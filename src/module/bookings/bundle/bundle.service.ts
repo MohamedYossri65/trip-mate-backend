@@ -4,11 +4,11 @@ import { BundleRepository } from './repository/bundle.repository';
 import { BundleFilterDto } from './dto/bundle-filter.dto';
 import { BundleMapper } from './mapper/bundle.mapper';
 import { PaginatedResponseDto } from 'src/common/dto/paginated-response.dto';
-import { BookingType } from '../enum/booking-type.enum';
-import { HotelBooking } from '../hotel/entity/hotel-booking.entity';
-import { CarBooking } from '../car/entity/car-booking.entity';
-import { FlightBooking } from '../flight/entity/flight.-booking.entity';
-import { VisaBooking } from '../visa/entity/visa-booking.entity';
+import { BookingType } from '../domain/enum/booking-type.enum';
+import { HotelBooking } from '../services/hotel/entity/hotel-booking.entity';
+import { CarBooking } from '../services/car/entity/car-booking.entity';
+import { FlightBooking } from '../services/flight/entity/flight.-booking.entity';
+import { VisaBooking } from '../services/visa/entity/visa-booking.entity';
 
 @Injectable()
 export class BundleService {

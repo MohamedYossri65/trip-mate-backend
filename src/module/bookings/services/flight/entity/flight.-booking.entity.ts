@@ -1,5 +1,5 @@
 import { Entity, PrimaryGeneratedColumn, Column, PrimaryColumn, OneToOne, JoinColumn } from 'typeorm';
-import { Booking } from '../../entity/booking.entity';
+import { Booking } from '../../../domain/entity/booking.entity';
 
 @Entity('flight_bookings')
 export class FlightBooking {

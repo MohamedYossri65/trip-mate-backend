@@ -1,21 +1,21 @@
 import { Body, Controller, Get, Post, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { BookingsService } from './bookings.service';
-import { CreateHotelBookingDto } from './hotel/dto/create-hotel-booking.dto';
+import { CreateHotelBookingDto } from './services/hotel/dto/create-hotel-booking.dto';
 import { Auth } from 'src/common/guards/auth.decorator';
 import { CurrentUser } from 'src/common/guards/user.decorator';
 import { Account } from '../account/entity/account.entity';
 import { RolesEnum } from 'src/common/enums/roles.enum';
 import { SuccessResponse } from 'src/common/interceptors/success-response.interceptor';
-import { CreateCarBookingDto } from './car/dto/create-car-booking.dto';
-import { CreateFlightBookingDto } from './flight/dto/create-flight-booking.dto';
-import { CreateVisaBookingDto } from './visa/dto/create-visa.dto';
-import { HotelFilterDto } from './hotel/dto/hotel-filter.dto';
-import { FlightFilterDto } from './flight/dto/flight-filter.dto';
-import { CarFilterDto } from './car/dto/car-filter.dto';
-import { VisaFilterDto } from './visa/dto/visa-filter.dto';
+import { CreateCarBookingDto } from './services/car/dto/create-car-booking.dto';
+import { CreateFlightBookingDto } from './services/flight/dto/create-flight-booking.dto';
+import { CreateVisaBookingDto } from './services/visa/dto/create-visa.dto';
+import { HotelFilterDto } from './services/hotel/dto/hotel-filter.dto';
+import { FlightFilterDto } from './services/flight/dto/flight-filter.dto';
+import { CarFilterDto } from './services/car/dto/car-filter.dto';
+import { VisaFilterDto } from './services/visa/dto/visa-filter.dto';
 import { BundleFilterDto } from './bundle/dto/bundle-filter.dto';
-import { CreateAllBookingsDto } from './dto/create-all-bookings.dto';
+import { CreateAllBookingsDto } from './domain/dto/create-all-bookings.dto';
 
 @ApiTags('bookings')
 @Controller({ path: 'bookings', version: '1' })

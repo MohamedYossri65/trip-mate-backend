@@ -1,11 +1,10 @@
-// hotel/dto/hotel-filter.dto.ts
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { IsOptional, IsString } from 'class-validator';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
 import { SortDto } from 'src/common/dto/sort.dto';
-import { BookingStatus } from '../../enum/booking-status.enum';
+import { BookingStatus } from '../../../domain/enum/booking-status.enum';
 
-export class HotelFilterDto extends PaginationDto implements SortDto {
+export class FlightFilterDto extends PaginationDto implements SortDto {
 
     @ApiPropertyOptional({ description: 'Filter by arrival country' })
     @IsOptional()

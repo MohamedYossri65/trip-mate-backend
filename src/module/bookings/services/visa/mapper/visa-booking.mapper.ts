@@ -1,6 +1,6 @@
 import { VisaBooking } from '../entity/visa-booking.entity';
 import { CreateVisaBookingDto } from '../dto/create-visa.dto';
-import { Booking } from '../../entity/booking.entity';
+import { Booking } from '../../../domain/entity/booking.entity';
 
 export class VisaBookingMapper {
     bookingId: bigint;

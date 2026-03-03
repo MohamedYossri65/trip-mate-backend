@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { BookingStatus } from '../bookings/enum/booking-status.enum';
+import { BookingStatus } from '../bookings/domain/enum/booking-status.enum';
 import { Offer } from './offer.entity';
 import { DataSource } from 'typeorm';
-import { Booking } from '../bookings/entity/booking.entity';
+import { Booking } from '../bookings/domain/entity/booking.entity';
 
 @Injectable()
 export class OffersService {

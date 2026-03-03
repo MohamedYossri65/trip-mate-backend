@@ -1,4 +1,4 @@
-import { Booking } from '../../entity/booking.entity';
+import { Booking } from '../../../domain/entity/booking.entity';
 import { CreateFlightBookingDto } from '../dto/create-flight-booking.dto';
 import { FlightBooking } from '../entity/flight.-booking.entity';
 

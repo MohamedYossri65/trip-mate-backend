@@ -5,7 +5,7 @@ import {
   OneToOne,
   JoinColumn,
 } from 'typeorm';
-import { Booking } from '../../entity/booking.entity';
+import { Booking } from '../../../domain/entity/booking.entity';
 
 export interface RoomDetail {
   roomType: string;

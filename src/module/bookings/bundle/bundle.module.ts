@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm/dist/typeorm.module';
-import { Bundle } from '../entity/bundle.entity';
+import { Bundle } from '../domain/entity/bundle.entity';
 import { BundleService } from './bundle.service';
 import { BundleRepository } from './repository/bundle.repository';
 

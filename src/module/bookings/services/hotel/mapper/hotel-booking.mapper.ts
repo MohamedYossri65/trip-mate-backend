@@ -1,6 +1,6 @@
 import { HotelBooking, RoomDetail } from '../entity/hotel-booking.entity';
 import { CreateHotelBookingDto } from '../dto/create-hotel-booking.dto';
-import { Booking } from '../../entity/booking.entity';
+import { Booking } from '../../../domain/entity/booking.entity';
 
 export class HotelBookingMapper {
   bookingId: bigint;

@@ -2,19 +2,19 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 import { IsOptional, IsString } from 'class-validator';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
 import { SortDto } from 'src/common/dto/sort.dto';
-import { BookingStatus } from '../../enum/booking-status.enum';
+import { BookingStatus } from '../../../domain/enum/booking-status.enum';
 
-export class CarFilterDto extends PaginationDto implements SortDto {
+export class VisaFilterDto extends PaginationDto implements SortDto {
 
     @ApiPropertyOptional({ description: 'Filter by arrival country' })
     @IsOptional()
     @IsString()
     arrivalCountry?: string;
 
-    @ApiPropertyOptional({ description: 'Filter by arrival city' })
+    @ApiPropertyOptional({ description: 'Filter by visa type' })
     @IsOptional()
     @IsString()
-    arrivalCity?: string;
+    visaType?: string;
 
     @ApiPropertyOptional({
         description: 'Filter by booking status',

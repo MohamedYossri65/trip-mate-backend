@@ -1,10 +1,10 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { ValidateNested, IsOptional, IsArray } from 'class-validator';
 import { Type } from 'class-transformer';
-import { CreateHotelBookingDto } from '../services/hotel/dto/create-hotel-booking.dto';
-import { CreateCarBookingDto } from '../services/car/dto/create-car-booking.dto';
-import { CreateFlightBookingDto } from '../services/flight/dto/create-flight-booking.dto';
-import { CreateVisaBookingDto } from '../services/visa/dto/create-visa.dto';
+import { CreateHotelBookingDto } from '../../services/hotel/dto/create-hotel-booking.dto';
+import { CreateCarBookingDto } from '../../services/car/dto/create-car-booking.dto';
+import { CreateFlightBookingDto } from '../../services/flight/dto/create-flight-booking.dto';
+import { CreateVisaBookingDto } from '../../services/visa/dto/create-visa.dto';
 
 
 export class CreateAllBookingsDto {

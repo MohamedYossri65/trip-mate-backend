@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { DataSource, In, Repository, SelectQueryBuilder } from 'typeorm';
-import { Bundle } from '../../entity/bundle.entity';
+import { Bundle } from '../../domain/entity/bundle.entity';
 import { BundleFilterDto } from '../dto/bundle-filter.dto';
 
 @Injectable()
@@ -42,4 +42,3 @@ export class BundleRepository extends Repository<Bundle> {
             .getOne();
     }
 }
-    

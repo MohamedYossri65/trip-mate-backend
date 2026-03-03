@@ -1,6 +1,6 @@
 import { CarBooking } from '../entity/car-booking.entity';
 import { CreateCarBookingDto } from '../dto/create-car-booking.dto';
-import { Booking } from '../../entity/booking.entity';
+import { Booking } from '../../../domain/entity/booking.entity';
 
 export class CarBookingMapper {
     bookingId: bigint;
