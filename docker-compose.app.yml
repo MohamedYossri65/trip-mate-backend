@@ -1,0 +1,38 @@
+services:
+  app:
+    container_name: trip-mate-app
+    image: yossri65/trip-mate-app
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+      args:
+        APP_ENV: production
+    networks:
+      - trip-mate-network
+    environment:
+      - APP_ENV=production
+    env_file:
+      - .env
+    ports:
+      - '5050:${PORT:-3000}'
+    depends_on:
+      - network-setup
+    volumes:
+      - logs-trip-mate-data:/usr/src/app/logs
+    restart: unless-stopped
+
+  network-setup:  
+    image: alpine:latest
+    command: echo "Network setup complete"
+    networks:
+      - trip-mate-network
+
+networks:
+  trip-mate-network:
+    name: trip-mate-network
+    driver: bridge
+
+
+volumes:
+  logs-trip-mate-data:
+    driver: local

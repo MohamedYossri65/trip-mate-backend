@@ -1,0 +1,7 @@
+export enum AccountStatus {
+  CREATED = 'CREATED',
+  PENDING_OTP = 'PENDING_OTP',
+  PENDING_REVIEW = 'PENDING_REVIEW',
+  ACTIVE = 'ACTIVE',
+  REJECTED = 'REJECTED',
+}

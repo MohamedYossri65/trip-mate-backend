@@ -1,0 +1,26 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:17
+    container_name: trip-mate-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: tripmate
+      POSTGRES_PASSWORD: tripmate123123
+      POSTGRES_DB: tripmate
+    ports:
+      - "30466:5432"
+    volumes:
+      - postgres-trip-mate-data:/var/lib/postgresql/data
+    networks:
+      - trip-mate-network
+
+networks:
+  trip-mate-network:
+    name: trip-mate-network
+    driver: bridge
+
+volumes:
+  postgres-trip-mate-data:
+    driver: local
