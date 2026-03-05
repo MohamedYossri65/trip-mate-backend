@@ -7,10 +7,9 @@ export class HotelBookingMapper {
   booking: {
     id: bigint;
     user: {
-      id: bigint;
+      accountId: bigint;
       name: string;
       account: {
-        accountId: bigint;
         email: string;
         phone: string;
         status: string;
@@ -41,10 +40,9 @@ export class HotelBookingMapper {
       booking: {
         id: hotelBooking.booking.id,
         user: {
-          id: hotelBooking.booking.user.id,
+          accountId: hotelBooking.booking.user.accountId,
           name: hotelBooking.booking.user.name,
           account: {
-            accountId: hotelBooking.booking.user.account.id,
             email: hotelBooking.booking.user.account.email,
             phone: hotelBooking.booking.user.account.phone,
             status: hotelBooking.booking.user.account.status,

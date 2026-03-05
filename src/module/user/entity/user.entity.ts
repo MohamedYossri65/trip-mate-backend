@@ -6,11 +6,11 @@ import { Column, CreateDateColumn, Entity, JoinColumn, OneToOne, PrimaryGenerate
 @Entity('user_profiles')
 export class UserProfile {
 
-  @PrimaryGeneratedColumn('identity')
-  id: bigint;
+  @PrimaryGeneratedColumn({ name: 'account_id', type: 'bigint' })
+  accountId: bigint;
 
-  @OneToOne(() => Account, { onDelete: 'CASCADE' , eager : true})
-  @JoinColumn()
+  @OneToOne(() => Account, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'account_id' })
   account: Account;
 
   @Column()

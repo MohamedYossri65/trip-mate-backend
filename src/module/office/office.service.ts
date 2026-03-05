@@ -63,7 +63,7 @@ export class OfficeService {
     }
     const employees = employeeDto.map((emp) =>
       this.officeEmployeeRepository.create({
-        office: { id: office.id },
+        office: { accountId: office.accountId },
         name: emp.name,
         phone: emp.phone,
         roleInOffice: emp.roleInOffice,

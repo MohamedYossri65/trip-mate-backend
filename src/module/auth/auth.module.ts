@@ -21,7 +21,7 @@ import { JwtRefreshStrategy } from './jwt-refresh.strategy';
     OfficeModule,
     JwtModule.register({
       secret: process.env.JWT_ACCESS_SECRET,
-      signOptions: { expiresIn: '15m' },
+      signOptions: { expiresIn: '60m' },
     }),
     TypeOrmModule.forFeature([Session]),
   ],

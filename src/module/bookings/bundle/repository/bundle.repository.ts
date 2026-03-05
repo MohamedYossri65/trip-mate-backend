@@ -1,44 +1,50 @@
 import { Injectable } from '@nestjs/common';
-import { DataSource, In, Repository, SelectQueryBuilder } from 'typeorm';
-import { Bundle } from '../../domain/entity/bundle.entity';
+import { DataSource, Repository } from 'typeorm';
+import { Booking } from '../../domain/entity/booking.entity';
+import { BookingType } from '../../domain/enum/booking-type.enum';
 import { BundleFilterDto } from '../dto/bundle-filter.dto';
 
 @Injectable()
-export class BundleRepository extends Repository<Bundle> {
+export class BundleRepository extends Repository<Booking> {
     constructor(private dataSource: DataSource) {
-        super(Bundle, dataSource.createEntityManager());
+        super(Booking, dataSource.createEntityManager());
     }
 
     async findWithFilters(
         dto: BundleFilterDto,
-    ): Promise<[Bundle[], number]> {
-        const qb = this.createQueryBuilder('bundle')
-            .leftJoinAndSelect('bundle.user', 'user')
+    ): Promise<[Booking[], number]> {
+        const qb = this.createQueryBuilder('booking')
+            .leftJoinAndSelect('booking.user', 'user')
             .leftJoinAndSelect('user.account', 'account')
-            .leftJoinAndSelect('bundle.bookings', 'booking');
+            .leftJoinAndSelect('booking.children', 'child')
+            .where('booking.type = :type', { type: BookingType.BUNDLE });
 
         if (dto.status) {
-            qb.andWhere('booking.status = :status', { status: dto.status });
+            qb.andWhere('child.status = :status', { status: dto.status });
         }
 
         const allowedSortColumns: Record<string, string> = {
-            createdAt: 'bundle.createdAt',
+            createdAt: 'booking.createdAt',
         };
         const sortColumn = allowedSortColumns[dto.sortBy ?? 'createdAt'];
         qb.orderBy(sortColumn, dto.sortOrder ?? 'DESC');
-
         qb.skip(dto.skip).take(dto.limit);
 
         return qb.getManyAndCount();
     }
 
-
-    async findOneWithBookings(id: bigint): Promise<Bundle | null> {
-        return this.createQueryBuilder('bundle')
-            .leftJoinAndSelect('bundle.bookings', 'booking')
+    async findManyWithBookings(ids: bigint[]): Promise<Booking[]> {
+        if (!ids.length) return [];
+        return this.createQueryBuilder('booking')
             .leftJoinAndSelect('booking.user', 'user')
             .leftJoinAndSelect('user.account', 'account')
-            .where('bundle.id = :id', { id })
-            .getOne();
+            .leftJoinAndSelect('booking.children', 'child')
+            .where('booking.id IN (:...ids) AND booking.type = :type', { ids, type: BookingType.BUNDLE })
+            .getMany();
+    }
+
+    async findOneWithBookings(id: bigint): Promise<Booking | null> {
+        const results = await this.findManyWithBookings([id]);
+        return results[0] ?? null;
     }
 }

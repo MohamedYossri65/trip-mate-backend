@@ -4,4 +4,5 @@ export enum BookingType {
   FLIGHT = 'FLIGHT',
   CAR = 'CAR',
   VISA = 'VISA',
+  BUNDLE = 'BUNDLE',
 }

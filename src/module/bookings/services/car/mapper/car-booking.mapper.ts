@@ -7,10 +7,9 @@ export class CarBookingMapper {
     booking: {
         id: bigint;
         user: {
-            id: bigint;
+            accountId: bigint;
             name: string;
             account: {
-                accountId: bigint;
                 email: string;
                 phone: string; status: string;
             };
@@ -42,10 +41,9 @@ export class CarBookingMapper {
             booking: {
                 id: carBooking.booking.id,
                 user: {
-                    id: carBooking.booking.user.id,
+                    accountId: carBooking.booking.user.accountId,
                     name: carBooking.booking.user.name,
                     account: {
-                        accountId: carBooking.booking.user.account.id,
                         email: carBooking.booking.user.account.email,
                         phone: carBooking.booking.user.account.phone,
                         status: carBooking.booking.user.account.status,

@@ -16,6 +16,7 @@ import { CarFilterDto } from './services/car/dto/car-filter.dto';
 import { VisaFilterDto } from './services/visa/dto/visa-filter.dto';
 import { BundleFilterDto } from './bundle/dto/bundle-filter.dto';
 import { CreateAllBookingsDto } from './domain/dto/create-all-bookings.dto';
+import { BookingFilterDto } from './domain/dto/booking-filter.dto';
 
 @ApiTags('bookings')
 @Controller({ path: 'bookings', version: '1' })
@@ -136,6 +137,17 @@ export class BookingsController {
   @SuccessResponse('Bundle booking retrieved successfully')
   async findOneBundle(@Query('id') id: bigint) {
     return this.bookingsService.findOneBundle(id);
+  }
+
+  @Get('my')
+  @Auth(RolesEnum.USER)
+  @ApiOperation({ summary: 'Get current user bookings with pagination' })
+  @SuccessResponse('User bookings retrieved successfully')
+  async findUserBookings(
+    @CurrentUser() account: Account,
+    @Query() dto: BookingFilterDto,
+  ) {
+    return this.bookingsService.findUserBookings(account.id, dto);
   }
 
   @Get('home-page')

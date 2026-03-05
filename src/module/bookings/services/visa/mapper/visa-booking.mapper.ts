@@ -7,10 +7,9 @@ export class VisaBookingMapper {
     booking: {
         id: bigint;
         user: {
-            id: bigint;
+            accountId: bigint;
             name: string;
             account: {
-                accountId: bigint;
                 email: string;
                 phone: string;
                 status: string;
@@ -34,10 +33,9 @@ export class VisaBookingMapper {
             booking: {
                 id: visaBooking.booking.id,
                 user: {
-                    id: visaBooking.booking.user.id,
+                    accountId: visaBooking.booking.user.accountId,
                     name: visaBooking.booking.user.name,
                     account: {
-                        accountId: visaBooking.booking.user.account.id,
                         email: visaBooking.booking.user.account.email,
                         phone: visaBooking.booking.user.account.phone,
                         status: visaBooking.booking.user.account.status,

@@ -7,9 +7,9 @@ import {
   ManyToOne,
   CreateDateColumn,
 } from 'typeorm';
-import { Booking } from '../bookings/domain/entity/booking.entity';
-import { OfficeProfile } from '../office/entity/office.entity';
-import { OfferStatus } from './enum/offer-status.enum';
+import { Booking } from '../../bookings/domain/entity/booking.entity';
+import { OfficeProfile } from '../../office/entity/office.entity';
+import { OfferStatus } from '../enum/offer-status.enum';
 
 
 @Entity('offers')

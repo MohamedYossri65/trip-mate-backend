@@ -1,4 +1,4 @@
-import { Bundle } from '../../domain/entity/bundle.entity';
+import { Booking } from '../../domain/entity/booking.entity';
 import { HotelBooking } from '../../services/hotel/entity/hotel-booking.entity';
 import { CarBooking } from '../../services/car/entity/car-booking.entity';
 import { FlightBooking } from '../../services/flight/entity/flight.-booking.entity';
@@ -9,9 +9,9 @@ import { FlightBookingMapper } from '../../services/flight/mapper/flight-booking
 import { VisaBookingMapper } from '../../services/visa/mapper/visa-booking.mapper';
 
 export class BundleMapper {
-  bundleId: bigint;
+  id: bigint;
   user: {
-    id: bigint;
+    accountId: bigint;
     name: string;
     account: {
       email: string;
@@ -26,7 +26,7 @@ export class BundleMapper {
   visas: VisaBookingMapper[];
 
   static fromEntities(
-    bundle: Bundle,
+    bundle: Booking,
     subEntities: {
       hotels: HotelBooking[];
       cars: CarBooking[];
@@ -35,9 +35,9 @@ export class BundleMapper {
     },
   ): BundleMapper {
     return {
-      bundleId: bundle.id,
+      id: bundle.id,
       user: {
-        id: bundle.user.id,
+        accountId: bundle.user.accountId,
         name: bundle.user.name,
         account: {
           email: bundle.user.account.email,

@@ -17,8 +17,8 @@ export class FindHomePageMapper {
     ) {
         return {
             bundles: bundles.map((bundle) => ({
-                type: 'BUNDLE',
-                bundleId: bundle.bundleId,
+                type: BookingType.BUNDLE,
+                id: bundle.id,
                 name: bundle.user.name,
                 createdAt: bundle.createdAt,
             })),

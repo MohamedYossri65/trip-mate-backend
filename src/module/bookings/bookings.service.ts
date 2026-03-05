@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { DataSource } from 'typeorm';
+import { DataSource, In } from 'typeorm';
 import { Booking } from './domain/entity/booking.entity';
 import { BookingType } from './domain/enum/booking-type.enum';
 import { BookingStatus } from './domain/enum/booking-status.enum';
@@ -28,10 +28,12 @@ import { BookingRepository } from './domain/repository/booking.repository';
 import { CreateAllBookingsDto } from './domain/dto/create-all-bookings.dto';
 import { BundleService } from './bundle/bundle.service';
 import { BundleFilterDto } from './bundle/dto/bundle-filter.dto';
-import { Bundle } from './domain/entity/bundle.entity';
-import { In } from 'typeorm';
 import { BundleMapper } from './bundle/mapper/bundle.mapper';
 import { FindHomePageMapper } from './domain/mapper/find-home-page-mapper';
+import { PaginationDto } from 'src/common/dto/pagination.dto';
+import { PaginatedResponseDto } from 'src/common/dto/paginated-response.dto';
+import { BookingFilterDto } from './domain/dto/booking-filter.dto';
+import { BookingMapper } from './domain/mapper/booking.mapper';
 
 @Injectable()
 export class BookingsService {
@@ -54,12 +56,13 @@ export class BookingsService {
       // 0️⃣ resolve UserProfile from account ID
       const userProfile = await manager.findOne(UserProfile, {
         where: { account: { id: BigInt(accountId) } },
+        relations: ['account'],
       });
       if (!userProfile) throw new NotFoundException('User profile not found');
 
       // 1️⃣ create booking
       const booking = manager.create(Booking, {
-        user: { id: userProfile.id },
+        user: { accountId: userProfile.accountId },
         type: BookingType.HOTEL,
         status: BookingStatus.DRAFT,
       });
@@ -94,12 +97,13 @@ export class BookingsService {
       // 0️⃣ resolve UserProfile from account ID
       const userProfile = await manager.findOne(UserProfile, {
         where: { account: { id: accountId } },
+        relations: ['account'],
       });
       if (!userProfile) throw new NotFoundException('User profile not found');
 
       // 1️⃣ create booking
       const booking = manager.create(Booking, {
-        user: { id: userProfile.id },
+        user: { accountId: userProfile.accountId },
         type: BookingType.CAR,
         status: BookingStatus.DRAFT,
       });
@@ -134,12 +138,13 @@ export class BookingsService {
       // 0️⃣ resolve UserProfile from account ID
       const userProfile = await manager.findOne(UserProfile, {
         where: { account: { id: accountId } },
+        relations: ['account'],
       });
       if (!userProfile) throw new NotFoundException('User profile not found');
 
       // 1️⃣ create booking
       const booking = manager.create(Booking, {
-        user: { id: userProfile.id },
+        user: { accountId: userProfile.accountId },
         type: BookingType.FLIGHT,
         status: BookingStatus.DRAFT,
       });
@@ -174,12 +179,13 @@ export class BookingsService {
       // 0️⃣ resolve UserProfile from account ID
       const userProfile = await manager.findOne(UserProfile, {
         where: { account: { id: accountId } },
+        relations: ['account'],
       });
       if (!userProfile) throw new NotFoundException('User profile not found');
 
       // 1️⃣ create booking
       const booking = manager.create(Booking, {
-        user: { id: userProfile.id },
+        user: { accountId: userProfile.accountId },
         type: BookingType.VISA,
         status: BookingStatus.DRAFT,
       });
@@ -232,20 +238,24 @@ export class BookingsService {
     });
     if (!userProfile) throw new NotFoundException('User profile not found');
 
-    // Create a Bundle to group these bookings together
-    const bundle = this.dataSource.getRepository(Bundle).create({ user: userProfile });
-    await this.dataSource.getRepository(Bundle).save(bundle);
+    // Create a BUNDLE booking to group these child bookings together
+    const bundleBooking = this.dataSource.getRepository(Booking).create({
+      user: { accountId: userProfile.accountId },
+      type: BookingType.BUNDLE,
+      status: BookingStatus.WAITING_FOR_OFFERS,
+    });
+    await this.dataSource.getRepository(Booking).save(bundleBooking);
 
-    // Link every created Booking record to this bundle
+    // Link every created Booking record to this bundle booking via parent_id
     const bookingIds: bigint[] = allResults.map((r: any) => r.booking.id);
     await this.dataSource
       .createQueryBuilder()
       .update(Booking)
-      .set({ bundle: { id: bundle.id } })
+      .set({ parent: { id: bundleBooking.id } })
       .whereInIds(bookingIds)
       .execute();
 
-    return { bundleId: bundle.id, hotels, cars, flights, visas };
+    return { bundleId: bundleBooking.id, hotels, cars, flights, visas };
   }
 
   // Getters for bookings for officers would go here
@@ -313,5 +323,11 @@ export class BookingsService {
     const entity = await this.visaService.findOneByBookingId(bookingId);
     if (!entity) return null;
     return entity;
+  }
+
+  async findUserBookings(accountId: bigint, dto: BookingFilterDto): Promise<PaginatedResponseDto<BookingMapper>> {
+    const [bookings, total] = await this.bookingRepository.findUserBookings(accountId, dto);
+    const mapped = bookings.map(BookingMapper.fromEntities);
+    return new PaginatedResponseDto(mapped, total, dto.page, dto.limit);
   }
 }

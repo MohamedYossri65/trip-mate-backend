@@ -3,6 +3,7 @@ import {
   PrimaryGeneratedColumn,
   Column,
   ManyToOne,
+  OneToMany,
   OneToOne,
   JoinColumn,
   CreateDateColumn,
@@ -11,8 +12,7 @@ import {
 import { BookingType } from '../enum/booking-type.enum';
 import { BookingStatus } from '../enum/booking-status.enum';
 import { UserProfile } from 'src/module/user/entity/user.entity';
-import { Offer } from 'src/module/offers/offer.entity';
-import { Bundle } from './bundle.entity';
+import { Offer } from 'src/module/offers/entity/offer.entity';
 
 @Entity('bookings')
 export class Booking {
@@ -36,9 +36,13 @@ export class Booking {
   @JoinColumn({ name: 'selected_offer_id' })
   selectedOffer?: Offer;
 
-  @ManyToOne(() => Bundle, (bundle) => bundle.bookings, { nullable: true, onDelete: 'SET NULL', eager: false })
-  @JoinColumn({ name: 'bundle_id' })
-  bundle?: Bundle;
+  // Self-referencing: a BUNDLE-type booking is the parent of its child bookings
+  @ManyToOne(() => Booking, (b) => b.children, { nullable: true, onDelete: 'SET NULL', eager: false })
+  @JoinColumn({ name: 'parent_id' })
+  parent?: Booking;
+
+  @OneToMany(() => Booking, (b) => b.parent, { eager: false })
+  children?: Booking[];
 
   @CreateDateColumn()
   createdAt: Date;

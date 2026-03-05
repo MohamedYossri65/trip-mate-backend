@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { DataSource, Repository, SelectQueryBuilder } from 'typeorm';
 import { Booking } from '../entity/booking.entity';
 import { BookingFilterDto } from '../dto/booking-filter.dto';
+import { BookingType } from '../enum/booking-type.enum';
 
 
 @Injectable()
@@ -58,5 +59,15 @@ export class BookingRepository extends Repository<Booking> {
     dto: BookingFilterDto,
   ): void {
     qb.skip(dto.skip).take(dto.limit);
+  }
+
+  async findUserBookings(accountId: bigint,dto: BookingFilterDto): Promise<[Booking[], number]> {
+    const qb = this.createQueryBuilder('booking')
+      .leftJoinAndSelect('booking.user', 'user')
+      .leftJoinAndSelect('user.account', 'account')
+      .where('user.account_id = :accountId', { accountId })
+      .andWhere('booking.parent_id IS NULL OR booking.type = :type', { type: BookingType.BUNDLE }); // include both parent and child bookings
+    this.applyPagination(qb, dto);
+    return qb.getManyAndCount();
   }
 }

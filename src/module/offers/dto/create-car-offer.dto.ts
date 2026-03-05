@@ -13,7 +13,14 @@ import {
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
-export class CreateCarBookingDto {
+export class CreateCarOfferDto {
+
+    @IsNumber()
+    bookingId: bigint;
+
+    @IsNumber()
+    price: number;
+
     @IsString()
     @IsNotEmpty()
     arrivalCountry: string;
@@ -43,11 +50,9 @@ export class CreateCarBookingDto {
     transmissionType: string;
 
     @IsString()
-    @IsOptional()
     carBrand?: string;
 
     @IsString()
-    @IsOptional()
     carModel?: string;
 
     @IsBoolean()
@@ -69,6 +74,11 @@ export class CreateCarBookingDto {
 
     @IsBoolean()
     requiresFullInsurance: boolean;
+
+
+    @IsDate()
+    @Type(() => Date)
+    offerDuration: Date;
 
     @IsOptional()
     @IsString()

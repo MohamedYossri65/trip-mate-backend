@@ -7,10 +7,9 @@ export class FlightBookingMapper {
     booking: {
         id: bigint;
         user: {
-            id: bigint;
+            accountId: bigint;
             name: string;
             account: {
-                accountId: bigint;
                 email: string;
                 phone: string;
                 status: string;
@@ -45,10 +44,9 @@ export class FlightBookingMapper {
             booking: {
                 id: flightBooking.booking.id,
                 user: {
-                    id: flightBooking.booking.user.id,
+                    accountId: flightBooking.booking.user.accountId,
                     name: flightBooking.booking.user.name,
                     account: {
-                        accountId: flightBooking.booking.user.account.id,
                         email: flightBooking.booking.user.account.email,
                         phone: flightBooking.booking.user.account.phone,
                         status: flightBooking.booking.user.account.status,

@@ -6,11 +6,11 @@ import { OfficeEmployee } from "./employee.entity";
 @Entity('office_profiles')
 export class OfficeProfile {
 
-  @PrimaryGeneratedColumn('identity')
-  id: bigint;
+  @PrimaryGeneratedColumn({ name: 'account_id', type: 'bigint' })
+  accountId: bigint;
 
   @OneToOne(() => Account, { onDelete: 'CASCADE' })
-  @JoinColumn()
+  @JoinColumn({ name: 'account_id' })
   account: Account;
 
   @Column()
