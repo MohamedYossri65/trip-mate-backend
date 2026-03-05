@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { BookingStatus } from '../bookings/domain/enum/booking-status.enum';
 import { Offer } from './entity/offer.entity';
 import { DataSource } from 'typeorm';
@@ -7,14 +7,22 @@ import { CreateCarBookingDto } from '../bookings/services/car/dto/create-car-boo
 import { CarOfferDetails } from './entity/car-offer-details';
 import { CarOfferMapper } from './mapper/car-offer.mapper';
 import { CreateCarOfferDto } from './dto/create-car-offer.dto';
+import { BookingType } from '../bookings/domain/enum/booking-type.enum';
+import { OfferStatus } from './enum/offer-status.enum';
+import { OfferRepository } from './repository/offer.repository';
+import { OfferFilterDto } from './dto/offer-filter.dto';
+import { OfferMapper } from './mapper/offer-mapper.dto';
 
 @Injectable()
 export class OffersService {
-  constructor(private readonly dataSource: DataSource) {}
+  constructor(
+    private readonly dataSource: DataSource,
+    private readonly offerRepository: OfferRepository,
+  ) {}
 
   async createOffer(
     bookingId: bigint,
-    officeId: string,
+    officeId: bigint,
     price: number,
   ): Promise<Offer> {
     return this.dataSource.transaction(async (manager) => {
@@ -29,7 +37,7 @@ export class OffersService {
 
       const offer = manager.create(Offer, {
         booking,
-        office: { accountId: BigInt(officeId) },
+        office: { accountId: officeId },
         price,
       });
 
@@ -52,17 +60,24 @@ export class OffersService {
       const booking = await manager
         .createQueryBuilder(Booking, 'booking')
         .where('booking.id = :id', { id: carOfferDetailsDto.bookingId })
-        .setLock('pessimistic_write', undefined, ['booking'])
+        .andWhere('booking.parent_id IS NULL AND booking.type = :type', { type: BookingType.CAR })
         .getOne();
 
 
-      if (!booking) throw new Error('Booking not found');
+      if (!booking) throw new BadRequestException('Booking not found');
+
+      const hasPendingOfferFromOffice = await this.hasPendingOfferFromOffice(BigInt(carOfferDetailsDto.bookingId), accountId);
+
+      if(hasPendingOfferFromOffice) {
+        throw new BadRequestException('An offer from this office already exists for this booking');
+      }
 
       const offer = manager.create(Offer, {
         booking,
         office: { accountId },
         price : carOfferDetailsDto.price,
         offerDuration: carOfferDetailsDto.offerDuration,
+        arrivalCountry: carOfferDetailsDto.arrivalCountry,
       });
 
       await manager.save(offer);
@@ -113,5 +128,23 @@ export class OffersService {
       ],
     });
     return carOfferDetailsList.map(CarOfferMapper.fromEntities);
+  }
+
+  async findOfficeOffers(officeId: bigint , dto: OfferFilterDto): Promise<OfferMapper[]> {
+    const offerDetailsList = await this.offerRepository.findWithFilters(dto ,officeId).then(([offers]) => offers);
+
+    return offerDetailsList.map(OfferMapper.fromEntities);
+  }
+    
+
+  private async hasPendingOfferFromOffice(bookingId: bigint, officeId: bigint): Promise<boolean> {
+    const existingOffer = await this.dataSource.getRepository(Offer).findOne({
+      where: {
+        booking: { id: bookingId },
+        office: { accountId: officeId },
+        status: OfferStatus.PENDING,
+      },
+    });
+    return !!existingOffer;
   }
 }

@@ -32,7 +32,7 @@ export class BookingsController {
     @CurrentUser() account: Account,
   ) {
     return await this.bookingsService.createHotelBooking(
-      account.id.toString(),
+      account.id,
       dto,
     );
   }

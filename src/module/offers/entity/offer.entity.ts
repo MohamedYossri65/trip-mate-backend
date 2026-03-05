@@ -6,6 +6,8 @@ import {
   Column,
   ManyToOne,
   CreateDateColumn,
+  UpdateDateColumn,
+  JoinColumn,
 } from 'typeorm';
 import { Booking } from '../../bookings/domain/entity/booking.entity';
 import { OfficeProfile } from '../../office/entity/office.entity';
@@ -18,9 +20,11 @@ export class Offer {
   id: bigint;
 
   @ManyToOne(() => Booking, { nullable: false })
+  @JoinColumn({ name: 'booking_id' })
   booking: Booking;
 
   @ManyToOne(() => OfficeProfile, { nullable: false })
+  @JoinColumn({ name: 'office_id' })
   office: OfficeProfile;
 
   @Column({ type: 'decimal', precision: 12, scale: 2 })
@@ -28,6 +32,9 @@ export class Offer {
 
   @Column({ default: 'USD' })
   currency: string;
+
+  @Column()
+  arrivalCountry: string;
 
   @Column({
     type: 'enum',
@@ -45,6 +52,9 @@ export class Offer {
   @Column({ type: 'jsonb', nullable: true })
   attachments: string[];
 
-  @CreateDateColumn()
+  @CreateDateColumn({ type: 'timestamptz' })
   createdAt: Date;
+
+  @UpdateDateColumn({ type: 'timestamptz' })
+  updatedAt: Date;
 }

@@ -11,9 +11,6 @@ export class CarOfferDetails {
     offer:Offer;
 
     @Column()
-    arrivalCountry: string;
-
-    @Column()
     arrivalCity: string;
 
     @Column()

@@ -4,11 +4,12 @@ import { OffersService } from "./offers.service";
 import { Module } from "@nestjs/common";
 import { OffersController } from "./offer.controller";
 import { CarOfferDetails } from "./entity/car-offer-details";
+import { OfferRepository } from "./repository/offer.repository";
 
 @Module({
   imports: [TypeOrmModule.forFeature([Offer ,CarOfferDetails])],
   controllers: [OffersController],
-  providers: [OffersService],
+  providers: [OffersService ,OfferRepository],
   exports: [OffersService],
 })
 export class OffersModule {}

@@ -34,7 +34,7 @@ export class CarOfferMapper {
                 status: carofferDetails.offer.status,
                 offerDuration: carofferDetails.offer.offerDuration,
             },
-            arrivalCountry: carofferDetails.arrivalCountry,
+            arrivalCountry: carofferDetails.offer.arrivalCountry,
             arrivalCity: carofferDetails.arrivalCity,
             deliveryLocation: carofferDetails.deliveryLocation,
             deliveryDate: carofferDetails.deliveryDate,
@@ -56,7 +56,6 @@ export class CarOfferMapper {
     static fromDto(dto: CreateCarOfferDto, offer: Offer): Partial<CarOfferDetails> {
         return {
             offerId: offer.id,
-            arrivalCountry: dto.arrivalCountry,
             arrivalCity: dto.arrivalCity,
             deliveryLocation: dto.deliveryLocation,
             deliveryDate: dto.deliveryDate,

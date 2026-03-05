@@ -16,7 +16,8 @@ import { Type } from 'class-transformer';
 export class CreateCarOfferDto {
 
     @IsNumber()
-    bookingId: bigint;
+    @Type(() => Number)
+    bookingId: number;
 
     @IsNumber()
     price: number;

@@ -49,13 +49,13 @@ export class BookingsService {
 
   // Each createXBooking method follows the same pattern:
   async createHotelBooking(
-    accountId: string,
+    accountId: bigint,
     dto: CreateHotelBookingDto,
   ): Promise<HotelBookingMapper> {
     const hotelDetails = await this.dataSource.transaction(async (manager) => {
       // 0️⃣ resolve UserProfile from account ID
       const userProfile = await manager.findOne(UserProfile, {
-        where: { account: { id: BigInt(accountId) } },
+        where: { account: { id: accountId } },
         relations: ['account'],
       });
       if (!userProfile) throw new NotFoundException('User profile not found');
@@ -223,7 +223,7 @@ export class BookingsService {
     visas: VisaBookingMapper[];
   }> {
     const [hotels, cars, flights, visas] = await Promise.all([
-      Promise.all((dto.hotels ?? []).map((h) => this.createHotelBooking(accountId.toString(), h))),
+      Promise.all((dto.hotels ?? []).map((h) => this.createHotelBooking(accountId, h))),
       Promise.all((dto.cars ?? []).map((c) => this.createCarBooking(accountId, c))),
       Promise.all((dto.flights ?? []).map((f) => this.createFlightBooking(accountId, f))),
       Promise.all((dto.visas ?? []).map((v) => this.createVisaBooking(accountId, v))),

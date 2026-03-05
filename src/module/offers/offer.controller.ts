@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post } from "@nestjs/common";
+import { Body, Controller, Get, Param, Post, Query } from "@nestjs/common";
 import { ApiOperation, ApiTags } from "@nestjs/swagger";
 import { OffersService } from "./offers.service";
 import { Account } from "../account/entity/account.entity";
@@ -6,6 +6,7 @@ import { CurrentUser } from "src/common/guards/user.decorator";
 import { SuccessResponse } from "src/common/interceptors/success-response.interceptor";
 import { Auth } from "src/common/guards/auth.decorator";
 import { CreateCarOfferDto } from "./dto/create-car-offer.dto";
+import { OfferFilterDto } from "./dto/offer-filter.dto";
 
 @ApiTags('offers')
 @Controller({ path: 'offers', version: '1' })
@@ -26,13 +27,24 @@ export class OffersController {
         );
     }
 
+    @Get('office')
+    @Auth()
+    @ApiOperation({ summary: 'Get offers for an office' })
+    @SuccessResponse('Offers retrieved successfully')
+    async findOfficeOffers(
+        @CurrentUser() account: Account,
+        @Query() dto: OfferFilterDto,
+    ) {
+        return await this.offersService.findOfficeOffers(account.id, dto);
+    }
+
     @Get('/:bookingId')
     @Auth()
     @ApiOperation({ summary: 'Get offers for a booking' })
     @SuccessResponse('Offers retrieved successfully')
     async findOffersByBookingId(
-        @Body('bookingId') bookingId: bigint,
+        @Param('bookingId') bookingId: string,
     ) {
-        return await this.offersService.findOffersByBookingId(bookingId);
+        return await this.offersService.findOffersByBookingId(BigInt(bookingId));
     }
 }
