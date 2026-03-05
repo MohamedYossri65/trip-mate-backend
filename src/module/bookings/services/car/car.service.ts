@@ -17,4 +17,10 @@ export class CarService {
 
     return new PaginatedResponseDto(mapped, total, dto.page, dto.limit);
   }
+
+  async findOneByBookingId(bookingId: bigint): Promise<CarBookingMapper | null> {
+    const entity = await this.carBookingRepository.findOneByBookingId(bookingId);
+    if (!entity) return null;
+    return CarBookingMapper.fromEntities(entity);
+  }
 }

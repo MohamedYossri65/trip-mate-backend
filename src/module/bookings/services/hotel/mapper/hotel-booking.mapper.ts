@@ -67,8 +67,7 @@ export class HotelBookingMapper {
       roomDetails: hotelBooking.roomDetails.map(
         (room): RoomDetail => ({
           roomType: room.roomType,
-          numberOfGuests: room.numberOfGuests,
-          numberOfChildren: room.numberOfChildren,
+          accommodationType: room.accommodationType,
         }),
       ),
       notes: hotelBooking.notes || '',
@@ -93,8 +92,7 @@ export class HotelBookingMapper {
       roomDetails: dto.roomDetails.map(
         (room): RoomDetail => ({
           roomType: room.roomType,
-          numberOfGuests: room.numberOfGuests,
-          numberOfChildren: room.numberOfChildren,
+          accommodationType: room.accommodationType,
         }),
       ),
       notes: dto.notes || '',

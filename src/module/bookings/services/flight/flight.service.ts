@@ -17,4 +17,10 @@ export class FlightService {
 
     return new PaginatedResponseDto(mapped, total, dto.page, dto.limit);
   }
+
+  async findOneByBookingId(bookingId: bigint): Promise<FlightBookingMapper | null> {
+    const entity = await this.flightBookingRepository.findOneByBookingId(bookingId);
+    if (!entity) return null;
+    return FlightBookingMapper.fromEntities(entity);
+  }
 }

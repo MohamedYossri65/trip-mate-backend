@@ -9,8 +9,7 @@ import { Booking } from '../../../domain/entity/booking.entity';
 
 export interface RoomDetail {
   roomType: string;
-  numberOfGuests: number;
-  numberOfChildren: number;
+  accommodationType: string;
 }
 
 @Entity('hotel_bookings')

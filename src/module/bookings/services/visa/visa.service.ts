@@ -17,4 +17,10 @@ export class VisaService {
 
     return new PaginatedResponseDto(mapped, total, dto.page, dto.limit);
   }
+
+  async findOneByBookingId(bookingId: bigint): Promise<VisaBookingMapper | null> {
+    const entity = await this.visaBookingRepository.findOneByBookingId(bookingId);
+    if (!entity) return null;
+    return VisaBookingMapper.fromEntities(entity);
+  }
 }

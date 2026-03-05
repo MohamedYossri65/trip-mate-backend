@@ -17,4 +17,10 @@ export class HotelService {
 
     return new PaginatedResponseDto(mapped, total, dto.page, dto.limit);
   }
+
+  async findOneByBookingId(bookingId: bigint): Promise<HotelBookingMapper | null> {
+    const entity = await this.hotelBookingRepository.findOneByBookingId(bookingId);
+    if (!entity) return null;
+    return HotelBookingMapper.fromEntities(entity);
+  }
 }

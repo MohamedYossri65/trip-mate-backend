@@ -57,4 +57,13 @@ export class HotelBookingRepository extends Repository<HotelBooking> {
   ): void {
     qb.skip(dto.skip).take(dto.limit);
   }
+
+  async findOneByBookingId(bookingId: bigint): Promise<HotelBooking | null> {
+    return this.createQueryBuilder('hotel')
+      .leftJoinAndSelect('hotel.booking', 'booking')
+      .leftJoinAndSelect('booking.user', 'user')
+      .leftJoinAndSelect('user.account', 'account')
+      .where('hotel.bookingId = :id', { id: bookingId })
+      .getOne();
+  }
 }

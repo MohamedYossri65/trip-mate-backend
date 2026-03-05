@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Post, Query } from '@nestjs/common';
-import { ApiTags, ApiOperation } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiQuery } from '@nestjs/swagger';
 import { BookingsService } from './bookings.service';
 import { CreateHotelBookingDto } from './services/hotel/dto/create-hotel-booking.dto';
 import { Auth } from 'src/common/guards/auth.decorator';
@@ -89,14 +89,6 @@ export class BookingsController {
     return this.bookingsService.createAllBookings(account.id, dto);
   }
 
-  // @Get('bookings')
-  // @Auth()
-  // @ApiOperation({ summary: 'List all bookings with filter, search & pagination' })
-  // @SuccessResponse('Bookings retrieved successfully')
-  // async findAllBookings(@Query() dto: any) {
-  //   return this.bookingsService.findAllBooking(dto);
-  // }
-
   @Get('hotels')
   @Auth()
   @ApiOperation({ summary: 'List hotel bookings with filter, search & pagination' })
@@ -144,5 +136,48 @@ export class BookingsController {
   @SuccessResponse('Bundle booking retrieved successfully')
   async findOneBundle(@Query('id') id: bigint) {
     return this.bookingsService.findOneBundle(id);
+  }
+
+  @Get('home-page')
+  @Auth()
+  @ApiQuery({ name: 'arrivalCountry', required: false, description: 'Filter by arrival country' })
+  @ApiOperation({ summary: 'Get recent bookings for home page display' })
+  @SuccessResponse('Home page bookings retrieved successfully')
+  async findHomePageBookings(
+    @Query('arrivalCountry') arrivalCountry?: string,
+  ) {
+    return this.bookingsService.findHomePageBookings(arrivalCountry);
+  }
+
+  @Get('cars/:bookingId')
+  @Auth()
+  @ApiOperation({ summary: 'Get car booking details by booking ID' })
+  @SuccessResponse('Car booking retrieved successfully')
+  async findCarByBookingId(@Query('bookingId') bookingId: bigint) {
+    return this.bookingsService.findOneCarBooking(bookingId);
+  }
+
+  @Get('flights/:bookingId')
+  @Auth()
+  @ApiOperation({ summary: 'Get flight booking details by booking ID' })
+  @SuccessResponse('Flight booking retrieved successfully')
+  async findFlightByBookingId(@Query('bookingId') bookingId: bigint) {
+    return this.bookingsService.findOneFlightBooking(bookingId);
+  }
+
+  @Get('hotels/:bookingId')
+  @Auth()
+  @ApiOperation({ summary: 'Get hotel booking details by booking ID' })
+  @SuccessResponse('Hotel booking retrieved successfully')
+  async findHotelByBookingId(@Query('bookingId') bookingId: bigint) {
+    return this.bookingsService.findOneHotelBooking(bookingId);
+  }
+
+  @Get('visas/:bookingId')
+  @Auth()
+  @ApiOperation({ summary: 'Get visa booking details by booking ID' })
+  @SuccessResponse('Visa booking retrieved successfully')
+  async findVisaByBookingId(@Query('bookingId') bookingId: bigint) {
+    return this.bookingsService.findOneVisaBooking(bookingId);
   }
 }

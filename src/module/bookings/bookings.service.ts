@@ -31,6 +31,7 @@ import { BundleFilterDto } from './bundle/dto/bundle-filter.dto';
 import { Bundle } from './domain/entity/bundle.entity';
 import { In } from 'typeorm';
 import { BundleMapper } from './bundle/mapper/bundle.mapper';
+import { FindHomePageMapper } from './domain/mapper/find-home-page-mapper';
 
 @Injectable()
 export class BookingsService {
@@ -249,16 +250,8 @@ export class BookingsService {
 
   // Getters for bookings for officers would go here
 
-  async findAllBooking(dto: any) {
-    return this.bookingRepository.findWithFilters(dto);
-  }
-
   async findAllBundles(dto: BundleFilterDto) {
     return this.bundleService.findAll(dto);
-  }
-
-  async findOneBundle(bundleId: bigint): Promise<BundleMapper> {
-    return this.bundleService.findOne(bundleId);
   }
 
   async findAllHotels(dto: HotelFilterDto) {
@@ -277,5 +270,48 @@ export class BookingsService {
     return this.visaService.findAll(dto);
   }
 
-  
+  async findOneBundle(bundleId: bigint): Promise<BundleMapper> {
+    return this.bundleService.findOne(bundleId);
+  }
+
+  async findHomePageBookings(arrivalCountry?: string) {
+    const [hotels, cars, flights, visas, bundles] = await Promise.all([
+      this.hotelService.findAll({ page: 1, skip: 0, limit: 3, sortBy: 'createdAt', sortOrder: 'DESC', arrivalCountry }),
+      this.carService.findAll({ page: 1, skip: 0, limit: 3, sortBy: 'createdAt', sortOrder: 'DESC', arrivalCountry }),
+      this.flightService.findAll({ page: 1, skip: 0, limit: 3, sortBy: 'createdAt', sortOrder: 'DESC', arrivalCountry }),
+      this.visaService.findAll({ page: 1, skip: 0, limit: 3, sortBy: 'createdAt', sortOrder: 'DESC', arrivalCountry }),
+      this.bundleService.findAll({ page: 1, skip: 0, limit: 3, sortBy: 'createdAt', sortOrder: 'DESC' }),
+    ]);
+    return FindHomePageMapper.fromEntities(
+      bundles.data ?? [],
+      hotels.data ?? [],
+      cars.data ?? [],
+      visas.data ?? [],
+      flights.data ?? [],
+    );
+  }
+
+  async findOneHotelBooking(bookingId: bigint): Promise<HotelBookingMapper | null> {
+    const entity = await this.hotelService.findOneByBookingId(bookingId);
+    if (!entity) return null;
+    return entity;
+  }
+
+  async findOneCarBooking(bookingId: bigint): Promise<CarBookingMapper | null> {
+    const entity = await this.carService.findOneByBookingId(bookingId);
+    if (!entity) return null;
+    return entity;
+  }
+
+  async findOneFlightBooking(bookingId: bigint): Promise<FlightBookingMapper | null> {
+    const entity = await this.flightService.findOneByBookingId(bookingId);
+    if (!entity) return null;
+    return entity;
+  }
+
+  async findOneVisaBooking(bookingId: bigint): Promise<VisaBookingMapper | null> {
+    const entity = await this.visaService.findOneByBookingId(bookingId);
+    if (!entity) return null;
+    return entity;
+  }
 }

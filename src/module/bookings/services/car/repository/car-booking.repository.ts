@@ -59,4 +59,13 @@ export class CarBookingRepository extends Repository<CarBooking> {
   ): void {
     qb.skip(dto.skip).take(dto.limit);
   }
+
+  async findOneByBookingId(bookingId: bigint): Promise<CarBooking | null> {
+    return this.createQueryBuilder('car')
+      .leftJoinAndSelect('car.booking', 'booking')
+      .leftJoinAndSelect('booking.user', 'user')
+      .leftJoinAndSelect('user.account', 'account')
+      .where('car.bookingId = :id', { id: bookingId })
+      .getOne();
+  }
 }

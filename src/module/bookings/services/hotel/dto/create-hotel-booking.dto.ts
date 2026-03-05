@@ -66,12 +66,8 @@ export class RoomDetailsDto {
     @IsNotEmpty()
     roomType: string;
 
-    @IsInt()
-    @Min(1)
-    numberOfGuests: number;
-
-    @IsInt()
-    @Min(0)
-    numberOfChildren: number;
+    @IsString()
+    @IsNotEmpty()
+    accommodationType: string;
 }
 

@@ -59,4 +59,13 @@ export class VisaBookingRepository extends Repository<VisaBooking> {
   ): void {
     qb.skip(dto.skip).take(dto.limit);
   }
+
+  async findOneByBookingId(bookingId: bigint): Promise<VisaBooking | null> {
+    return this.createQueryBuilder('visa')
+      .leftJoinAndSelect('visa.booking', 'booking')
+      .leftJoinAndSelect('booking.user', 'user')
+      .leftJoinAndSelect('user.account', 'account')
+      .where('visa.bookingId = :id', { id: bookingId })
+      .getOne();
+  }
 }

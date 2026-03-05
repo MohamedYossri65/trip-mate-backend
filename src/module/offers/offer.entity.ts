@@ -36,6 +36,15 @@ export class Offer {
   })
   status: OfferStatus;
 
+  @Column({ type: 'timestamptz', nullable: true })
+  offerDuration: Date;
+
+  @Column({ type: 'text', nullable: true })
+  addtionalInfo?: string;
+
+  @Column({ type: 'jsonb', nullable: true })
+  attachments: string[];
+
   @CreateDateColumn()
   createdAt: Date;
 }
