@@ -5,12 +5,12 @@ import {
   UploadedFile,
   UseInterceptors,
   Body,
+  Get,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiConsumes, ApiBody, ApiOperation } from '@nestjs/swagger';
 import { OfficeService } from './office.service';
 import { CommerceDetailsDto } from './dto/commerce-details.dto';
-import { FileUploadService } from 'src/common/fileUpload/file-upload.service';
 import { SuccessResponse } from 'src/common/interceptors/success-response.interceptor';
 import { Auth } from 'src/common/guards/auth.decorator';
 import { CurrentUser } from 'src/common/guards/user.decorator';
@@ -18,13 +18,14 @@ import { Account } from '../account/entity/account.entity';
 import { RolesEnum } from 'src/common/enums/roles.enum';
 import { UploadLogoDto } from './dto/upload-logo.dto';
 import { AddEmployeeDto } from './dto/add-employee.dto';
+import { FileUploadService } from '../fileUpload/file-upload.service';
 
 @Controller('offices')
 export class OfficeController {
   constructor(
     private readonly officeService: OfficeService,
     private readonly fileUploadService: FileUploadService,
-  ) {}
+  ) { }
 
   @Post('commerce-details')
   @Auth(RolesEnum.OFFICE)
@@ -81,5 +82,15 @@ export class OfficeController {
     );
     await this.officeService.uploadLogo(account.id, logoUrl);
     return;
+  }
+
+  @Get('details/:officeId')
+  @Auth()
+  @ApiOperation({ summary: 'Get office details' })
+  @SuccessResponse('Office details retrieved successfully')
+  async getOfficeDetails(
+    @Param('officeId') officeId: string,
+  ) {
+    return await this.officeService.getOfficeDetails(BigInt(officeId));
   }
 }

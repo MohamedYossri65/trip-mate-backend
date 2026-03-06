@@ -34,6 +34,9 @@ import { PaginationDto } from 'src/common/dto/pagination.dto';
 import { PaginatedResponseDto } from 'src/common/dto/paginated-response.dto';
 import { BookingFilterDto } from './domain/dto/booking-filter.dto';
 import { BookingMapper } from './domain/mapper/booking.mapper';
+import { Account } from '../account/entity/account.entity';
+import { RolesEnum } from 'src/common/enums/roles.enum';
+import { OffersService } from '../offers/offers.service';
 
 @Injectable()
 export class BookingsService {
@@ -45,6 +48,7 @@ export class BookingsService {
     private readonly visaService: VisaService,
     private readonly bundleService: BundleService,
     private readonly bookingRepository: BookingRepository,
+    private readonly offerService: OffersService,
   ) { }
 
   // Each createXBooking method follows the same pattern:
@@ -301,27 +305,43 @@ export class BookingsService {
     );
   }
 
-  async findOneHotelBooking(bookingId: bigint): Promise<HotelBookingMapper | null> {
+  async findOneHotelBooking(bookingId: bigint ,account: Account): Promise<HotelBookingMapper | null> {
     const entity = await this.hotelService.findOneByBookingId(bookingId);
     if (!entity) return null;
+    if(account.role === RolesEnum.OFFICE) {
+      const canOfficeAddOffers = await this.offerService.canOfficeAddOffer(bookingId ,account.id);
+      return { ...entity, canOfficeAddOffers };
+    }
     return entity;
   }
 
-  async findOneCarBooking(bookingId: bigint): Promise<CarBookingMapper | null> {
+  async findOneCarBooking(bookingId: bigint, account: Account): Promise<CarBookingMapper | null> {
     const entity = await this.carService.findOneByBookingId(bookingId);
     if (!entity) return null;
+    if(account.role === RolesEnum.OFFICE) {
+      const canOfficeAddOffers = await this.offerService.canOfficeAddOffer(bookingId ,account.id);
+      return { ...entity, canOfficeAddOffers };
+    }
     return entity;
   }
 
-  async findOneFlightBooking(bookingId: bigint): Promise<FlightBookingMapper | null> {
+  async findOneFlightBooking(bookingId: bigint, account: Account): Promise<FlightBookingMapper | null> {
     const entity = await this.flightService.findOneByBookingId(bookingId);
     if (!entity) return null;
+    if(account.role === RolesEnum.OFFICE) {
+      const canOfficeAddOffers = await this.offerService.canOfficeAddOffer(bookingId ,account.id);
+      return { ...entity, canOfficeAddOffers };
+    }
     return entity;
   }
 
-  async findOneVisaBooking(bookingId: bigint): Promise<VisaBookingMapper | null> {
+  async findOneVisaBooking(bookingId: bigint, account: Account): Promise<VisaBookingMapper | null> {
     const entity = await this.visaService.findOneByBookingId(bookingId);
     if (!entity) return null;
+    if(account.role === RolesEnum.OFFICE) {
+      const canOfficeAddOffers = await this.offerService.canOfficeAddOffer(bookingId ,account.id);
+      return { ...entity, canOfficeAddOffers };
+    }
     return entity;
   }
 

@@ -7,6 +7,10 @@ import { CreateOfficeDto } from './dto/create-office.dto';
 import { CommerceDetailsDto } from './dto/commerce-details.dto';
 import { AddEmployeeDto } from './dto/add-employee.dto';
 import { OfficeEmployee } from './entity/employee.entity';
+import { Offer } from '../offers/entity/offer.entity';
+import { OfferStatus } from '../offers/enum/offer-status.enum';
+import { DataSource } from 'typeorm';
+import { OfficeDetailsMapper } from './mapper/office-details.mapper';
 
 @Injectable()
 export class OfficeService {
@@ -16,6 +20,8 @@ export class OfficeService {
 
     @InjectRepository(OfficeEmployee)
     private readonly officeEmployeeRepository: Repository<OfficeEmployee>,
+
+    private readonly dataSource: DataSource,
   ) {}
 
   async createProfile(
@@ -99,4 +105,47 @@ export class OfficeService {
       { reviewStatus: ReviewOfficeStatus.REJECTED, rejectionReason: reason },
     );
   }
+
+  async getOfficeDetails(officeId : bigint): Promise<OfficeDetailsMapper> {
+    const office = await this.officeProfileRepository.findOne({
+      where: { accountId: officeId },
+      relations: ['account', 'employees'],
+    });
+
+    if (!office) {
+      throw new BadRequestException('Office profile not found');
+    }
+
+    return OfficeDetailsMapper.fromEntities(
+      office,
+      await this.getOfficeReviewStatus(officeId),
+      await this.getOfficeCompletedBookingsPercentage(officeId),
+    );
+  }
+
+
+  async getOfficeReviewStatus(accountId: bigint): Promise<number> {
+    return 5; // Placeholder for actual implementation to calculate review status percentage
+    
+  }
+
+  
+    async getOfficeCompletedBookingsPercentage(officeId: bigint): Promise<number> {
+      const totalOffers = await this.dataSource 
+        .getRepository(Offer)
+        .createQueryBuilder('offer')
+        .where('offer.office_id = :officeId', { officeId })
+        .getCount();
+      
+      if (totalOffers === 0) return 0;
+  
+      const completedOffers = await this.dataSource
+        .getRepository(Offer)
+        .createQueryBuilder('offer')
+        .where('offer.office_id = :officeId', { officeId })
+        .andWhere('offer.status = :status', { status: OfferStatus.ACCEPTED })
+        .getCount();
+  
+      return (completedOffers / totalOffers) * 100;
+    }
 }

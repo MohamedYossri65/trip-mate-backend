@@ -1,6 +1,7 @@
 import { CarOfferDetails } from "../entity/car-offer-details";
 import { Offer } from "../entity/offer.entity";
 import { CreateCarOfferDto } from "../dto/create-car-offer.dto";
+import { OfficeDetailsMapper } from "src/module/office/mapper/office-details.mapper";
 
 
 export class CarOfferMapper {
@@ -25,8 +26,12 @@ export class CarOfferMapper {
     requiresPrivateDriver: boolean;
     requiresChildSeat: boolean;
     requiresFullInsurance: boolean;
+    bookingRequestDate: Date;
     notes?: string;
-    static fromEntities(carofferDetails: CarOfferDetails): CarOfferMapper {
+    attachments?: string[];
+    officeDetails: OfficeDetailsMapper | undefined;
+    canOfficeEditOffer: boolean;
+    static fromEntities(carofferDetails: CarOfferDetails,canOfficeEditOffer: boolean ,officeDetails: OfficeDetailsMapper | undefined): CarOfferMapper {
         return {
             offerId: carofferDetails.offer.id,
             offer: {
@@ -34,6 +39,7 @@ export class CarOfferMapper {
                 status: carofferDetails.offer.status,
                 offerDuration: carofferDetails.offer.offerDuration,
             },
+            bookingRequestDate: carofferDetails.offer.booking.createdAt,
             arrivalCountry: carofferDetails.offer.arrivalCountry,
             arrivalCity: carofferDetails.arrivalCity,
             deliveryLocation: carofferDetails.deliveryLocation,
@@ -50,6 +56,9 @@ export class CarOfferMapper {
             requiresChildSeat: carofferDetails.requiresChildSeat,
             requiresFullInsurance: carofferDetails.requiresFullInsurance,
             notes: carofferDetails.notes || '',
+            attachments: carofferDetails.offer.attachments || [],
+            officeDetails : officeDetails || undefined ,
+            canOfficeEditOffer
         };
     }
 

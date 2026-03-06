@@ -38,6 +38,8 @@ export class FlightBookingMapper {
     isYouTravelToThisCountryBefore: boolean;
     isYourVisaRefusedBefore: boolean;
 
+    canOfficeAddOffers?: boolean;
+
     static fromEntities(flightBooking: FlightBooking): FlightBookingMapper {
         return {
             bookingId: flightBooking.bookingId,

@@ -14,6 +14,7 @@ import { UserModule } from './module/user/user.module';
 import { OtpModule } from './module/otp/otp.module';
 import { BookingsModule } from './module/bookings/booking.module';
 import { OffersModule } from './module/offers/offers.module';
+import { FileUploadModule } from './module/fileUpload/file-upload.module';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { OffersModule } from './module/offers/offers.module';
     AuthModule,
     BookingsModule,
     OffersModule,
+    FileUploadModule,
   ],
   controllers: [AppController],
   providers: [AppService],

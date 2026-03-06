@@ -165,31 +165,31 @@ export class BookingsController {
   @Auth()
   @ApiOperation({ summary: 'Get car booking details by booking ID' })
   @SuccessResponse('Car booking retrieved successfully')
-  async findCarByBookingId(@Query('bookingId') bookingId: bigint) {
-    return this.bookingsService.findOneCarBooking(bookingId);
+  async findCarByBookingId(@Query('bookingId') bookingId: bigint , @CurrentUser() account: Account) {
+    return this.bookingsService.findOneCarBooking(bookingId, account);
   }
 
   @Get('flights/:bookingId')
   @Auth()
   @ApiOperation({ summary: 'Get flight booking details by booking ID' })
   @SuccessResponse('Flight booking retrieved successfully')
-  async findFlightByBookingId(@Query('bookingId') bookingId: bigint) {
-    return this.bookingsService.findOneFlightBooking(bookingId);
+  async findFlightByBookingId(@Query('bookingId') bookingId: bigint, @CurrentUser() account: Account) {
+    return this.bookingsService.findOneFlightBooking(bookingId, account);
   }
 
   @Get('hotels/:bookingId')
   @Auth()
   @ApiOperation({ summary: 'Get hotel booking details by booking ID' })
   @SuccessResponse('Hotel booking retrieved successfully')
-  async findHotelByBookingId(@Query('bookingId') bookingId: bigint) {
-    return this.bookingsService.findOneHotelBooking(bookingId);
+  async findHotelByBookingId(@Query('bookingId') bookingId: bigint ,@CurrentUser() account: Account) {
+    return this.bookingsService.findOneHotelBooking(bookingId, account);
   }
 
   @Get('visas/:bookingId')
   @Auth()
   @ApiOperation({ summary: 'Get visa booking details by booking ID' })
   @SuccessResponse('Visa booking retrieved successfully')
-  async findVisaByBookingId(@Query('bookingId') bookingId: bigint) {
-    return this.bookingsService.findOneVisaBooking(bookingId);
+  async findVisaByBookingId(@Query('bookingId') bookingId: bigint, @CurrentUser() account: Account) {
+    return this.bookingsService.findOneVisaBooking(bookingId, account);
   }
 }

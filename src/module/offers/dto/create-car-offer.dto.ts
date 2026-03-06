@@ -84,4 +84,8 @@ export class CreateCarOfferDto {
     @IsOptional()
     @IsString()
     notes?: string;
+
+    @IsOptional()
+    @IsString({ each: true })
+    attachments?: string[];
 }

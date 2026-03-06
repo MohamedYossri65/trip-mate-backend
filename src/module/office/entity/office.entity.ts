@@ -19,10 +19,36 @@ export class OfficeProfile {
   @Column({ nullable: true })
   commerceNumber: string;
 
-  @Column({ nullable: true })
+    @Column({
+		nullable: true,
+		transformer: {
+			to: (value: string) => value,
+			from: (value: string) => {
+				const baseUrl = process.env.IMAGEKIT_URL_ENDPOINT || 'https://yourbaseurl.com';
+				if (!value) return value;
+				if (value.startsWith('http://') || value.startsWith('https://')) {
+					return value.replace(/^(http:\/\/|https:\/\/)[^\/]+/, baseUrl);
+				}
+				return `${baseUrl}${value}`;
+			},
+		},
+	})
   taxCertificate: string;
 
-  @Column({ nullable: true })
+  @Column({
+		nullable: true,
+		transformer: {
+			to: (value: string) => value,
+			from: (value: string) => {
+				const baseUrl = process.env.IMAGEKIT_URL_ENDPOINT || 'https://yourbaseurl.com';
+				if (!value) return value;
+				if (value.startsWith('http://') || value.startsWith('https://')) {
+					return value.replace(/^(http:\/\/|https:\/\/)[^\/]+/, baseUrl);
+				}
+				return `${baseUrl}${value}`;
+			},
+		},
+	})
   logoUrl: string;
 
   @Column({

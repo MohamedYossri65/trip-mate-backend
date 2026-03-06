@@ -1,12 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import ImageKit from 'imagekit';
-import { Express } from 'express';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 
 @Injectable()
 export class FileUploadService {
   private imagekit: ImageKit;
 
-  constructor() {
+  constructor(
+  ) {
     this.imagekit = new ImageKit({
       publicKey: process.env.IMAGEKIT_PUBLIC_KEY || '',
       privateKey: process.env.IMAGEKIT_PRIVATE_KEY || '',
@@ -14,12 +16,16 @@ export class FileUploadService {
     });
   }
 
-  async uploadImage(file: Express.Multer.File ,folder?: string, quality?: number): Promise<string> {
+  getAuthParameters() {
+    return this.imagekit.getAuthenticationParameters();
+  }
+
+  async uploadImage(file: Express.Multer.File, folder?: string, quality?: number): Promise<string> {
     try {
       const fileType = file.mimetype.split('/')[1].toLowerCase();
       let processedBuffer: Buffer;
 
-        processedBuffer = file.buffer;
+      processedBuffer = file.buffer;
 
       const uploadResponse = await this.imagekit.upload({
         file: processedBuffer,
@@ -51,6 +57,25 @@ export class FileUploadService {
     return Promise.all(uploadPromises);
   }
 
+  async uploadAttachments(
+    files: Express.Multer.File[],
+    folder = '/trip-mate/attachments',
+  ): Promise<string[]> {
+    const urls = await Promise.all(
+      files.map(async (file) => {
+        const ext = file.mimetype.split('/')[1].toLowerCase();
+        const uploadResponse = await this.imagekit.upload({
+          file: file.buffer,
+          fileName: `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`,
+          folder,
+        });
+        return uploadResponse.url;
+      }),
+    );
+
+    return urls;
+  }
+
   async uploadBuffer(buffer: Buffer): Promise<string> {
     try {
       const uploadResponse = await this.imagekit.upload({
@@ -62,6 +87,19 @@ export class FileUploadService {
       return uploadResponse.url;
     } catch (error) {
       console.error('ImageKit uploadBuffer error:', error);
+      throw error;
+    }
+  }
+
+  async deleteAttachment(fileUrl: string): Promise<void> {
+    try {
+      const fileId = fileUrl.split('/').pop()?.split('.')[0];
+      if (!fileId) {
+        throw new Error('Invalid file URL');
+      }
+      await this.imagekit.deleteFile(fileId);
+    } catch (error) {
+      console.error('ImageKit deleteFile error:', error);
       throw error;
     }
   }

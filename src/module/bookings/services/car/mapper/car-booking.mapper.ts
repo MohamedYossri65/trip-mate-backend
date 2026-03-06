@@ -35,6 +35,8 @@ export class CarBookingMapper {
     requiresChildSeat: boolean;
     requiresFullInsurance: boolean;
     notes?: string;
+
+    canOfficeAddOffers?: boolean;
     static fromEntities(carBooking: CarBooking): CarBookingMapper {
         return {
             bookingId: carBooking.bookingId,

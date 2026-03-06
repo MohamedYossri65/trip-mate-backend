@@ -8,9 +8,10 @@ import { HotelBookingRepository } from './repository/hotel-booking.repository';
 @Module({
   imports: [TypeOrmModule.forFeature([
     HotelBooking,
-  ])],
+  ]),
+  ],
   controllers: [],
-  providers: [HotelService ,HotelBookingRepository],
-  exports: [ HotelService, HotelBookingRepository],
+  providers: [HotelService, HotelBookingRepository],
+  exports: [HotelService, HotelBookingRepository],
 })
 export class HotelModule { }

@@ -9,6 +9,7 @@ import { CarModule } from './services/car/car.module';
 import { VisaModule } from './services/visa/visa.module';
 import { BundleModule } from './bundle/bundle.module';
 import { BookingRepository } from './domain/repository/booking.repository';
+import { OffersModule } from '../offers/offers.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { BookingRepository } from './domain/repository/booking.repository';
     CarModule,
     VisaModule,
     BundleModule,
+    OffersModule,
   ],
   controllers: [BookingsController],
   providers: [BookingsService, BookingRepository],

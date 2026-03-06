@@ -31,6 +31,7 @@ export class HotelBookingMapper {
   numChildren: number;
   roomDetails: RoomDetail[];
   notes?: string;
+  canOfficeAddOffers?: boolean;
 
   static fromEntities(
     hotelBooking: HotelBooking,

@@ -49,7 +49,24 @@ export class Offer {
   @Column({ type: 'text', nullable: true })
   addtionalInfo?: string;
 
-  @Column({ type: 'jsonb', nullable: true })
+  @Column({
+    type: 'jsonb',
+    nullable: true,
+    transformer: {
+      to: (value: string[]) => value,
+      from: (value: string[]) => {
+        if (!value) return value;
+        const baseUrl = process.env.IMAGEKIT_URL_ENDPOINT || 'https://yourbaseurl.com';
+        return value.map((url) => {
+          if (!url) return url;
+          if (url.startsWith('http://') || url.startsWith('https://')) {
+            return url.replace(/^(http:\/\/|https:\/\/)[^\/]+/, baseUrl);
+          }
+          return `${baseUrl}${url}`;
+        });
+      },
+    },
+  })
   attachments: string[];
 
   @CreateDateColumn({ type: 'timestamptz' })

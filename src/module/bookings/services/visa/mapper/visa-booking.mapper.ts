@@ -27,6 +27,8 @@ export class VisaBookingMapper {
     companionsAdults: number;
     companionsChildren: number;
 
+    canOfficeAddOffers?: boolean;
+
     static fromEntities(visaBooking: VisaBooking): VisaBookingMapper {
         return {
             bookingId: visaBooking.bookingId,

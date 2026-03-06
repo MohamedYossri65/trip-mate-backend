@@ -2,6 +2,7 @@ import { INestApplication, Req } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AuthModule } from 'src/module/auth/auth.module';
 import { BookingsModule } from 'src/module/bookings/booking.module';
+import { FileUploadModule } from 'src/module/fileUpload/file-upload.module';
 import { OffersModule } from 'src/module/offers/offers.module';
 import { OfficeModule } from 'src/module/office/office.module';
 import { UserModule } from 'src/module/user/user.module';
@@ -22,7 +23,8 @@ export function setupSwagger(app: INestApplication) {
       UserModule,
       OfficeModule,
       BookingsModule,
-      OffersModule
+      OffersModule,
+      FileUploadModule,
     ],
   });
 
