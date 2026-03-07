@@ -661,7 +661,13 @@ export class OffersService {
   async findOfficeOffers(officeId: bigint, dto: OfferFilterDto): Promise<OfferMapper[]> {
     const offerDetailsList = await this.offerRepository.findWithFilters(dto, officeId).then(([offers]) => offers);
 
-    return offerDetailsList.map(OfferMapper.fromEntities);
+    return offerDetailsList.map((offer) => {
+      const canOfficeEditOffer =
+        offer.office.accountId.toString() === officeId.toString() &&
+        offer.status === OfferStatus.PENDING &&
+        offer.booking.status === BookingStatus.UNDER_NEGOTIATION;
+      return OfferMapper.fromEntities(offer, canOfficeEditOffer);
+    });
   }
 
 
@@ -683,7 +689,21 @@ export class OffersService {
     return !!existingOffer;
   }
 
-
+  async getOfferHomePage(officeId: bigint) {
+    return await Promise.all([
+      this.findOfficeOffers(officeId, { limit: 3, page: 1, skip: 0, type: BookingType.FLIGHT ,sortOrder: 'DESC'}),
+      this.findOfficeOffers(officeId, { limit: 3, page: 1, skip: 0, type: BookingType.HOTEL ,sortOrder: 'DESC'}),
+      this.findOfficeOffers(officeId, { limit: 3, page: 1, skip: 0, type: BookingType.CAR ,sortOrder: 'DESC'}),
+      this.findOfficeOffers(officeId, { limit: 3, page: 1, skip: 0, type: BookingType.VISA ,sortOrder: 'DESC'}),
+    ]).then(([FlightOffers, HotelOffers, CarOffers, VisaOffers]) => {
+      return {
+        FlightOffers,
+        HotelOffers,
+        CarOffers,
+        VisaOffers
+      }
+    });
+  }
   async savePathAttachments(attachments: string[]): Promise<string[]> {
 
     return attachments.map((url) => {

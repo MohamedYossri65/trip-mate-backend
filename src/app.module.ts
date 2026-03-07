@@ -15,6 +15,8 @@ import { OtpModule } from './module/otp/otp.module';
 import { BookingsModule } from './module/bookings/booking.module';
 import { OffersModule } from './module/offers/offers.module';
 import { FileUploadModule } from './module/fileUpload/file-upload.module';
+import { APP_INTERCEPTOR } from '@nestjs/core';
+import { UserProcessInterceptor } from './common/interceptors/office-roles.interceptor';
 
 @Module({
   imports: [
@@ -41,15 +43,21 @@ import { FileUploadModule } from './module/fileUpload/file-upload.module';
     FileUploadModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+      {
+      provide: APP_INTERCEPTOR,
+      useClass: UserProcessInterceptor,
+    },
+  ],
 })
 export class AppModule {
   private nodeEnv: string;
 
   configure(consumer: MiddlewareConsumer) {
     this.nodeEnv = process.env.APP_ENV || 'development';
-    if (this.nodeEnv === 'development') {
+    // if (this.nodeEnv === 'development') {
       consumer.apply(LoggerMiddleware).forRoutes('*');
-    }
+    // }
   }
 }

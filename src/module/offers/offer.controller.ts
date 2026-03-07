@@ -249,4 +249,14 @@ export class OffersController {
     ) {
         return await this.offersService.findOfficeOffers(account.id, dto);
     }
+
+    @Get('home')
+    @Auth()
+    @ApiOperation({ summary: 'Get offers for the home page' })
+    @SuccessResponse('Offers retrieved successfully')
+    async getOfferHomePage(
+        @CurrentUser() account: Account,
+    ) {
+        return await this.offersService.getOfferHomePage(account.id);
+    }
 }

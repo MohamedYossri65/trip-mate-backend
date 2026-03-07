@@ -23,7 +23,9 @@ export class OfferMapper {
         destinationCountry: string;
     };
 
-    static fromEntities(offer: Offer): OfferMapper {
+    canOfficeEditOffer: boolean;
+
+    static fromEntities(offer: Offer, canOfficeEditOffer: boolean): OfferMapper {
         return {
             offerId: offer.id,
             price: offer.price,
@@ -46,6 +48,7 @@ export class OfferMapper {
                 type: offer.booking.type,
                 destinationCountry: offer.arrivalCountry,
             },
+            canOfficeEditOffer
         };
     }
 }

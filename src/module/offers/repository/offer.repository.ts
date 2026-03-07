@@ -15,6 +15,7 @@ export class OfferRepository extends Repository<Offer> {
         officeId?: bigint | null,
     ): Promise<[Offer[], number]> {
         const qb = this.createQueryBuilder('offer')
+            .leftJoinAndSelect('offer.office', 'office')
             .leftJoinAndSelect('offer.booking', 'booking')
             .leftJoinAndSelect('booking.user', 'user')
             .leftJoinAndSelect('user.account', 'account');
@@ -39,6 +40,9 @@ export class OfferRepository extends Repository<Offer> {
     ): void {
         if (dto.status) {
             qb.andWhere('booking.status = :status', { status: dto.status });
+        }
+        if (dto.type) {
+            qb.andWhere('booking.type = :type', { type: dto.type });
         }
     }
 

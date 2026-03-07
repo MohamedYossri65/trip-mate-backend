@@ -1,3 +1,5 @@
+import { AccountStatus } from "src/common/enums/account-status.enum";
+
 export class LoginResponse {
   accessToken?: string;
   refreshToken?: string;
@@ -8,6 +10,7 @@ export class LoginResponse {
     phone: string;
     role: string;
     accountStage?: string;
+    status?: AccountStatus;
   };
   static fromEntity(response: any): LoginResponse {
     if (
@@ -29,6 +32,7 @@ export class LoginResponse {
         phone: response.account.phone,
         role: response.account.role,
         accountStage: response.accountStage || null,
+        status: response.account.status || null,
       },
     };
   }

@@ -1,12 +1,12 @@
 import { Account } from "src/module/account/entity/account.entity";
-import { Column, CreateDateColumn, Entity, JoinColumn, OneToMany, OneToOne, PrimaryGeneratedColumn } from "typeorm";
+import { Column, CreateDateColumn, Entity, JoinColumn, OneToMany, OneToOne, PrimaryColumn } from "typeorm";
 import { ReviewOfficeStatus } from "../enum/review-office-status.enum";
 import { OfficeEmployee } from "./employee.entity";
 
 @Entity('office_profiles')
 export class OfficeProfile {
 
-  @PrimaryGeneratedColumn({ name: 'account_id', type: 'bigint' })
+  @PrimaryColumn({ name: 'account_id', type: 'bigint' })
   accountId: bigint;
 
   @OneToOne(() => Account, { onDelete: 'CASCADE' })

@@ -33,6 +33,7 @@ export class OfficeService {
       : this.officeProfileRepository;
     return await repo.save(
       repo.create({
+        accountId: data.accountId,
         officeName: data.officeName,
         account: { id: data.accountId },
         reviewStatus: ReviewOfficeStatus.PENDING,
