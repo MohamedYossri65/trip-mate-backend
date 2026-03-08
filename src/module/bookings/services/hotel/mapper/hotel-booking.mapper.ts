@@ -32,6 +32,8 @@ export class HotelBookingMapper {
   roomDetails: RoomDetail[];
   notes?: string;
   canOfficeAddOffers?: boolean;
+  canChatbeEnabled?: boolean;
+  
 
   static fromEntities(
     hotelBooking: HotelBooking,
@@ -69,7 +71,7 @@ export class HotelBookingMapper {
           accommodationType: room.accommodationType,
         }),
       ),
-      notes: hotelBooking.notes || '',
+      notes: hotelBooking.notes || ''
     };
   }
 
@@ -83,7 +85,7 @@ export class HotelBookingMapper {
       destinationCity: dto.arrivalCity,
       isTherePreferredHotel: dto.isTherePreferredHotel,
       hotelName: dto.isTherePreferredHotel ? dto.preferredHotelName : '',
-      starRating: dto.hotelStarRating,
+      starRating: dto.hotelStarRating || 0,
       checkIn: dto.checkInDate,
       checkOut: dto.checkOutDate,
       numGuests: dto.numberOfGuests,

@@ -3,6 +3,7 @@ import { DataSource, Repository, SelectQueryBuilder } from 'typeorm';
 import { Booking } from '../entity/booking.entity';
 import { BookingFilterDto } from '../dto/booking-filter.dto';
 import { BookingType } from '../enum/booking-type.enum';
+import { BookingStatus } from '../enum/booking-status.enum';
 
 
 @Injectable()
@@ -35,7 +36,19 @@ export class BookingRepository extends Repository<Booking> {
       qb.andWhere('booking.arrivalCountry = :arrivalCountry', { arrivalCountry: dto.arrivalCountry });
     }
     if (dto.status) {
-      qb.andWhere('booking.status = :status', { status: dto.status });
+      if (dto.status === 'PENDING') {
+        qb.andWhere('booking.status IN (:...status)', {
+          status: [
+            BookingStatus.CONFIRMED,
+            BookingStatus.OFFER_ACCEPTED,
+            BookingStatus.PARTIALLY_PAID,
+            BookingStatus.UNDER_NEGOTIATION,
+            BookingStatus.WAITING_FOR_OFFERS
+          ]
+        });
+      } else {
+        qb.andWhere('booking.status = :status', { status: dto.status });
+      }
     }
     if (dto.type) {
       qb.andWhere('booking.type = :type', { type: dto.type });
@@ -61,13 +74,15 @@ export class BookingRepository extends Repository<Booking> {
     qb.skip(dto.skip).take(dto.limit);
   }
 
-  async findUserBookings(accountId: bigint,dto: BookingFilterDto): Promise<[Booking[], number]> {
+  async findUserBookings(accountId: bigint, dto: BookingFilterDto): Promise<[Booking[], number]> {
     const qb = this.createQueryBuilder('booking')
       .leftJoinAndSelect('booking.user', 'user')
       .leftJoinAndSelect('user.account', 'account')
       .where('user.account_id = :accountId', { accountId })
       .andWhere('booking.parent_id IS NULL OR booking.type = :type', { type: BookingType.BUNDLE }); // include both parent and child bookings
     this.applyPagination(qb, dto);
+    this.applyFilters(qb, dto);
+    this.applySort(qb, dto);
     return qb.getManyAndCount();
   }
 }

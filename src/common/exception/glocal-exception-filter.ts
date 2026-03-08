@@ -5,17 +5,25 @@ import {
   HttpException,
   HttpStatus,
   Injectable,
-  Logger,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Request, Response } from 'express';
 import { I18nValidationException } from 'nestjs-i18n';
-import winstonLogger from './logger.winston.utils';
+import errorLogger from './logger.winston.utils';
+
+const safeSerialize = (value: any): any => {
+  try {
+    return JSON.parse(JSON.stringify(value, (_k, v) =>
+      typeof v === 'bigint' ? v.toString() : v
+    ));
+  } catch {
+    return String(value);
+  }
+};
 
 @Injectable()
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {
-  private readonly logger = new Logger(GlobalExceptionFilter.name);
   private appEnv: string;
 
   constructor(private readonly configService: ConfigService) {
@@ -118,6 +126,21 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       timestamp: new Date().toISOString(),
     };
 
+    if (status >= 500) {
+      errorLogger.error('HttpException 5xx', {
+        statusCode: status,
+        message,
+        request: {
+          method: request.method,
+          url: request.originalUrl,
+          body: safeSerialize(request.body),
+          params: request.params,
+          query: request.query,
+        },
+        stack: exception.stack,
+      });
+    }
+
     response.status(status).json(responseBody);
   }
 
@@ -146,14 +169,13 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       timestamp: new Date().toISOString(),
     };
 
-    winstonLogger.error({
-      message: 'Programming error occurred',
-      error: exception,
+    errorLogger.error('Programming error occurred', {
+      errorMessage: exception.message,
       stack: exception.stack,
       request: {
         method: request.method,
         url: request.originalUrl,
-        body: request.body,
+        body: safeSerialize(request.body),
         params: request.params,
         query: request.query,
       },
@@ -180,15 +202,14 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       timestamp: new Date().toISOString(),
     };
 
-    winstonLogger.error({
-      message: 'Unknown error occurred',
+    errorLogger.error('Unknown error occurred', {
       errorMessage: message,
-      error: exception,
+      error: safeSerialize(exception),
       stack: exception.stack,
       request: {
         method: request.method,
         url: request.originalUrl,
-        body: request.body,
+        body: safeSerialize(request.body),
         params: request.params,
         query: request.query,
       },

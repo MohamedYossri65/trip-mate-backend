@@ -94,16 +94,6 @@ export class AccountService {
     await this.accountRepository.update({ id: accountId }, { status });
   }
 
-  async updateRefresh(
-    accountId: bigint,
-    refreshTokenHash: string | null,
-  ): Promise<void> {
-    await this.accountRepository.update(
-      { id: accountId },
-      { refreshTokenHash: refreshTokenHash ? refreshTokenHash : '' },
-    );
-  }
-
   async verifyPhone(accountId: bigint): Promise<Account> {
     await this.accountRepository.update(
       { id: accountId },

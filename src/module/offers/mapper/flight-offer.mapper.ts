@@ -25,6 +25,7 @@ export class FlightOfferMapper {
     nationalIdNumber: string;
     nationality: string;
     hasPassport: boolean;
+    endingDate: Date;
     isYouTravelToThisCountryBefore: boolean;
     isYourVisaRefusedBefore: boolean;
     notes?: string;
@@ -56,6 +57,7 @@ export class FlightOfferMapper {
             nationalIdNumber: flightOfferDetails.nationalIdNumber,
             nationality: flightOfferDetails.nationality,
             hasPassport: flightOfferDetails.hasPassport,
+            endingDate: flightOfferDetails.endingDate,
             isYouTravelToThisCountryBefore: flightOfferDetails.isYouTravelToThisCountryBefore,
             isYourVisaRefusedBefore: flightOfferDetails.isYourVisaRefusedBefore,
             notes: flightOfferDetails.notes || '',
@@ -85,6 +87,7 @@ export class FlightOfferMapper {
             isYouTravelToThisCountryBefore: dto.isYouTravelToThisCountryBefore,
             isYourVisaRefusedBefore: dto.isYourVisaRefusedBefore,
             notes: dto.notes || '',
+            endingDate: dto.endingDate,
         };
     }
 }

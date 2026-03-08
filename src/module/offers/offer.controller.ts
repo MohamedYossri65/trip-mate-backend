@@ -259,4 +259,14 @@ export class OffersController {
     ) {
         return await this.offersService.getOfferHomePage(account.id);
     }
+
+    @Get('user/last-pending')
+    @Auth()
+    @ApiOperation({ summary: 'Get the last pending offer for a user' })
+    @SuccessResponse('Last pending offer retrieved successfully')
+    async findLastPendingOfferForUser(
+        @CurrentUser() account: Account,
+    ) {
+        return await this.offersService.findLastOfferPendingForUser(account.id);
+    }
 }

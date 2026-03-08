@@ -43,9 +43,6 @@ export class Account {
   @CreateDateColumn()
   createdAt: Date;
 
-  @Column({ nullable: true })
-  refreshTokenHash: string;
-
   @OneToMany(() => Otp, (otp) => otp.account)
   otps: Otp[];
 

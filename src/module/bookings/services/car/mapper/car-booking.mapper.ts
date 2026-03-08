@@ -36,6 +36,8 @@ export class CarBookingMapper {
     requiresFullInsurance: boolean;
     notes?: string;
 
+    canChatbeEnabled?: boolean;
+
     canOfficeAddOffers?: boolean;
     static fromEntities(carBooking: CarBooking): CarBookingMapper {
         return {

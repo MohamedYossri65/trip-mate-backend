@@ -25,6 +25,9 @@ export class BundleMapper {
   flights: FlightBookingMapper[];
   visas: VisaBookingMapper[];
 
+  canChatbeEnabled?: boolean;
+  canOfficeAddOffers?: boolean;
+
   static fromEntities(
     bundle: Booking,
     subEntities: {

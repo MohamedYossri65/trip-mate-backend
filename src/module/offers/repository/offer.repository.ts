@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { DataSource, Repository, SelectQueryBuilder } from 'typeorm';
 import { Offer } from '../entity/offer.entity';
 import { OfferFilterDto } from '../dto/offer-filter.dto';
+import { OfferStatus } from '../enum/offer-status.enum';
 
 
 @Injectable()
@@ -71,6 +72,16 @@ export class OfferRepository extends Repository<Offer> {
             .leftJoinAndSelect('booking.user', 'user')
             .leftJoinAndSelect('user.account', 'account')
             .where('offer.bookingId = :id', { id: bookingId })
+            .getOne();
+    }
+
+    async findLastPendingOfferForUser(userId: bigint): Promise<Offer | null> {
+        return this.createQueryBuilder('offer')
+            .leftJoinAndSelect('offer.booking', 'booking')
+            .leftJoinAndSelect('booking.user', 'user')
+            .where('user.accountId = :userId', { userId })
+            .andWhere('offer.status = :status', { status: OfferStatus.PENDING })
+            .orderBy('offer.createdAt', 'DESC')
             .getOne();
     }
 }

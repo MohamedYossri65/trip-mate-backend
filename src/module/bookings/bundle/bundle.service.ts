@@ -39,10 +39,10 @@ export class BundleService {
 
         const subRelations = ['booking', 'booking.user', 'booking.user.account'];
         const [hotels, cars, flights, visas] = await Promise.all([
-            hotelIds.length ? this.dataSource.getRepository(HotelBooking).find({ where: { bookingId: In(hotelIds) as any }, relations: subRelations }) : [],
-            carIds.length ? this.dataSource.getRepository(CarBooking).find({ where: { bookingId: In(carIds) as any }, relations: subRelations }) : [],
-            flightIds.length ? this.dataSource.getRepository(FlightBooking).find({ where: { bookingId: In(flightIds) as any }, relations: subRelations }) : [],
-            visaIds.length ? this.dataSource.getRepository(VisaBooking).find({ where: { bookingId: In(visaIds) as any }, relations: subRelations }) : [],
+            await hotelIds.length ? this.dataSource.getRepository(HotelBooking).find({ where: { bookingId: In(hotelIds) as any }, relations: subRelations }) : [],
+            await carIds.length ? this.dataSource.getRepository(CarBooking).find({ where: { bookingId: In(carIds) as any }, relations: subRelations }) : [],
+            await flightIds.length ? this.dataSource.getRepository(FlightBooking).find({ where: { bookingId: In(flightIds) as any }, relations: subRelations }) : [],
+            await visaIds.length ? this.dataSource.getRepository(VisaBooking).find({ where: { bookingId: In(visaIds) as any }, relations: subRelations }) : [],
         ]);
 
         const hotelMap = new Map(hotels.map((h) => [h.bookingId.toString(), h] as const));
@@ -84,10 +84,14 @@ export class BundleService {
         return this.buildMappersForBundles(bundles);
     }
 
-    async findOne(id: bigint): Promise<BundleMapper> {
+    async findOne(id: bigint ,canChatbeEnabled: boolean, canOfficeAddOffers: boolean): Promise<BundleMapper> {
         const bundle = await this.bundleRepository.findOneWithBookings(id);
         if (!bundle) throw new NotFoundException('Bundle not found');
         const [mapper] = await this.buildMappersForBundles([bundle]);
-        return mapper;
+        return {
+            ...mapper,
+            canChatbeEnabled,
+            canOfficeAddOffers,
+        };
     }
 }

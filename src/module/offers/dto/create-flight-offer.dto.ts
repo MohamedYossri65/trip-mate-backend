@@ -85,6 +85,10 @@ export class CreateFlightOfferDto {
     @IsBoolean()
     hasPassport: boolean;
 
+    @IsDate()
+    @Type(() => Date)
+    endingDate: Date;
+
     @ValidateIf(o => o.hasVisa === false)
     @IsBoolean()
     isYouTravelToThisCountryBefore: boolean;

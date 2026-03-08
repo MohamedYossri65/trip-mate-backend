@@ -29,7 +29,7 @@ export class FlightBooking {
     departureDate: Date;
 
     @Column({ type: 'date', nullable: true })
-    returnDate?: Date;
+    returnDate?: Date | null;
 
     @Column({ default: false })
     hasVisa: boolean;
@@ -54,6 +54,9 @@ export class FlightBooking {
 
     @Column({ default: false })
     hasPassport: boolean;
+
+    @Column({ type: 'date', nullable: true })
+    endingDate: Date;
 
     @Column({ default: false })
     isYouTravelToThisCountryBefore: boolean;

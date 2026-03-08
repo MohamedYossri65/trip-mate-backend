@@ -17,6 +17,7 @@ import { OffersModule } from './module/offers/offers.module';
 import { FileUploadModule } from './module/fileUpload/file-upload.module';
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { UserProcessInterceptor } from './common/interceptors/office-roles.interceptor';
+import { BannerModule } from './module/banner/banner.module';
 
 @Module({
   imports: [
@@ -41,6 +42,7 @@ import { UserProcessInterceptor } from './common/interceptors/office-roles.inter
     BookingsModule,
     OffersModule,
     FileUploadModule,
+    BannerModule
   ],
   controllers: [AppController],
   providers: [

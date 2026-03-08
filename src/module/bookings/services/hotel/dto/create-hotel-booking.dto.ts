@@ -30,9 +30,8 @@ export class CreateHotelBookingDto {
     preferredHotelName?: string;
 
     @IsInt()
-    @Min(1)
-    @Max(5)
-    hotelStarRating: number;
+    @IsOptional()
+    hotelStarRating?: number;
 
     @IsDate()
     @Type(() => Date)

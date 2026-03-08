@@ -17,6 +17,7 @@ import { VisaFilterDto } from './services/visa/dto/visa-filter.dto';
 import { BundleFilterDto } from './bundle/dto/bundle-filter.dto';
 import { CreateAllBookingsDto } from './domain/dto/create-all-bookings.dto';
 import { BookingFilterDto } from './domain/dto/booking-filter.dto';
+import { MyBookingFilterDto } from './domain/dto/my-booking-filter.dto';
 
 @ApiTags('bookings')
 @Controller({ path: 'bookings', version: '1' })
@@ -135,8 +136,8 @@ export class BookingsController {
   @Auth()
   @ApiOperation({ summary: 'Get details of a single bundle (comprehensive trip) booking' })
   @SuccessResponse('Bundle booking retrieved successfully')
-  async findOneBundle(@Query('id') id: bigint) {
-    return this.bookingsService.findOneBundle(id);
+  async findOneBundle(@Query('id') id: bigint , @CurrentUser() account: Account) {
+    return this.bookingsService.findOneBundle(id, account);
   }
 
   @Get('my')
@@ -145,7 +146,7 @@ export class BookingsController {
   @SuccessResponse('User bookings retrieved successfully')
   async findUserBookings(
     @CurrentUser() account: Account,
-    @Query() dto: BookingFilterDto,
+    @Query() dto: MyBookingFilterDto,
   ) {
     return this.bookingsService.findUserBookings(account.id, dto);
   }

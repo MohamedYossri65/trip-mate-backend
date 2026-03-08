@@ -691,10 +691,10 @@ export class OffersService {
 
   async getOfferHomePage(officeId: bigint) {
     return await Promise.all([
-      this.findOfficeOffers(officeId, { limit: 3, page: 1, skip: 0, type: BookingType.FLIGHT ,sortOrder: 'DESC'}),
-      this.findOfficeOffers(officeId, { limit: 3, page: 1, skip: 0, type: BookingType.HOTEL ,sortOrder: 'DESC'}),
-      this.findOfficeOffers(officeId, { limit: 3, page: 1, skip: 0, type: BookingType.CAR ,sortOrder: 'DESC'}),
-      this.findOfficeOffers(officeId, { limit: 3, page: 1, skip: 0, type: BookingType.VISA ,sortOrder: 'DESC'}),
+      await this.findOfficeOffers(officeId, { limit: 3, page: 1, skip: 0, type: BookingType.FLIGHT, sortOrder: 'DESC' }),
+      await this.findOfficeOffers(officeId, { limit: 3, page: 1, skip: 0, type: BookingType.HOTEL, sortOrder: 'DESC' }),
+      await this.findOfficeOffers(officeId, { limit: 3, page: 1, skip: 0, type: BookingType.CAR, sortOrder: 'DESC' }),
+      await this.findOfficeOffers(officeId, { limit: 3, page: 1, skip: 0, type: BookingType.VISA, sortOrder: 'DESC' }),
     ]).then(([FlightOffers, HotelOffers, CarOffers, VisaOffers]) => {
       return {
         FlightOffers,
@@ -704,6 +704,13 @@ export class OffersService {
       }
     });
   }
+
+  async findLastOfferPendingForUser(userId: bigint): Promise<OfferMapper | null> {
+    const offerDetails = await this.offerRepository.findLastPendingOfferForUser(userId);
+    if (!offerDetails) return null;
+    return OfferMapper.fromEntities(offerDetails, false);
+  }
+
   async savePathAttachments(attachments: string[]): Promise<string[]> {
 
     return attachments.map((url) => {
@@ -752,6 +759,31 @@ export class OffersService {
     if (offer && offer.booking.status === BookingStatus.UNDER_NEGOTIATION && offer.status === OfferStatus.PENDING) {
       return false;
     };
+    return true;
+  }
+
+  async canChatbeEnabled(bookingId: bigint, officeId: bigint): Promise<boolean> {
+    const booking = await this.dataSource.getRepository(Booking).findOne({
+      where: { id: bookingId },
+    });
+    const offer = await this.dataSource.getRepository(Offer).findOne({
+      where: {
+        booking: { id: bookingId },
+        office: { accountId: officeId },
+      },
+    });
+
+    if (
+      booking &&
+      (
+        booking.status !== BookingStatus.PARTIALLY_PAID &&
+        booking.status !== BookingStatus.CONFIRMED &&
+        booking.status !== BookingStatus.COMPLETED
+      ) &&
+      !offer
+    ) {
+      return false;
+    }
     return true;
   }
 }

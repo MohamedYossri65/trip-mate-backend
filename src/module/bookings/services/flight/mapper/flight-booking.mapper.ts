@@ -26,7 +26,7 @@ export class FlightBookingMapper {
     arrivalCity: string;
     isRoundTrip: boolean;
     departureDate: Date;
-    returnDate?: Date;
+    returnDate?: Date | null;
     hasVisa: boolean;
     hasCompanions: boolean;
     numberOfCompanions?: number;
@@ -37,8 +37,10 @@ export class FlightBookingMapper {
     hasPassport: boolean;
     isYouTravelToThisCountryBefore: boolean;
     isYourVisaRefusedBefore: boolean;
+    endingDate: Date;
 
     canOfficeAddOffers?: boolean;
+    canChatbeEnabled?: boolean;
 
     static fromEntities(flightBooking: FlightBooking): FlightBookingMapper {
         return {
@@ -76,6 +78,7 @@ export class FlightBookingMapper {
             hasPassport: flightBooking.hasPassport,
             isYouTravelToThisCountryBefore: flightBooking.isYouTravelToThisCountryBefore,
             isYourVisaRefusedBefore: flightBooking.isYourVisaRefusedBefore,
+            endingDate: flightBooking.endingDate,
         };
     }
 
@@ -88,17 +91,18 @@ export class FlightBookingMapper {
             arrivalCity: dto.arrivalCity,
             isRoundTrip: dto.isRoundTrip,
             departureDate: dto.departureDate,
-            returnDate: dto.returnDate,
+            returnDate: dto.returnDate ? dto.returnDate : null,
             hasVisa: dto.hasVisa,
             hasCompanions: dto.hasCompanions,
-            numberOfCompanions: dto.numberOfCompanions,
+            numberOfCompanions: dto.numberOfCompanions === null ? 0 : dto.numberOfCompanions,
             fullName: dto.fullName,
             dateOfBirth: dto.dateOfBirth,
             nationalIdNumber: dto.nationalIdNumber,
             nationality: dto.nationality,
             hasPassport: dto.hasPassport,
             isYouTravelToThisCountryBefore: dto.isYouTravelToThisCountryBefore,
-            isYourVisaRefusedBefore: dto.isYourVisaRefusedBefore,
+            isYourVisaRefusedBefore: dto.isYourVisaRefusedBefore == null ? false : dto.isYourVisaRefusedBefore,
+            endingDate: dto.endingDate,
         };
     }
 }

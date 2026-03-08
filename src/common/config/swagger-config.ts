@@ -1,6 +1,7 @@
 import { INestApplication, Req } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AuthModule } from 'src/module/auth/auth.module';
+import { BannerModule } from 'src/module/banner/banner.module';
 import { BookingsModule } from 'src/module/bookings/booking.module';
 import { FileUploadModule } from 'src/module/fileUpload/file-upload.module';
 import { OffersModule } from 'src/module/offers/offers.module';
@@ -25,6 +26,7 @@ export function setupSwagger(app: INestApplication) {
       BookingsModule,
       OffersModule,
       FileUploadModule,
+      BannerModule
     ],
   });
 

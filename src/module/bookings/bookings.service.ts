@@ -37,6 +37,7 @@ import { BookingMapper } from './domain/mapper/booking.mapper';
 import { Account } from '../account/entity/account.entity';
 import { RolesEnum } from 'src/common/enums/roles.enum';
 import { OffersService } from '../offers/offers.service';
+import { MyBookingFilterDto } from './domain/dto/my-booking-filter.dto';
 
 @Injectable()
 export class BookingsService {
@@ -227,10 +228,10 @@ export class BookingsService {
     visas: VisaBookingMapper[];
   }> {
     const [hotels, cars, flights, visas] = await Promise.all([
-      Promise.all((dto.hotels ?? []).map((h) => this.createHotelBooking(accountId, h))),
-      Promise.all((dto.cars ?? []).map((c) => this.createCarBooking(accountId, c))),
-      Promise.all((dto.flights ?? []).map((f) => this.createFlightBooking(accountId, f))),
-      Promise.all((dto.visas ?? []).map((v) => this.createVisaBooking(accountId, v))),
+      await Promise.all((dto.hotels ?? []).map((h) => this.createHotelBooking(accountId, h))),
+      await Promise.all((dto.cars ?? []).map((c) => this.createCarBooking(accountId, c))),
+      await Promise.all((dto.flights ?? []).map((f) => this.createFlightBooking(accountId, f))),
+      await Promise.all((dto.visas ?? []).map((v) => this.createVisaBooking(accountId, v))),
     ]);
 
     const allResults = [...hotels, ...cars, ...flights, ...visas];
@@ -284,17 +285,19 @@ export class BookingsService {
     return this.visaService.findAll(dto);
   }
 
-  async findOneBundle(bundleId: bigint): Promise<BundleMapper> {
-    return this.bundleService.findOne(bundleId);
+  async findOneBundle(bundleId: bigint ,account: Account): Promise<BundleMapper> {
+    const canOfficeAddOffers = await this.offerService.canOfficeAddOffer(bundleId ,account.id);
+      const canChatbeEnabled = await this.offerService.canChatbeEnabled(bundleId ,account.id);
+    return this.bundleService.findOne(bundleId, canChatbeEnabled , canOfficeAddOffers);
   }
 
   async findHomePageBookings(arrivalCountry?: string) {
     const [hotels, cars, flights, visas, bundles] = await Promise.all([
-      this.hotelService.findAll({ page: 1, skip: 0, limit: 3, sortBy: 'createdAt', sortOrder: 'DESC', arrivalCountry }),
-      this.carService.findAll({ page: 1, skip: 0, limit: 3, sortBy: 'createdAt', sortOrder: 'DESC', arrivalCountry }),
-      this.flightService.findAll({ page: 1, skip: 0, limit: 3, sortBy: 'createdAt', sortOrder: 'DESC', arrivalCountry }),
-      this.visaService.findAll({ page: 1, skip: 0, limit: 3, sortBy: 'createdAt', sortOrder: 'DESC', arrivalCountry }),
-      this.bundleService.findAll({ page: 1, skip: 0, limit: 3, sortBy: 'createdAt', sortOrder: 'DESC' }),
+      await this.hotelService.findAll({ page: 1, skip: 0, limit: 3, sortBy: 'createdAt', sortOrder: 'DESC', arrivalCountry }),
+      await this.carService.findAll({ page: 1, skip: 0, limit: 3, sortBy: 'createdAt', sortOrder: 'DESC', arrivalCountry }),
+      await this.flightService.findAll({ page: 1, skip: 0, limit: 3, sortBy: 'createdAt', sortOrder: 'DESC', arrivalCountry }),
+      await this.visaService.findAll({ page: 1, skip: 0, limit: 3, sortBy: 'createdAt', sortOrder: 'DESC', arrivalCountry }),
+      await this.bundleService.findAll({ page: 1, skip: 0, limit: 3, sortBy: 'createdAt', sortOrder: 'DESC' }),
     ]);
     return FindHomePageMapper.fromEntities(
       bundles.data ?? [],
@@ -310,7 +313,8 @@ export class BookingsService {
     if (!entity) return null;
     if(account.role === RolesEnum.OFFICE) {
       const canOfficeAddOffers = await this.offerService.canOfficeAddOffer(bookingId ,account.id);
-      return { ...entity, canOfficeAddOffers };
+      const canChatbeEnabled = await this.offerService.canChatbeEnabled(bookingId ,account.id);
+      return { ...entity, canOfficeAddOffers, canChatbeEnabled };
     }
     return entity;
   }
@@ -320,7 +324,8 @@ export class BookingsService {
     if (!entity) return null;
     if(account.role === RolesEnum.OFFICE) {
       const canOfficeAddOffers = await this.offerService.canOfficeAddOffer(bookingId ,account.id);
-      return { ...entity, canOfficeAddOffers };
+      const canChatbeEnabled = await this.offerService.canChatbeEnabled(bookingId ,account.id);
+      return { ...entity, canOfficeAddOffers, canChatbeEnabled };
     }
     return entity;
   }
@@ -330,7 +335,8 @@ export class BookingsService {
     if (!entity) return null;
     if(account.role === RolesEnum.OFFICE) {
       const canOfficeAddOffers = await this.offerService.canOfficeAddOffer(bookingId ,account.id);
-      return { ...entity, canOfficeAddOffers };
+      const canChatbeEnabled = await this.offerService.canChatbeEnabled(bookingId ,account.id);
+      return { ...entity, canOfficeAddOffers, canChatbeEnabled };
     }
     return entity;
   }
@@ -340,12 +346,13 @@ export class BookingsService {
     if (!entity) return null;
     if(account.role === RolesEnum.OFFICE) {
       const canOfficeAddOffers = await this.offerService.canOfficeAddOffer(bookingId ,account.id);
-      return { ...entity, canOfficeAddOffers };
+      const canChatbeEnabled = await this.offerService.canChatbeEnabled(bookingId ,account.id);
+      return { ...entity, canOfficeAddOffers, canChatbeEnabled };
     }
     return entity;
   }
 
-  async findUserBookings(accountId: bigint, dto: BookingFilterDto): Promise<PaginatedResponseDto<BookingMapper>> {
+  async findUserBookings(accountId: bigint, dto: MyBookingFilterDto): Promise<PaginatedResponseDto<BookingMapper>> {
     const [bookings, total] = await this.bookingRepository.findUserBookings(accountId, dto);
     const mapped = bookings.map(BookingMapper.fromEntities);
     return new PaginatedResponseDto(mapped, total, dto.page, dto.limit);

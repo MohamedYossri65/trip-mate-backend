@@ -58,6 +58,9 @@ export class FlightOfferDetails {
     @Column({ default: false })
     isYourVisaRefusedBefore: boolean;
 
+    @Column({ type: 'date', nullable: true })
+    endingDate: Date;
+
     @Column({ nullable: true })
     notes?: string;
 }
