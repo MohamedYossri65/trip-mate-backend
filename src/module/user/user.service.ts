@@ -19,6 +19,7 @@ export class UserService {
       ? manager.getRepository(UserProfile)
       : this.userProfileRepository;
     const userProfile = repo.create({
+      accountId: data.accountId,
       name: data.name,
       account: { id: data.accountId },
     });
@@ -27,7 +28,7 @@ export class UserService {
 
   async findByAccountId(accountId: bigint): Promise<UserProfile | null> {
     return await this.userProfileRepository.findOne({
-      where: { account: { id: accountId } },
+      where: { accountId },
       relations: ['account'],
     });
   }

@@ -354,7 +354,15 @@ export class BookingsService {
 
   async findUserBookings(accountId: bigint, dto: MyBookingFilterDto): Promise<PaginatedResponseDto<BookingMapper>> {
     const [bookings, total] = await this.bookingRepository.findUserBookings(accountId, dto);
-    const mapped = bookings.map(BookingMapper.fromEntities);
+    const mapped = bookings.map((booking) => {
+      const bookingMapper = BookingMapper.fromEntities(booking);
+      if(booking.status !== BookingStatus.COMPLETED){
+        bookingMapper.status = 'PENDING';
+      }else{
+        bookingMapper.status = 'COMPLETED';
+      }
+      return bookingMapper;
+    });
     return new PaginatedResponseDto(mapped, total, dto.page, dto.limit);
   }
 }

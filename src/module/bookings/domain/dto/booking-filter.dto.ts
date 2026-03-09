@@ -17,8 +17,8 @@ export class BookingFilterDto extends PaginationDto implements SortDto {
         enum: BookingStatus,
     })
     @IsOptional()
-    @IsString()
-    status?: string;
+    @IsEnum(BookingStatus)
+    status?: BookingStatus;
 
     @ApiPropertyOptional({ description: 'Filter by Booking type' })
     @IsOptional()

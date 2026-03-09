@@ -79,6 +79,7 @@ export class OfferRepository extends Repository<Offer> {
         return this.createQueryBuilder('offer')
             .leftJoinAndSelect('offer.booking', 'booking')
             .leftJoinAndSelect('booking.user', 'user')
+            .leftJoinAndSelect('user.account', 'account')
             .where('user.accountId = :userId', { userId })
             .andWhere('offer.status = :status', { status: OfferStatus.PENDING })
             .orderBy('offer.createdAt', 'DESC')

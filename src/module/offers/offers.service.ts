@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { BookingStatus } from '../bookings/domain/enum/booking-status.enum';
 import { Offer } from './entity/offer.entity';
-import { DataSource } from 'typeorm';
+import { Brackets, DataSource } from 'typeorm';
 import { Booking } from '../bookings/domain/entity/booking.entity';
 import { CarOfferDetails } from './entity/car-offer-details';
 import { CarOfferMapper } from './mapper/car-offer.mapper';
@@ -48,8 +48,10 @@ export class OffersService {
       const booking = await manager
         .createQueryBuilder(Booking, 'booking')
         .where('booking.id = :id', { id: carOfferDetailsDto.bookingId })
-        .andWhere('booking.parent_id IS NULL AND booking.type = :type', { type: BookingType.CAR })
-        .getOne();
+        .andWhere(new Brackets(qb => {
+          qb.where('booking.parent_id IS NULL')
+            .orWhere('booking.type = :type', { type: BookingType.BUNDLE });
+        })).getOne();
 
 
       if (!booking) throw new BadRequestException('Booking not found');
@@ -145,7 +147,10 @@ export class OffersService {
       const booking = await manager
         .createQueryBuilder(Booking, 'booking')
         .where('booking.id = :id', { id: visaOfferDto.bookingId })
-        .andWhere('booking.parent_id IS NULL AND booking.type = :type', { type: BookingType.VISA })
+        .andWhere(new Brackets(qb => {
+          qb.where('booking.parent_id IS NULL')
+            .orWhere('booking.type = :type', { type: BookingType.BUNDLE });
+        }))
         .getOne();
 
       if (!booking) throw new BadRequestException('Booking not found');
@@ -241,8 +246,10 @@ export class OffersService {
       const booking = await manager
         .createQueryBuilder(Booking, 'booking')
         .where('booking.id = :id', { id: flightOfferDto.bookingId })
-        .andWhere('booking.parent_id IS NULL AND booking.type = :type', { type: BookingType.FLIGHT })
-        .getOne();
+        .andWhere(new Brackets(qb => {
+          qb.where('booking.parent_id IS NULL')
+            .orWhere('booking.type = :type', { type: BookingType.BUNDLE });
+        })).getOne();
 
       if (!booking) throw new BadRequestException('Booking not found');
 
@@ -337,7 +344,10 @@ export class OffersService {
       const booking = await manager
         .createQueryBuilder(Booking, 'booking')
         .where('booking.id = :id', { id: hotelOfferDto.bookingId })
-        .andWhere('booking.parent_id IS NULL AND booking.type = :type', { type: BookingType.HOTEL })
+        .andWhere(new Brackets(qb => {
+          qb.where('booking.parent_id IS NULL')
+            .orWhere('booking.type = :type', { type: BookingType.BUNDLE });
+        }))
         .getOne();
 
       if (!booking) throw new BadRequestException('Booking not found');
@@ -433,7 +443,10 @@ export class OffersService {
       const booking = await manager
         .createQueryBuilder(Booking, 'booking')
         .where('booking.id = :id', { id: bundleOfferDto.bookingId })
-        .andWhere('booking.parent_id IS NULL AND booking.type = :type', { type: BookingType.BUNDLE })
+        .andWhere(new Brackets(qb => {
+          qb.where('booking.parent_id IS NULL')
+            .orWhere('booking.type = :type', { type: BookingType.BUNDLE });
+        }))
         .getOne();
 
       if (!booking) throw new BadRequestException('Booking not found');
@@ -570,7 +583,6 @@ export class OffersService {
       const details = await manager.getRepository(VisaOfferDetails).findOne({ where: { offerId } });
       if (!details) throw new BadRequestException('Visa offer details not found');
 
-      if (dto.arrivalCity !== undefined) details.arrivalCity = dto.arrivalCity;
       if (dto.fingerPrintLocation !== undefined) details.fingerPrintLocation = dto.fingerPrintLocation;
       if (dto.visaType !== undefined) details.visaType = dto.visaType;
       if (dto.departureDate !== undefined) details.departureDate = dto.departureDate;

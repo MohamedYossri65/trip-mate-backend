@@ -1,7 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { DataSource, Repository, SelectQueryBuilder } from 'typeorm';
+import { Brackets, DataSource, Repository, SelectQueryBuilder } from 'typeorm';
 import { Booking } from '../entity/booking.entity';
 import { BookingFilterDto } from '../dto/booking-filter.dto';
+import { MyBookingFilterDto } from '../dto/my-booking-filter.dto';
 import { BookingType } from '../enum/booking-type.enum';
 import { BookingStatus } from '../enum/booking-status.enum';
 
@@ -30,7 +31,7 @@ export class BookingRepository extends Repository<Booking> {
 
   private applyFilters(
     qb: SelectQueryBuilder<Booking>,
-    dto: BookingFilterDto,
+    dto: BookingFilterDto | MyBookingFilterDto,
   ): void {
     if (dto.arrivalCountry) {
       qb.andWhere('booking.arrivalCountry = :arrivalCountry', { arrivalCountry: dto.arrivalCountry });
@@ -46,6 +47,8 @@ export class BookingRepository extends Repository<Booking> {
             BookingStatus.WAITING_FOR_OFFERS
           ]
         });
+      } else if (dto.status === 'COMPLETED') {
+        qb.andWhere('booking.status = :status', { status: BookingStatus.COMPLETED });
       } else {
         qb.andWhere('booking.status = :status', { status: dto.status });
       }
@@ -57,7 +60,7 @@ export class BookingRepository extends Repository<Booking> {
 
   private applySort(
     qb: SelectQueryBuilder<Booking>,
-    dto: BookingFilterDto,
+    dto: BookingFilterDto | MyBookingFilterDto,
   ): void {
     const allowedSortColumns: Record<string, string> = {
       createdAt: 'booking.createdAt',
@@ -69,17 +72,20 @@ export class BookingRepository extends Repository<Booking> {
 
   private applyPagination(
     qb: SelectQueryBuilder<Booking>,
-    dto: BookingFilterDto,
+    dto: BookingFilterDto | MyBookingFilterDto,
   ): void {
     qb.skip(dto.skip).take(dto.limit);
   }
 
-  async findUserBookings(accountId: bigint, dto: BookingFilterDto): Promise<[Booking[], number]> {
+  async findUserBookings(accountId: bigint, dto: MyBookingFilterDto): Promise<[Booking[], number]> {
     const qb = this.createQueryBuilder('booking')
       .leftJoinAndSelect('booking.user', 'user')
       .leftJoinAndSelect('user.account', 'account')
       .where('user.account_id = :accountId', { accountId })
-      .andWhere('booking.parent_id IS NULL OR booking.type = :type', { type: BookingType.BUNDLE }); // include both parent and child bookings
+      .andWhere(new Brackets(qb => {
+        qb.where('booking.parent_id IS NULL')
+          .orWhere('booking.type = :type', { type: BookingType.BUNDLE });
+      }));
     this.applyPagination(qb, dto);
     this.applyFilters(qb, dto);
     this.applySort(qb, dto);

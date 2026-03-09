@@ -21,10 +21,6 @@ export class CreateVisaOfferDto {
 
     @IsString()
     @IsNotEmpty()
-    arrivalCity: string;
-
-    @IsString()
-    @IsNotEmpty()
     fingerPrintLocation: string;
 
     @IsString()

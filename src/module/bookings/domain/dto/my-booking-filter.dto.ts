@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsEnum, IsOptional, IsString } from 'class-validator';
+import { IsEnum, IsIn, IsOptional, IsString } from 'class-validator';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
 import { SortDto } from 'src/common/dto/sort.dto';
 import { BookingType } from '../enum/booking-type.enum';
@@ -13,11 +13,11 @@ export class MyBookingFilterDto extends PaginationDto implements SortDto {
 
     @ApiPropertyOptional({
         description: 'Filter by booking status',
-        enum: ['COMPLETED' , 'PENDING'],
+        enum: ['COMPLETED', 'PENDING'],
     })
     @IsOptional()
-    @IsString()
-    status?: string;
+    @IsIn(['COMPLETED', 'PENDING'])
+    status?: 'COMPLETED' | 'PENDING';
 
     @ApiPropertyOptional({ description: 'Filter by Booking type' })
     @IsOptional()

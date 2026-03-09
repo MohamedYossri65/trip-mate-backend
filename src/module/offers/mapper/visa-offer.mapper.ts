@@ -11,7 +11,6 @@ export class VisaOfferMapper {
         offerDuration: Date;
     };
     arrivalCountry: string;
-    arrivalCity: string;
     fingerPrintLocation: string;
     visaType: string;
     departureDate: Date;
@@ -32,7 +31,6 @@ export class VisaOfferMapper {
                 offerDuration: visaOfferDetails.offer.offerDuration,
             },
             arrivalCountry: visaOfferDetails.offer.arrivalCountry,
-            arrivalCity: visaOfferDetails.arrivalCity,
             fingerPrintLocation: visaOfferDetails.fingerPrintLocation,
             visaType: visaOfferDetails.visaType,
             departureDate: visaOfferDetails.departureDate,
@@ -48,7 +46,6 @@ export class VisaOfferMapper {
     static fromDto(dto: CreateVisaOfferDto, offer: Offer): Partial<VisaOfferDetails> {
         return {
             offerId: offer.id,
-            arrivalCity: dto.arrivalCity,
             fingerPrintLocation: dto.fingerPrintLocation,
             visaType: dto.visaType,
             departureDate: dto.departureDate,

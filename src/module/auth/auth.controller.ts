@@ -1,6 +1,6 @@
 import { ApiParam, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
-import { Body, Controller, Get, Post, Query, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { RegisterUserDto } from './dto/register-user.dto';
 import { RegisterUserResponse } from './mapper/register-user.mapper';
 import { RegisterOfficeResponse } from './mapper/register-office.mapper';
@@ -127,10 +127,10 @@ export class AuthController {
     );
   }
 
-  @Post('logout')
-  @UseGuards(RefreshTokenGuard)
+  @Post('logout/:sessionId')
+  @Auth()
   @SuccessResponse('Logged out successfully')
-  async logout(@CurrentUser() account: Account) {
-    await this.authService.logoutDevice(account.id);
+  async logout(@Param('sessionId') sessionId: bigint) {
+    await this.authService.logoutDevice(sessionId);
   }
 }

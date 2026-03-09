@@ -11,9 +11,6 @@ export class VisaOfferDetails {
     offer: Offer;
 
     @Column()
-    arrivalCity: string;
-
-    @Column()
     fingerPrintLocation: string;
 
     @Column()
