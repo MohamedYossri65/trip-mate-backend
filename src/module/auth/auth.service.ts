@@ -70,9 +70,12 @@ export class AuthService {
       req,
     });
 
+    const validationStatus = await this.validateAccount(account, 'verify');
+
     return LoginResponse.fromEntity({
       account,
       ...tokens,
+      accountStage: validationStatus,
       sessionId: session.id,
     });
   }
@@ -87,7 +90,7 @@ export class AuthService {
       password,
     );
 
-    const validationStatus = await this.validateAccount(account);
+    const validationStatus = await this.validateAccount(account , 'login');
     if (validationStatus === 'OTP_SENT') {
       throw new HttpException(
         'Phone number not verified. OTP has been resent to your phone.',
@@ -270,8 +273,8 @@ export class AuthService {
     return { accessToken, refreshToken };
   }
 
-  private async validateAccount(account: Account) {
-    if (!account.isPhoneVerified) {
+  private async validateAccount(account: Account ,methode: 'login' | 'verify' = 'login'){
+    if (!account.isPhoneVerified && methode === "login") {
       await this.resendPhoneVerificationOtp(Number(account.id));
       return 'OTP_SENT';
     }

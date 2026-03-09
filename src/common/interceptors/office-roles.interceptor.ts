@@ -15,7 +15,7 @@ export class UserProcessInterceptor implements NestInterceptor {
     intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
         const request = context.switchToHttp().getRequest();
 
-        if (request.url?.includes('/register')) {
+        if (request.url?.includes('/register') || request.url?.includes('/auth') || request.url?.includes('/offices')) {
             return next.handle();
         }
 

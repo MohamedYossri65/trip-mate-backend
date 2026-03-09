@@ -1,6 +1,6 @@
 import { ApiParam, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
-import { Body, Controller, Get, Param, Post, Query, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseIntPipe, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { RegisterUserDto } from './dto/register-user.dto';
 import { RegisterUserResponse } from './mapper/register-user.mapper';
 import { RegisterOfficeResponse } from './mapper/register-office.mapper';
@@ -59,9 +59,9 @@ export class AuthController {
   }
 
   @Post('resend-otp/:accountId')
-  @ApiQuery({ name: 'accountId', type: 'integer' })
+  @ApiParam({ name: 'accountId', type: 'integer' })
   @SuccessResponse('OTP resent again successfully')
-  async resendOtp(@Query('accountId') accountId: number) {
+  async resendOtp(@Param('accountId', ParseIntPipe) accountId: number) {
     return await this.authService.resendPhoneVerificationOtp(accountId);
   }
 

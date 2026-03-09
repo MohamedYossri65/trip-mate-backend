@@ -1,5 +1,5 @@
 import { Account } from "src/module/account/entity/account.entity";
-import { Column, CreateDateColumn, Entity, JoinColumn, OneToOne, PrimaryGeneratedColumn } from "typeorm";
+import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
 import { ReviewOfficeStatus } from "../enum/review-office-status.enum";
 import { OfficeProfile } from "./office.entity";
 
@@ -9,7 +9,7 @@ export class OfficeEmployee {
   @PrimaryGeneratedColumn('identity')
   id: bigint;
 
-  @OneToOne(() => OfficeProfile, { onDelete: 'CASCADE' })
+  @ManyToOne(() => OfficeProfile, { onDelete: 'CASCADE' })
   @JoinColumn()
   office: OfficeProfile;
 
