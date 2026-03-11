@@ -9,6 +9,37 @@ if (!fs.existsSync(logDir)) {
   fs.mkdirSync(logDir, { recursive: true });
 }
 
+// Transformer to sanitize data before sending to Elasticsearch
+const sanitizeForElasticsearch = (logData: any) => {
+  const sanitize = (obj: any): any => {
+    if (obj === null || obj === undefined) return obj;
+    
+    if (Array.isArray(obj)) {
+      // Convert arrays with mixed types to JSON strings
+      return JSON.stringify(obj);
+    }
+    
+    if (typeof obj === 'object' && obj.constructor === Object) {
+      const sanitized: any = {};
+      for (const key in obj) {
+        if (obj.hasOwnProperty(key)) {
+          // Convert problematic fields to strings
+          if (key === 'parameters' || key === 'driverError') {
+            sanitized[key] = JSON.stringify(obj[key]);
+          } else {
+            sanitized[key] = sanitize(obj[key]);
+          }
+        }
+      }
+      return sanitized;
+    }
+    
+    return obj;
+  };
+
+  return sanitize(logData);
+};
+
 const esTransportOpts = {
   level: 'info',
   clientOpts: {
@@ -18,6 +49,7 @@ const esTransportOpts = {
   indexPrefix: 'trip-mate-logs',
   buffering: false,
   flushInterval: 2000,
+  transformer: sanitizeForElasticsearch,
 };
 
 const esErrorTransportOpts = {
@@ -26,9 +58,10 @@ const esErrorTransportOpts = {
     node: 'http://elasticsearch:9200',
     requestTimeout: 10000,
   },
-  indexPrefix: 'trip-mate-errors',  // separate index for errors
+  indexPrefix: 'trip-mate-errors',
   buffering: false,
   flushInterval: 2000,
+  transformer: sanitizeForElasticsearch,
 };
 
 const esTransport = new ElasticsearchTransport(esTransportOpts);
@@ -72,6 +105,7 @@ export const logger = winston.createLogger({
   ),
   transports: [
     esTransport,
+    esErrorTransport,  // Also send errors to trip-mate-errors index
     new winston.transports.Console(),
     dailyRotateApp,
     dailyRotateError,

@@ -1,5 +1,6 @@
 import { Account } from "src/module/account/entity/account.entity";
-import { Column, Entity, JoinColumn, OneToOne, PrimaryColumn } from "typeorm";
+import { Review } from "src/module/review/entity/review.entity";
+import { Column, Entity, JoinColumn, OneToMany, OneToOne, PrimaryColumn } from "typeorm";
 
 @Entity('user_profiles')
 export class UserProfile {
@@ -13,4 +14,7 @@ export class UserProfile {
 
   @Column()
   name: string;
+
+  @OneToMany(() => Review, (review) => review.userProfile)
+  reviews: Review[];
 }

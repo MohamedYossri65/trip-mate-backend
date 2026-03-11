@@ -17,6 +17,7 @@ import { OffersModule } from './module/offers/offers.module';
 import { FileUploadModule } from './module/fileUpload/file-upload.module';
 import { BannerModule } from './module/banner/banner.module';
 import { SubscriptionModule } from './module/subscription/subscription.module';
+import { ReviewModule } from './module/review/review.module';
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { OfficeProcessInterceptor } from './common/interceptors/office-process.interceptor';
 import { SubscriptionInterceptor } from './common/interceptors/subscription.interceptor';
@@ -48,6 +49,7 @@ import { SubscriptionInterceptor } from './common/interceptors/subscription.inte
     FileUploadModule,
     BannerModule,
     SubscriptionModule,
+    ReviewModule,
   ],
   controllers: [AppController],
   providers: [

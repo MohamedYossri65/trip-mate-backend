@@ -2,6 +2,7 @@ import { Account } from "src/module/account/entity/account.entity";
 import { Column, CreateDateColumn, Entity, JoinColumn, OneToMany, OneToOne, PrimaryColumn } from "typeorm";
 import { ReviewOfficeStatus } from "../enum/review-office-status.enum";
 import { OfficeEmployee } from "./employee.entity";
+import { Review } from "src/module/review/entity/review.entity";
 
 @Entity('office_profiles')
 export class OfficeProfile {
@@ -63,4 +64,7 @@ export class OfficeProfile {
 
   @OneToMany(() => OfficeEmployee, (employee) => employee.office)
   employees: OfficeEmployee[];
+
+  @OneToMany(() => Review, (review) => review.office)
+  reviews: Review[];
 }

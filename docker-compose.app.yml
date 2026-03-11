@@ -18,7 +18,7 @@ services:
     depends_on:
       - network-setup
     volumes:
-      - logs-trip-mate-data:/usr/src/app/logs
+      - logs-trip-mate-data:/app/logs
     restart: unless-stopped
 
   network-setup:  
@@ -29,8 +29,7 @@ services:
 
 networks:
   trip-mate-network:
-    name: trip-mate-network
-    driver: bridge
+    external: true
 
 
 volumes:

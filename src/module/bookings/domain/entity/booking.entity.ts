@@ -13,6 +13,7 @@ import { BookingType } from '../enum/booking-type.enum';
 import { BookingStatus } from '../enum/booking-status.enum';
 import { UserProfile } from 'src/module/user/entity/user.entity';
 import { Offer } from 'src/module/offers/entity/offer.entity';
+import { Review } from 'src/module/review/entity/review.entity';
 
 @Entity('bookings')
 export class Booking {
@@ -20,6 +21,7 @@ export class Booking {
   id: bigint;
 
   @ManyToOne(() => UserProfile, { nullable: false , eager : true})
+  @JoinColumn({ name: 'userAccountId' })
   user: UserProfile;
 
   @Column({ type: 'enum', enum: BookingType })
@@ -43,6 +45,11 @@ export class Booking {
 
   @OneToMany(() => Booking, (b) => b.parent, { eager: false })
   children?: Booking[];
+
+
+  @OneToOne(() => Review, (review) => review.booking, {nullable: true, eager: true })
+  @JoinColumn({ name: 'reviewId' })
+  review?: Review;
 
   @CreateDateColumn()
   createdAt: Date;

@@ -1,3 +1,3 @@
-import { logger } from '../config/logger';
+import { errorLogger } from '../config/logger';
 
-export default logger;
+export default errorLogger;
