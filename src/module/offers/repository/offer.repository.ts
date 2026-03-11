@@ -80,8 +80,10 @@ export class OfferRepository extends Repository<Offer> {
             .leftJoinAndSelect('offer.booking', 'booking')
             .leftJoinAndSelect('booking.user', 'user')
             .leftJoinAndSelect('user.account', 'account')
+            .leftJoinAndSelect('offer.office', 'office')
             .where('user.accountId = :userId', { userId })
             .andWhere('offer.status = :status', { status: OfferStatus.PENDING })
+            .andWhere('offer.offerDuration > NOW()') 
             .orderBy('offer.createdAt', 'DESC')
             .getOne();
     }

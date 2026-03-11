@@ -12,13 +12,14 @@ import { ApiConsumes, ApiBody, ApiOperation } from '@nestjs/swagger';
 import { OfficeService } from './office.service';
 import { CommerceDetailsDto } from './dto/commerce-details.dto';
 import { SuccessResponse } from 'src/common/interceptors/success-response.interceptor';
-import { Auth } from 'src/common/guards/auth.decorator';
-import { CurrentUser } from 'src/common/guards/user.decorator';
+import { Auth } from 'src/common/guards/decorators/auth.decorator';
+import { CurrentUser } from 'src/common/guards/decorators/user.decorator';
 import { Account } from '../account/entity/account.entity';
 import { RolesEnum } from 'src/common/enums/roles.enum';
 import { UploadLogoDto } from './dto/upload-logo.dto';
 import { AddEmployeeDto } from './dto/add-employee.dto';
 import { FileUploadService } from '../fileUpload/file-upload.service';
+import { Public } from 'src/common/guards/decorators/public.decorator';
 
 @Controller('offices')
 export class OfficeController {
@@ -28,6 +29,7 @@ export class OfficeController {
   ) { }
 
   @Post('commerce-details')
+  @Public()
   @Auth(RolesEnum.OFFICE)
   @ApiOperation({ summary: 'Add commerce details with tax certificate' })
   @ApiConsumes('multipart/form-data')

@@ -7,4 +7,5 @@ export class ResponseCode {
     static readonly OFFICE_UNDER_REVIEW = 412;
     static readonly OFFICE_REJECTED = 413;  
     static readonly OFFICE_PENDING_OTP = 414;
+    static readonly OFFICE_NO_SUBSCRIPTION = 415;
 }

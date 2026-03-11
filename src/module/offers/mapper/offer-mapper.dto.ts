@@ -22,6 +22,11 @@ export class OfferMapper {
         type: string;
         destinationCountry: string;
     };
+    office: {
+        id: bigint;
+        officeName: string;
+        logo: string;
+    } | null;
 
     canOfficeEditOffer: boolean;
 
@@ -48,6 +53,11 @@ export class OfferMapper {
                 type: offer.booking.type,
                 destinationCountry: offer.arrivalCountry,
             },
+            office: offer.office ? {
+                id: offer.office.accountId,
+                officeName: offer.office.officeName,
+                logo : offer.office.logoUrl,
+            } : null,
             canOfficeEditOffer
         };
     }

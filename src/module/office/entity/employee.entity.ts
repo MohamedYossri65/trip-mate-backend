@@ -1,6 +1,4 @@
-import { Account } from "src/module/account/entity/account.entity";
-import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
-import { ReviewOfficeStatus } from "../enum/review-office-status.enum";
+import { Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
 import { OfficeProfile } from "./office.entity";
 
 @Entity('office_employees')

@@ -3,7 +3,7 @@
 import { Body, Controller, Delete, Get, Post, UploadedFiles, UseGuards, UseInterceptors } from '@nestjs/common';
 import { FileUploadService } from './file-upload.service';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiBody, ApiConsumes } from '@nestjs/swagger';
-import { Auth } from 'src/common/guards/auth.decorator';
+import { Auth } from 'src/common/guards/decorators/auth.decorator';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { UploadAttachmentsDto } from './upload-attashments.dto';
 

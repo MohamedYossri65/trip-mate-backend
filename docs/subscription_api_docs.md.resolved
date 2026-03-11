@@ -1,0 +1,250 @@
+# Subscription API Documentation
+
+Base URL: `/subscriptions`
+
+---
+
+## 1. Get All Plans
+
+```
+GET /subscriptions/plans
+```
+
+**Auth:** Any authenticated user
+
+**Response:**
+```json
+[
+  {
+    "id": 1,
+    "name": "Basic",
+    "price": 50,
+    "durationInDays": 30,
+    "createdAt": "2026-03-10T18:00:00.000Z",
+    "planFeatures": [
+      {
+        "id": 1,
+        "enabled": true,
+        "limitValue": null,
+        "feature": {
+          "id": 1,
+          "code": "SEND_OFFERS",
+          "name": "Send offers to users"
+        }
+      },
+      {
+        "id": 2,
+        "enabled": false,
+        "limitValue": null,
+        "feature": {
+          "id": 2,
+          "code": "REPORTS",
+          "name": "Reports and graphs"
+        }
+      },
+      {
+        "id": 3,
+        "enabled": true,
+        "limitValue": 2,
+        "feature": {
+          "id": 3,
+          "code": "EMPLOYEE_ACCOUNTS",
+          "name": "Create employee accounts"
+        }
+      }
+    ]
+  },
+  {
+    "id": 2,
+    "name": "Pro",
+    "price": 120,
+    "durationInDays": 30,
+    "planFeatures": [
+      { "enabled": true, "limitValue": null, "feature": { "code": "SEND_OFFERS", "name": "Send offers to users" } },
+      { "enabled": true, "limitValue": null, "feature": { "code": "REPORTS", "name": "Reports and graphs" } },
+      { "enabled": true, "limitValue": 10, "feature": { "code": "EMPLOYEE_ACCOUNTS", "name": "Create employee accounts" } }
+    ]
+  },
+  {
+    "id": 3,
+    "name": "Enterprise",
+    "price": 300,
+    "durationInDays": 30,
+    "planFeatures": [
+      { "enabled": true, "limitValue": null, "feature": { "code": "SEND_OFFERS", "name": "Send offers to users" } },
+      { "enabled": true, "limitValue": null, "feature": { "code": "REPORTS", "name": "Reports and graphs" } },
+      { "enabled": true, "limitValue": null, "feature": { "code": "EMPLOYEE_ACCOUNTS", "name": "Create employee accounts" } }
+    ]
+  }
+]
+```
+
+> **Note:** `limitValue: null` means **unlimited**.
+
+---
+
+## 2. Subscribe to a Plan
+
+```
+POST /subscriptions/subscribe
+```
+
+**Auth:** `OFFICE` role only
+
+**Request Body:**
+```json
+{
+  "planId": 1
+}
+```
+
+**Response:**
+```json
+{
+  "id": 1,
+  "startDate": "2026-03-10T18:00:00.000Z",
+  "endDate": "2026-04-09T18:00:00.000Z",
+  "status": "ACTIVE",
+  "plan": {
+    "id": 1,
+    "name": "Basic",
+    "price": 50,
+    "durationInDays": 30,
+    "planFeatures": [...]
+  }
+}
+```
+
+> Subscribing to a new plan **automatically expires** the previous active subscription.
+
+---
+
+## 3. Get My Subscription
+
+```
+GET /subscriptions/my-subscription
+```
+
+**Auth:** `OFFICE` role only
+
+**Response (has active subscription):**
+```json
+{
+  "id": 1,
+  "startDate": "2026-03-10T18:00:00.000Z",
+  "endDate": "2026-04-09T18:00:00.000Z",
+  "status": "ACTIVE",
+  "plan": {
+    "id": 1,
+    "name": "Basic",
+    "price": 50,
+    "durationInDays": 30,
+    "planFeatures": [
+      {
+        "enabled": true,
+        "limitValue": null,
+        "feature": { "code": "SEND_OFFERS", "name": "Send offers to users" }
+      },
+      {
+        "enabled": false,
+        "limitValue": null,
+        "feature": { "code": "REPORTS", "name": "Reports and graphs" }
+      },
+      {
+        "enabled": true,
+        "limitValue": 2,
+        "feature": { "code": "EMPLOYEE_ACCOUNTS", "name": "Create employee accounts" }
+      }
+    ]
+  }
+}
+```
+
+**Response (no active subscription):**
+```json
+null
+```
+
+---
+
+## 4. Create Plan (Admin Only)
+
+```
+POST /subscriptions/plans
+```
+
+**Auth:** `ADMIN` role only
+
+**Request Body:**
+```json
+{
+  "name": "Basic",
+  "price": 50,
+  "durationInDays": 30,
+  "features": [
+    {
+      "featureCode": "SEND_OFFERS",
+      "enabled": true
+    },
+    {
+      "featureCode": "REPORTS",
+      "enabled": false
+    },
+    {
+      "featureCode": "EMPLOYEE_ACCOUNTS",
+      "enabled": true,
+      "limitValue": 2
+    }
+  ]
+}
+```
+
+**Available Feature Codes:**
+
+| Code | Description |
+|---|---|
+| `SEND_OFFERS` | Can send offers to users |
+| `REPORTS` | Can access reports and graphs |
+| `EMPLOYEE_ACCOUNTS` | Can create employee accounts (use `limitValue` for max count) |
+
+---
+
+## Subscription Status Values
+
+| Status | Description |
+|---|---|
+| `ACTIVE` | Currently active subscription |
+| `EXPIRED` | Subscription has ended |
+| `CANCELLED` | Subscription was cancelled |
+
+---
+
+## Feature Access Errors
+
+If the office tries to use a feature **not included** in their plan:
+
+```json
+{
+  "statusCode": 403,
+  "message": "Your subscription plan does not include the \"SEND_OFFERS\" feature"
+}
+```
+
+If the office tries to **add employees beyond the limit**:
+
+```json
+{
+  "statusCode": 403,
+  "message": "Employee limit reached. Your plan allows a maximum of 2 employees"
+}
+```
+
+---
+
+## Plans Summary
+
+| Plan | Price | Send Offers | Reports | Employees |
+|---|---|---|---|---|
+| **Basic** | 50 | ✅ | ❌ | ✅ (max 2) |
+| **Pro** | 120 | ✅ | ✅ | ✅ (max 10) |
+| **Enterprise** | 300 | ✅ | ✅ | ✅ (unlimited) |

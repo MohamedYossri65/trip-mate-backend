@@ -2,9 +2,9 @@ import { Body, Controller, Get, Param, Patch, Post, Query } from "@nestjs/common
 import { ApiOperation, ApiTags } from "@nestjs/swagger";
 import { OffersService } from "./offers.service";
 import { Account } from "../account/entity/account.entity";
-import { CurrentUser } from "src/common/guards/user.decorator";
+import { CurrentUser } from "src/common/guards/decorators/user.decorator";
 import { SuccessResponse } from "src/common/interceptors/success-response.interceptor";
-import { Auth } from "src/common/guards/auth.decorator";
+import { Auth } from "src/common/guards/decorators/auth.decorator";
 import { CreateCarOfferDto } from "./dto/create-car-offer.dto";
 import { CreateVisaOfferDto } from "./dto/create-visa-offer.dto";
 import { CreateFlightOfferDto } from "./dto/create-flight-offer.dto";
@@ -14,8 +14,10 @@ import { UpdateVisaOfferDto } from "./dto/update-visa-offer.dto";
 import { UpdateFlightOfferDto } from "./dto/update-flight-offer.dto";
 import { UpdateHotelOfferDto } from "./dto/update-hotel-offer.dto";
 import { OfferFilterDto } from "./dto/offer-filter.dto";
+import { Public } from "src/common/guards/decorators/public.decorator";
 
 @ApiTags('offers')
+@Public()
 @Controller({ path: 'offers', version: '1' })
 export class OffersController {
     constructor(private readonly offersService: OffersService) { }

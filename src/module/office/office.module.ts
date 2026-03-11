@@ -5,12 +5,14 @@ import { OfficeProfile } from './entity/office.entity';
 import { OfficeController } from './office.controller';
 import { OfficeEmployee } from './entity/employee.entity';
 import { FileUploadModule } from '../fileUpload/file-upload.module';
+import { SubscriptionModule } from '../subscription/subscription.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([OfficeProfile , OfficeEmployee]),
+    TypeOrmModule.forFeature([OfficeProfile, OfficeEmployee]),
     FileUploadModule,
-],
+    SubscriptionModule,
+  ],
   controllers: [OfficeController],
   providers: [OfficeService],
   exports: [OfficeService],

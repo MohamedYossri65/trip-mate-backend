@@ -26,7 +26,7 @@ import {
 import { SuccessResponse } from 'src/common/interceptors/success-response.interceptor';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { RolesEnum } from 'src/common/enums/roles.enum';
-import { Auth } from 'src/common/guards/auth.decorator';
+import { Auth } from 'src/common/guards/decorators/auth.decorator';
 
 @ApiTags('Banners')
 @Controller('banners')

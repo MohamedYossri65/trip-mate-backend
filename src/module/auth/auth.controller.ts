@@ -7,7 +7,7 @@ import { RegisterOfficeResponse } from './mapper/register-office.mapper';
 import { RegisterOfficeDto } from './dto/register-office.dto';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
 import { SuccessResponse } from 'src/common/interceptors/success-response.interceptor';
-import { CurrentUser } from 'src/common/guards/user.decorator';
+import { CurrentUser } from 'src/common/guards/decorators/user.decorator';
 import { Account } from '../account/entity/account.entity';
 import { RefreshTokenGuard } from 'src/common/guards/refresh-token.guard';
 import { RefreshTokenRequestDto } from './dto/refresh-token.-requestdto';
@@ -15,13 +15,15 @@ import { LoginRequestDto } from './dto/login-request.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { VerifyPasswordResetOtpDto } from './dto/verify-password-reset-otp.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
-import { Auth } from 'src/common/guards/auth.decorator';
 import { UpdatePasswordDto } from './dto/update-password.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { ChangePhoneDto } from './dto/change-phone.dto';
+import { Auth } from 'src/common/guards/decorators/auth.decorator';
+import { Public } from 'src/common/guards/decorators/public.decorator';
 
 @ApiTags('auth')
 @Controller({ path: 'auth', version: '1' })
+@Public()
 export class AuthController {
   constructor(private readonly authService: AuthService) { }
 

@@ -11,6 +11,7 @@ import { Offer } from '../offers/entity/offer.entity';
 import { OfferStatus } from '../offers/enum/offer-status.enum';
 import { DataSource } from 'typeorm';
 import { OfficeDetailsMapper } from './mapper/office-details.mapper';
+import { SubscriptionService } from '../subscription/subscription.service';
 
 @Injectable()
 export class OfficeService {
@@ -22,6 +23,8 @@ export class OfficeService {
     private readonly officeEmployeeRepository: Repository<OfficeEmployee>,
 
     private readonly dataSource: DataSource,
+
+    private readonly subscriptionService: SubscriptionService,
   ) {}
 
   async createProfile(
@@ -68,6 +71,9 @@ export class OfficeService {
     if (!office) {
       throw new BadRequestException('Office profile not found');
     }
+
+    // Check subscription allows creating employees
+    await this.subscriptionService.canCreateMoreEmployees(accountId);
     const employees = employeeDto.map((emp) =>
       this.officeEmployeeRepository.create({
         office: { accountId: office.accountId },

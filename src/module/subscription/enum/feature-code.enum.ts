@@ -1,0 +1,5 @@
+export enum FeatureCode {
+  SEND_OFFERS = 'SEND_OFFERS',
+  REPORTS = 'REPORTS',
+  EMPLOYEE_ACCOUNTS = 'EMPLOYEE_ACCOUNTS',
+}
