@@ -67,6 +67,7 @@ export class RegisteriationService {
       await this.officeService.createProfile(
         {
           officeName: dto.officeName,
+          location: dto.location,
           accountId: account.id,
         },
         manager,

@@ -216,6 +216,10 @@ export class AuthService {
     if (!account) {
       throw new BadRequestException('Account not found');
     }
+    const isEmailTaken = await this.accountService.isEmailTaken(updateProfileDto.email);
+    if (isEmailTaken) {
+      throw new BadRequestException('Email is already taken by another account');
+    }
     await this.registrationService.updateUserProfile(accountId, updateProfileDto);
     return { ...account, updateName: updateProfileDto.name };
   }
@@ -225,6 +229,11 @@ export class AuthService {
     const account = await this.accountService.findById(accountId);
     if (!account) {
       throw new BadRequestException('Account not found');
+    }
+
+    const isPhoneTaken = await this.accountService.isPhoneTaken(changePhoneDto.newPhone);
+    if (isPhoneTaken) {
+      throw new BadRequestException('Phone number is already taken by another account');
     }
 
     // Verify password before allowing phone change

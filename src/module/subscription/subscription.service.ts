@@ -18,6 +18,8 @@ import { FeatureCode } from './enum/feature-code.enum';
 import { OfficeEmployee } from '../office/entity/employee.entity';
 import { SubscriptionPlanMapper } from './mapper/subscription-plan.mapper';
 import { OfficeSubscriptionMapper } from './mapper/office-subscription.mapper';
+import { AccountService } from '../account/account.service';
+import { AccountStatus } from 'src/common/enums/account-status.enum';
 
 @Injectable()
 export class SubscriptionService {
@@ -36,6 +38,8 @@ export class SubscriptionService {
 
     @InjectRepository(OfficeEmployee)
     private readonly officeEmployeeRepository: Repository<OfficeEmployee>,
+
+    private readonly accountService: AccountService,
 
     @Inject(CACHE_MANAGER)
     private cacheManager: Cache,
@@ -148,6 +152,11 @@ export class SubscriptionService {
 
     const savedSubscription = await this.officeSubscriptionRepository.save(
       subscription,
+    );
+
+    await this.accountService.updateStatus(
+      officeAccountId,
+      AccountStatus.ACTIVE,
     );
 
     // Invalidate cache for this office

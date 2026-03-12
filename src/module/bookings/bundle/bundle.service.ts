@@ -84,7 +84,7 @@ export class BundleService {
         return this.buildMappersForBundles(bundles);
     }
 
-    async findOne(id: bigint ,canChatbeEnabled: boolean, canOfficeAddOffers: boolean): Promise<BundleMapper> {
+    async findOne(id: bigint ,canChatbeEnabled: boolean, canOfficeAddOffers: boolean, canUserReviewBooking?: boolean): Promise<BundleMapper> {
         const bundle = await this.bundleRepository.findOneWithBookings(id);
         if (!bundle) throw new NotFoundException('Bundle not found');
         const [mapper] = await this.buildMappersForBundles([bundle]);
@@ -92,6 +92,7 @@ export class BundleService {
             ...mapper,
             canChatbeEnabled,
             canOfficeAddOffers,
+            canUserReviewBooking,
         };
     }
 }

@@ -41,6 +41,7 @@ export class FlightBookingMapper {
 
     canOfficeAddOffers?: boolean;
     canChatbeEnabled?: boolean;
+    canUserReviewBooking?: boolean;
 
     static fromEntities(flightBooking: FlightBooking): FlightBookingMapper {
         return {

@@ -55,6 +55,7 @@ export class OfficeController {
   }
 
   @Post('employees')
+  @Public()
   @Auth(RolesEnum.OFFICE)
   @ApiOperation({ summary: 'Add office employees' })
   @ApiBody({ type: [AddEmployeeDto] })
@@ -68,6 +69,7 @@ export class OfficeController {
   }
 
   @Post('upload-logo')
+  @Public()
   @Auth(RolesEnum.OFFICE)
   @ApiBody({ type: UploadLogoDto })
   @ApiConsumes('multipart/form-data')

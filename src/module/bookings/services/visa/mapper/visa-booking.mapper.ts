@@ -29,6 +29,7 @@ export class VisaBookingMapper {
 
     canOfficeAddOffers?: boolean;
     canChatbeEnabled?: boolean;
+    canUserReviewBooking?: boolean;
 
     static fromEntities(visaBooking: VisaBooking): VisaBookingMapper {
         return {

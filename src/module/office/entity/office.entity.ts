@@ -17,6 +17,12 @@ export class OfficeProfile {
   @Column()
   officeName: string;
 
+  @Column({ nullable: true ,default: 'الرياض'})
+  location: string;
+
+  @Column({ nullable: true })
+  description: string;
+
   @Column({ nullable: true })
   commerceNumber: string;
 

@@ -14,5 +14,8 @@ export class RegisterOfficeDto {
   phone: string;
 
   @IsNotEmpty()
+  location: string;
+
+  @IsNotEmpty()
   password: string;
 }

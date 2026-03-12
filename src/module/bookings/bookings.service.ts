@@ -38,6 +38,8 @@ import { Account } from '../account/entity/account.entity';
 import { RolesEnum } from 'src/common/enums/roles.enum';
 import { OffersService } from '../offers/offers.service';
 import { MyBookingFilterDto } from './domain/dto/my-booking-filter.dto';
+import { OfficeService } from '../office/office.service';
+import { ReviewService } from '../review/review.service';
 
 @Injectable()
 export class BookingsService {
@@ -50,6 +52,7 @@ export class BookingsService {
     private readonly bundleService: BundleService,
     private readonly bookingRepository: BookingRepository,
     private readonly offerService: OffersService,
+    private readonly reviewService: ReviewService,
   ) { }
 
   // Each createXBooking method follows the same pattern:
@@ -285,10 +288,11 @@ export class BookingsService {
     return this.visaService.findAll(dto);
   }
 
-  async findOneBundle(bundleId: bigint ,account: Account): Promise<BundleMapper> {
-    const canOfficeAddOffers = await this.offerService.canOfficeAddOffer(bundleId ,account.id);
-      const canChatbeEnabled = await this.offerService.canChatbeEnabled(bundleId ,account.id);
-    return this.bundleService.findOne(bundleId, canChatbeEnabled , canOfficeAddOffers);
+  async findOneBundle(bundleId: bigint, account: Account): Promise<BundleMapper> {
+    const canOfficeAddOffers = await this.offerService.canOfficeAddOffer(bundleId, account.id);
+    const canChatbeEnabled = await this.offerService.canChatbeEnabled(bundleId, account.id);
+    const canUserReviewBooking = await this.reviewService.canUserReviewBooking(account.id, bundleId);
+    return this.bundleService.findOne(bundleId, canChatbeEnabled, canOfficeAddOffers, canUserReviewBooking);
   }
 
   async findHomePageBookings(arrivalCountry?: string) {
@@ -308,13 +312,16 @@ export class BookingsService {
     );
   }
 
-  async findOneHotelBooking(bookingId: bigint ,account: Account): Promise<HotelBookingMapper | null> {
+  async findOneHotelBooking(bookingId: bigint, account: Account): Promise<HotelBookingMapper | null> {
     const entity = await this.hotelService.findOneByBookingId(bookingId);
     if (!entity) return null;
-    if(account.role === RolesEnum.OFFICE) {
-      const canOfficeAddOffers = await this.offerService.canOfficeAddOffer(bookingId ,account.id);
-      const canChatbeEnabled = await this.offerService.canChatbeEnabled(bookingId ,account.id);
+    if (account.role === RolesEnum.OFFICE) {
+      const canOfficeAddOffers = await this.offerService.canOfficeAddOffer(bookingId, account.id);
+      const canChatbeEnabled = await this.offerService.canChatbeEnabled(bookingId, account.id);
       return { ...entity, canOfficeAddOffers, canChatbeEnabled };
+    } else if (account.role === RolesEnum.USER) {
+      const canUserReviewBooking = await this.reviewService.canUserReviewBooking(account.id, bookingId);
+      return { ...entity, canUserReviewBooking };
     }
     return entity;
   }
@@ -322,10 +329,13 @@ export class BookingsService {
   async findOneCarBooking(bookingId: bigint, account: Account): Promise<CarBookingMapper | null> {
     const entity = await this.carService.findOneByBookingId(bookingId);
     if (!entity) return null;
-    if(account.role === RolesEnum.OFFICE) {
-      const canOfficeAddOffers = await this.offerService.canOfficeAddOffer(bookingId ,account.id);
-      const canChatbeEnabled = await this.offerService.canChatbeEnabled(bookingId ,account.id);
+    if (account.role === RolesEnum.OFFICE) {
+      const canOfficeAddOffers = await this.offerService.canOfficeAddOffer(bookingId, account.id);
+      const canChatbeEnabled = await this.offerService.canChatbeEnabled(bookingId, account.id);
       return { ...entity, canOfficeAddOffers, canChatbeEnabled };
+    } else if (account.role === RolesEnum.USER) {
+      const canUserReviewBooking = await this.reviewService.canUserReviewBooking(account.id, bookingId);
+      return { ...entity, canUserReviewBooking };
     }
     return entity;
   }
@@ -333,10 +343,13 @@ export class BookingsService {
   async findOneFlightBooking(bookingId: bigint, account: Account): Promise<FlightBookingMapper | null> {
     const entity = await this.flightService.findOneByBookingId(bookingId);
     if (!entity) return null;
-    if(account.role === RolesEnum.OFFICE) {
-      const canOfficeAddOffers = await this.offerService.canOfficeAddOffer(bookingId ,account.id);
-      const canChatbeEnabled = await this.offerService.canChatbeEnabled(bookingId ,account.id);
+    if (account.role === RolesEnum.OFFICE) {
+      const canOfficeAddOffers = await this.offerService.canOfficeAddOffer(bookingId, account.id);
+      const canChatbeEnabled = await this.offerService.canChatbeEnabled(bookingId, account.id);
       return { ...entity, canOfficeAddOffers, canChatbeEnabled };
+    } else if (account.role === RolesEnum.USER) {
+      const canUserReviewBooking = await this.reviewService.canUserReviewBooking(account.id, bookingId);
+      return { ...entity, canUserReviewBooking };
     }
     return entity;
   }
@@ -344,10 +357,13 @@ export class BookingsService {
   async findOneVisaBooking(bookingId: bigint, account: Account): Promise<VisaBookingMapper | null> {
     const entity = await this.visaService.findOneByBookingId(bookingId);
     if (!entity) return null;
-    if(account.role === RolesEnum.OFFICE) {
-      const canOfficeAddOffers = await this.offerService.canOfficeAddOffer(bookingId ,account.id);
-      const canChatbeEnabled = await this.offerService.canChatbeEnabled(bookingId ,account.id);
+    if (account.role === RolesEnum.OFFICE) {
+      const canOfficeAddOffers = await this.offerService.canOfficeAddOffer(bookingId, account.id);
+      const canChatbeEnabled = await this.offerService.canChatbeEnabled(bookingId, account.id);
       return { ...entity, canOfficeAddOffers, canChatbeEnabled };
+    } else if (account.role === RolesEnum.USER) {
+      const canUserReviewBooking = await this.reviewService.canUserReviewBooking(account.id, bookingId);
+      return { ...entity, canUserReviewBooking };
     }
     return entity;
   }
@@ -356,9 +372,9 @@ export class BookingsService {
     const [bookings, total] = await this.bookingRepository.findUserBookings(accountId, dto);
     const mapped = bookings.map((booking) => {
       const bookingMapper = BookingMapper.fromEntities(booking);
-      if(booking.status !== BookingStatus.COMPLETED){
+      if (booking.status !== BookingStatus.COMPLETED) {
         bookingMapper.status = 'PENDING';
-      }else{
+      } else {
         bookingMapper.status = 'COMPLETED';
       }
       return bookingMapper;

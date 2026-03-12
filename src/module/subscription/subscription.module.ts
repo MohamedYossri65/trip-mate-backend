@@ -8,6 +8,7 @@ import { OfficeSubscription } from './entity/office-subscription.entity';
 import { OfficeEmployee } from '../office/entity/employee.entity';
 import { SubscriptionService } from './subscription.service';
 import { SubscriptionController } from './subscription.controller';
+import { AccountModule } from '../account/account.module';
 
 @Module({
   imports: [
@@ -21,9 +22,10 @@ import { SubscriptionController } from './subscription.controller';
     CacheModule.register({
       ttl: 86400000, // 1 day in milliseconds
     }),
+    AccountModule
   ],
   controllers: [SubscriptionController],
   providers: [SubscriptionService],
   exports: [SubscriptionService],
 })
-export class SubscriptionModule {}
+export class SubscriptionModule { }

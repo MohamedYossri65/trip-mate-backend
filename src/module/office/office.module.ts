@@ -6,12 +6,14 @@ import { OfficeController } from './office.controller';
 import { OfficeEmployee } from './entity/employee.entity';
 import { FileUploadModule } from '../fileUpload/file-upload.module';
 import { SubscriptionModule } from '../subscription/subscription.module';
+import { ReviewModule } from '../review/review.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([OfficeProfile, OfficeEmployee]),
     FileUploadModule,
     SubscriptionModule,
+    ReviewModule,
   ],
   controllers: [OfficeController],
   providers: [OfficeService],

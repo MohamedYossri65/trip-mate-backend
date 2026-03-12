@@ -8,7 +8,6 @@ export class CreateReviewDto {
     example: 1,
   })
   @IsNotEmpty()
-  @Transform(({ value }) => BigInt(value))
   officeId: bigint;
 
   @ApiProperty({
@@ -17,7 +16,6 @@ export class CreateReviewDto {
     required: false,
   })
   @IsOptional()
-  @Transform(({ value }) => (value ? BigInt(value) : undefined))
   bookingId?: bigint;
 
   @ApiProperty({

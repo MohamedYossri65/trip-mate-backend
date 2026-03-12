@@ -27,6 +27,7 @@ export class BundleMapper {
 
   canChatbeEnabled?: boolean;
   canOfficeAddOffers?: boolean;
+  canUserReviewBooking?: boolean;
 
   static fromEntities(
     bundle: Booking,

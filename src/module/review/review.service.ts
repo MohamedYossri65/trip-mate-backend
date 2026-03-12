@@ -44,23 +44,34 @@ export class ReviewService {
     }
 
     // Verify user has completed at least one booking with this office
-    const hasCompletedBooking = await this.bookingRepository
+    const queryBuilder = this.bookingRepository
       .createQueryBuilder('booking')
-      .innerJoin('booking.user', 'user')
-      .innerJoin('booking.selectedOffer', 'offer')
-      .innerJoin('offer.office', 'office')
-      .where('user.accountId = :accountId', { accountId })
-      .andWhere('office.id = :officeId', { officeId: dto.officeId })
-      .andWhere('booking.status = :status', { status: BookingStatus.COMPLETED })
-      .getCount();
+      .andWhere('booking.userAccountId = :accountId', { accountId: BigInt(accountId) })
+      .andWhere('booking.status = :status', { status: BookingStatus.COMPLETED });
 
-    if (hasCompletedBooking === 0) {
+    // If bookingId is provided, check that specific booking
+    if (dto.bookingId) {
+      queryBuilder.andWhere('booking.id = :bookingId', { bookingId: BigInt(dto.bookingId) });
+    }
+    const hasCompletedBooking = await queryBuilder.getOne();
+
+    if (!hasCompletedBooking) {
       throw new BadRequestException(
         'You can only review offices after completing a booking with them',
       );
     }
 
     // Check if user already reviewed this office
+    const existingReviewWhere: any = {
+      accountId,
+      officeId: dto.officeId,
+    };
+
+    // Only check for duplicate if bookingId is provided
+    if (dto.bookingId) {
+      existingReviewWhere.bookingId = dto.bookingId;
+    }
+
     const existingReview = await this.reviewRepository.findOne({
       where: {
         accountId,
@@ -88,7 +99,7 @@ export class ReviewService {
     // Fetch with relations for response
     const fullReview = await this.reviewRepository.findOne({
       where: { id: savedReview.id },
-      relations: ['account', 'office'],
+      relations: ['userProfile', 'office'],
     });
 
     if (!fullReview) {
@@ -202,7 +213,7 @@ export class ReviewService {
   async getReviewById(reviewId: bigint): Promise<ReviewResponseDto> {
     const review = await this.reviewRepository.findOne({
       where: { id: reviewId },
-      relations: ['account', 'office'],
+      relations: ['userProfile', 'office'],
     });
 
     if (!review) {
@@ -210,5 +221,15 @@ export class ReviewService {
     }
 
     return ReviewMapper.toResponseDto(review);
+  }
+
+  async canUserReviewBooking(accountId: bigint ,bookingId: bigint): Promise<boolean> {
+    const hasCompletedBooking = await this.bookingRepository
+      .createQueryBuilder('booking')
+      .andWhere('booking.userAccountId = :accountId', { accountId })
+      .andWhere('booking.id = :bookingId', { bookingId })
+      .andWhere('booking.status = :status', { status: BookingStatus.COMPLETED })
+      .getOne();
+    return !!hasCompletedBooking;
   }
 }

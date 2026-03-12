@@ -6,6 +6,8 @@ export class OfficeDetailsMapper {
     officeName: string;
     averageRating: number;
     completedBookings: number;
+    location: string;
+    description?: string;
     createdAt: Date;
     logoUrl?: string;
 
@@ -13,6 +15,8 @@ export class OfficeDetailsMapper {
         return {
             officeId: officeDetails.accountId,
             officeName: officeDetails.officeName,
+            location: officeDetails.location,
+            description: officeDetails.description,
             averageRating: averageRating,
             completedBookings: completedBookings,
             createdAt: officeDetails.account.createdAt,

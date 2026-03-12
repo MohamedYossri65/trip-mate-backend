@@ -678,7 +678,7 @@ export class OffersService {
         offer.office.accountId.toString() === officeId.toString() &&
         offer.status === OfferStatus.PENDING &&
         offer.booking.status === BookingStatus.UNDER_NEGOTIATION;
-      return OfferMapper.fromEntities(offer, canOfficeEditOffer);
+      return OfferMapper.fromEntities(offer, canOfficeEditOffer, null);
     });
   }
 
@@ -720,7 +720,8 @@ export class OffersService {
   async findLastOfferPendingForUser(userId: bigint): Promise<OfferMapper | null> {
     const offerDetails = await this.offerRepository.findLastPendingOfferForUser(userId);
     if (!offerDetails) return null;
-    return OfferMapper.fromEntities(offerDetails, false);
+    const officeDetails = await this.officeService.getOfficeDetails(offerDetails.office.accountId);
+    return OfferMapper.fromEntities(offerDetails, false ,officeDetails);
   }
 
   async savePathAttachments(attachments: string[]): Promise<string[]> {
@@ -788,9 +789,9 @@ export class OffersService {
     if (
       booking &&
       (
-        booking.status !== BookingStatus.PARTIALLY_PAID &&
-        booking.status !== BookingStatus.CONFIRMED &&
-        booking.status !== BookingStatus.COMPLETED
+        booking.status === BookingStatus.PARTIALLY_PAID ||
+        booking.status === BookingStatus.CONFIRMED ||
+        booking.status === BookingStatus.COMPLETED
       ) &&
       !offer
     ) {

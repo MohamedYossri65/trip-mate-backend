@@ -9,7 +9,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { Request, Response } from 'express';
 import { I18nValidationException } from 'nestjs-i18n';
-import errorLogger from './logger.winston.utils';
+import errorLogger from '../config/logger.error';
 
 const safeSerialize = (value: any): any => {
   try {

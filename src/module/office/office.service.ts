@@ -12,6 +12,7 @@ import { OfferStatus } from '../offers/enum/offer-status.enum';
 import { DataSource } from 'typeorm';
 import { OfficeDetailsMapper } from './mapper/office-details.mapper';
 import { SubscriptionService } from '../subscription/subscription.service';
+import { ReviewService } from '../review/review.service';
 
 @Injectable()
 export class OfficeService {
@@ -25,6 +26,8 @@ export class OfficeService {
     private readonly dataSource: DataSource,
 
     private readonly subscriptionService: SubscriptionService,
+
+    private readonly reviewService: ReviewService,
   ) {}
 
   async createProfile(
@@ -38,6 +41,7 @@ export class OfficeService {
       repo.create({
         accountId: data.accountId,
         officeName: data.officeName,
+        location: data.location,
         account: { id: data.accountId },
         reviewStatus: ReviewOfficeStatus.PENDING,
       }),
@@ -72,8 +76,6 @@ export class OfficeService {
       throw new BadRequestException('Office profile not found');
     }
 
-    // Check subscription allows creating employees
-    await this.subscriptionService.canCreateMoreEmployees(accountId);
     const employees = employeeDto.map((emp) =>
       this.officeEmployeeRepository.create({
         office: { accountId: office.accountId },
@@ -132,12 +134,11 @@ export class OfficeService {
 
 
   async getOfficeReviewStatus(accountId: bigint): Promise<number> {
-    return 5; // Placeholder for actual implementation to calculate review status percentage
-    
+    return this.reviewService.getOfficeReviewsStats(accountId).then(stats => stats.averageRating);
   }
 
   
-    async getOfficeCompletedBookingsPercentage(officeId: bigint): Promise<number> {
+  async getOfficeCompletedBookingsPercentage(officeId: bigint): Promise<number> {
       const totalOffers = await this.dataSource 
         .getRepository(Offer)
         .createQueryBuilder('offer')

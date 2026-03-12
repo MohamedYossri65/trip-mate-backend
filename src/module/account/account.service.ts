@@ -126,4 +126,18 @@ export class AccountService {
       },
     );
   }
+
+  async isEmailTaken(email: string): Promise<boolean> {
+    const query = this.accountRepository.createQueryBuilder('account')
+      .where('account.email = :email', { email });
+    const result = await query.getOne();
+    return !!result;
+  }
+
+  async isPhoneTaken(phone: string): Promise<boolean> {
+    const query = this.accountRepository.createQueryBuilder('account')
+      .where('account.phone = :phone', { phone });
+    const result = await query.getOne();
+    return !!result;
+  }
 }

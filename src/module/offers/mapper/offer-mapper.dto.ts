@@ -1,3 +1,4 @@
+import { OfficeDetailsMapper } from "src/module/office/mapper/office-details.mapper";
 import { Offer } from "../entity/offer.entity";
 
 
@@ -22,15 +23,11 @@ export class OfferMapper {
         type: string;
         destinationCountry: string;
     };
-    office: {
-        id: bigint;
-        officeName: string;
-        logo: string;
-    } | null;
+    office: OfficeDetailsMapper| null;
 
     canOfficeEditOffer: boolean;
 
-    static fromEntities(offer: Offer, canOfficeEditOffer: boolean): OfferMapper {
+    static fromEntities(offer: Offer, canOfficeEditOffer: boolean , officeDetails: OfficeDetailsMapper | null): OfferMapper {
         return {
             offerId: offer.id,
             price: offer.price,
@@ -53,11 +50,7 @@ export class OfferMapper {
                 type: offer.booking.type,
                 destinationCountry: offer.arrivalCountry,
             },
-            office: offer.office ? {
-                id: offer.office.accountId,
-                officeName: offer.office.officeName,
-                logo : offer.office.logoUrl,
-            } : null,
+            office: offer.office ? officeDetails : null,
             canOfficeEditOffer
         };
     }

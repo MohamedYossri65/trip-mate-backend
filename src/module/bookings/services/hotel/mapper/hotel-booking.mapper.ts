@@ -33,6 +33,7 @@ export class HotelBookingMapper {
   notes?: string;
   canOfficeAddOffers?: boolean;
   canChatbeEnabled?: boolean;
+  canUserReviewBooking?: boolean;
   
 
   static fromEntities(

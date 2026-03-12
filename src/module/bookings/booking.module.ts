@@ -10,6 +10,7 @@ import { VisaModule } from './services/visa/visa.module';
 import { BundleModule } from './bundle/bundle.module';
 import { BookingRepository } from './domain/repository/booking.repository';
 import { OffersModule } from '../offers/offers.module';
+import { ReviewModule } from '../review/review.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { OffersModule } from '../offers/offers.module';
     VisaModule,
     BundleModule,
     OffersModule,
+    ReviewModule
   ],
   controllers: [BookingsController],
   providers: [BookingsService, BookingRepository],

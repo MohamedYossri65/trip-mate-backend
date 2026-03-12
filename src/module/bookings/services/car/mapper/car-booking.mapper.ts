@@ -37,8 +37,10 @@ export class CarBookingMapper {
     notes?: string;
 
     canChatbeEnabled?: boolean;
-
     canOfficeAddOffers?: boolean;
+    canUserReviewBooking?: boolean;
+
+    
     static fromEntities(carBooking: CarBooking): CarBookingMapper {
         return {
             bookingId: carBooking.bookingId,
