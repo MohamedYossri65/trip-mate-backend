@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiQuery } from '@nestjs/swagger';
 import { BookingsService } from './bookings.service';
 import { CreateHotelBookingDto } from './services/hotel/dto/create-hotel-booking.dto';
@@ -136,7 +136,7 @@ export class BookingsController {
   @Auth()
   @ApiOperation({ summary: 'Get details of a single bundle (comprehensive trip) booking' })
   @SuccessResponse('Bundle booking retrieved successfully')
-  async findOneBundle(@Query('id') id: bigint , @CurrentUser() account: Account) {
+  async findOneBundle(@Param('id') id: bigint , @CurrentUser() account: Account) {
     return this.bookingsService.findOneBundle(id, account);
   }
 
@@ -166,7 +166,7 @@ export class BookingsController {
   @Auth()
   @ApiOperation({ summary: 'Get car booking details by booking ID' })
   @SuccessResponse('Car booking retrieved successfully')
-  async findCarByBookingId(@Query('bookingId') bookingId: bigint , @CurrentUser() account: Account) {
+  async findCarByBookingId(@Param('bookingId') bookingId: bigint , @CurrentUser() account: Account) {
     return this.bookingsService.findOneCarBooking(bookingId, account);
   }
 
@@ -174,7 +174,7 @@ export class BookingsController {
   @Auth()
   @ApiOperation({ summary: 'Get flight booking details by booking ID' })
   @SuccessResponse('Flight booking retrieved successfully')
-  async findFlightByBookingId(@Query('bookingId') bookingId: bigint, @CurrentUser() account: Account) {
+  async findFlightByBookingId(@Param('bookingId') bookingId: bigint, @CurrentUser() account: Account) {
     return this.bookingsService.findOneFlightBooking(bookingId, account);
   }
 
@@ -182,7 +182,7 @@ export class BookingsController {
   @Auth()
   @ApiOperation({ summary: 'Get hotel booking details by booking ID' })
   @SuccessResponse('Hotel booking retrieved successfully')
-  async findHotelByBookingId(@Query('bookingId') bookingId: bigint ,@CurrentUser() account: Account) {
+  async findHotelByBookingId(@Param('bookingId') bookingId: bigint ,@CurrentUser() account: Account) {
     return this.bookingsService.findOneHotelBooking(bookingId, account);
   }
 
@@ -190,7 +190,7 @@ export class BookingsController {
   @Auth()
   @ApiOperation({ summary: 'Get visa booking details by booking ID' })
   @SuccessResponse('Visa booking retrieved successfully')
-  async findVisaByBookingId(@Query('bookingId') bookingId: bigint, @CurrentUser() account: Account) {
+  async findVisaByBookingId(@Param('bookingId') bookingId: bigint, @CurrentUser() account: Account) {
     return this.bookingsService.findOneVisaBooking(bookingId, account);
   }
 }

@@ -29,9 +29,6 @@ export class ReviewResponseDto {
     @ApiProperty({ type: ReviewerDto })
     reviewer: ReviewerDto;
 
-    @ApiProperty({ type: ReviewOfficeDto })
-    office: ReviewOfficeDto;
-
     @ApiProperty({ example: 5 })
     rating: number;
 

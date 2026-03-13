@@ -11,6 +11,7 @@ services:
       - trip-mate-network
     environment:
       - APP_ENV=production
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
     env_file:
       - .env
     ports:

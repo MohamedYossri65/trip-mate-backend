@@ -10,8 +10,14 @@ export class OfficeDetailsMapper {
     description?: string;
     createdAt: Date;
     logoUrl?: string;
+    bookingCompletionRate: number;
 
-    static fromEntities(officeDetails: OfficeProfile ,averageRating: number ,completedBookings: number): OfficeDetailsMapper {
+    static fromEntities(
+        officeDetails: OfficeProfile ,
+        averageRating: number ,
+        completedBookings: number,
+        bookingCompletionRate: number,
+    ): OfficeDetailsMapper {
         return {
             officeId: officeDetails.accountId,
             officeName: officeDetails.officeName,
@@ -21,6 +27,7 @@ export class OfficeDetailsMapper {
             completedBookings: completedBookings,
             createdAt: officeDetails.account.createdAt,
             logoUrl: officeDetails.logoUrl,
+            bookingCompletionRate: bookingCompletionRate,
         };
     }
 }

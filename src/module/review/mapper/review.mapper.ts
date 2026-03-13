@@ -8,17 +8,10 @@ export class ReviewMapper {
       name: review.userProfile.name,
     };
 
-    const office: ReviewOfficeDto = {
-      id: review.office.accountId,
-      name: review.office.officeName,
-      logo: review.office.logoUrl,
-    };
-
     return {
       id: review.id,
       bookingId : review.bookingId ? review.bookingId : undefined,
       reviewer,
-      office,
       rating: review.rating,
       comment: review.comment,
       createdAt: review.createdAt,

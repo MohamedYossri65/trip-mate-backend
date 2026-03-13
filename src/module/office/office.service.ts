@@ -1,6 +1,9 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
+import { Inject } from '@nestjs/common';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Cache } from 'cache-manager';
 import { ReviewOfficeStatus } from './enum/review-office-status.enum';
 import { OfficeProfile } from './entity/office.entity';
 import { CreateOfficeDto } from './dto/create-office.dto';
@@ -28,6 +31,9 @@ export class OfficeService {
     private readonly subscriptionService: SubscriptionService,
 
     private readonly reviewService: ReviewService,
+
+    @Inject(CACHE_MANAGER)
+    private readonly cacheManager: Cache,
   ) {}
 
   async createProfile(
@@ -116,6 +122,12 @@ export class OfficeService {
   }
 
   async getOfficeDetails(officeId : bigint): Promise<OfficeDetailsMapper> {
+    const cacheKey = `office:details:${officeId.toString()}`;
+    const cached = await this.cacheManager.get<OfficeDetailsMapper>(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
     const office = await this.officeProfileRepository.findOne({
       where: { accountId: officeId },
       relations: ['account', 'employees'],
@@ -125,16 +137,38 @@ export class OfficeService {
       throw new BadRequestException('Office profile not found');
     }
 
-    return OfficeDetailsMapper.fromEntities(
+    const details = OfficeDetailsMapper.fromEntities(
       office,
       await this.getOfficeReviewStatus(officeId),
       await this.getOfficeCompletedBookingsPercentage(officeId),
+      await this.getBookingCompletionRate(officeId),
     );
+
+    await this.cacheManager.set(cacheKey, details, 10800000);
+
+    return details;
   }
 
 
   async getOfficeReviewStatus(accountId: bigint): Promise<number> {
     return this.reviewService.getOfficeReviewsStats(accountId).then(stats => stats.averageRating);
+  }
+
+  async getBookingCompletionRate(officeId: bigint): Promise<number> {
+    const totalOffers = await this.dataSource 
+      .getRepository(Offer)      
+      .createQueryBuilder('offer')
+      .where('offer.office_id = :officeId', { officeId })
+      .getCount();
+    const completedOffers = await this.dataSource
+      .getRepository(Offer)
+      .createQueryBuilder('offer')
+      .where('offer.office_id = :officeId', { officeId })
+      .andWhere('offer.status = :status', { status: OfferStatus.ACCEPTED })
+      .getCount();
+
+    if (totalOffers === 0) return 0;
+    return (completedOffers / totalOffers) * 100;
   }
 
   
