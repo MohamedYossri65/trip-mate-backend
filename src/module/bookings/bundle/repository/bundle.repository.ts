@@ -25,6 +25,13 @@ export class BundleRepository extends Repository<BundleBase> {
             qb.andWhere('booking.status = :status', { status: dto.status });
         }
 
+        if (dto.arrivalCountry) {
+            qb.leftJoin(VisaBundle, 'visaBundle', 'visaBundle.bundleBaseId = baseBundle.bookingId')
+                .andWhere('visaBundle.arrivalCountry = :arrivalCountry', {
+                    arrivalCountry: dto.arrivalCountry,
+                });
+        }
+
         const allowedSortColumns: Record<string, string> = {
             createdAt: 'booking.createdAt',
         };
@@ -35,7 +42,7 @@ export class BundleRepository extends Repository<BundleBase> {
         return qb.getManyAndCount();
     }
 
-    async findOneBundleWithDetails(id: bigint){
+    async findOneBundleWithDetails(id: bigint) {
         const baseBundle = await this.createQueryBuilder('baseBundle')
             .leftJoinAndSelect('baseBundle.booking', 'booking')
             .leftJoinAndSelect('booking.user', 'user')

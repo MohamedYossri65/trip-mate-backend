@@ -38,12 +38,8 @@ import { Account } from '../account/entity/account.entity';
 import { RolesEnum } from 'src/common/enums/roles.enum';
 import { OffersService } from '../offers/offers.service';
 import { MyBookingFilterDto } from './domain/dto/my-booking-filter.dto';
-import { OfficeService } from '../office/office.service';
 import { ReviewService } from '../review/review.service';
-import { HotelBundleBookingMapper } from './bundle/mapper/hotel-bundle-booking.mapper';
-import { CarBundleBookingMapper } from './bundle/mapper/car-bundle-booking.mapper';
-import { VisaBundleBookingMapper } from './bundle/mapper/visa-bundle-booking.mapper';
-import { FlightBundleBookingMapper } from './bundle/mapper/flight-bundle-booking.mapper';
+
 
 @Injectable()
 export class BookingsService {
@@ -266,7 +262,7 @@ export class BookingsService {
       await this.carService.findAll({ page: 1, skip: 0, limit: 3, sortBy: 'createdAt', sortOrder: 'DESC', arrivalCountry }),
       await this.flightService.findAll({ page: 1, skip: 0, limit: 3, sortBy: 'createdAt', sortOrder: 'DESC', arrivalCountry }),
       await this.visaService.findAll({ page: 1, skip: 0, limit: 3, sortBy: 'createdAt', sortOrder: 'DESC', arrivalCountry }),
-      await this.bundleService.findAll({ page: 1, skip: 0, limit: 3, sortBy: 'createdAt', sortOrder: 'DESC' }),
+      await this.bundleService.findAll({ page: 1, skip: 0, limit: 3, sortBy: 'createdAt', sortOrder: 'DESC', arrivalCountry }),
     ]);
     return FindHomePageMapper.fromEntities(
       bundles.data ?? [],

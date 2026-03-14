@@ -46,7 +46,7 @@ export class BundleService {
             const createBooking = manager.create(Booking, {
                 user: { accountId } as UserProfile,
                 type: BookingType.BUNDLE,
-                status: BookingStatus.DRAFT,
+                status: BookingStatus.WAITING_FOR_OFFERS,
             });
             await manager.save(createBooking);
             const bundleBase = manager.create(BundleBase, {
@@ -106,8 +106,27 @@ export class BundleService {
 
     async findAll(dto: BundleFilterDto): Promise<PaginatedResponseDto<findAllBundlesMapper>> {
         const [bundles, total] = await this.bundleRepository.findWithFilters(dto);
+        const bundleIds = bundles.map((bundle) => bundle.bookingId);
+
+        const visas = bundleIds.length
+            ? await this.dataSource.getRepository(VisaBundle).find({
+                where: { bundleBaseId: In(bundleIds) },
+            })
+            : [];
+
+        const arrivalCountryByBundleId = new Map<string, string>();
+        for (const visa of visas) {
+            const key = visa.bundleBaseId.toString();
+            if (!arrivalCountryByBundleId.has(key) && visa.arrivalCountry) {
+                arrivalCountryByBundleId.set(key, visa.arrivalCountry);
+            }
+        }
+
         const mapped = await Promise.all(bundles.map(async (bundle) => {
-            return findAllBundlesMapper.toBaseBunddleResponse(bundle);
+            return findAllBundlesMapper.toBaseBunddleResponse(
+                bundle,
+                arrivalCountryByBundleId.get(bundle.bookingId.toString()),
+            );
         }));
         return new PaginatedResponseDto(mapped, total, dto.page, dto.limit);
     }

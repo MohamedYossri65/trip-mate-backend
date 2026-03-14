@@ -14,8 +14,9 @@ export class findAllBundlesMapper {
         };
     };
     createdAt: Date;
+    destinationCountry?: string;
     numberOfGuests: number;
-    static toBaseBunddleResponse(baseBundle: BundleBase): any {
+    static toBaseBunddleResponse(baseBundle: BundleBase, arrivalCountry?: string): any {
         return {
             id: baseBundle.bookingId,
             user: {
@@ -28,6 +29,7 @@ export class findAllBundlesMapper {
                 }
             },
             createdAt: baseBundle.createdAt,
+            destinationCountry: arrivalCountry,
             numberOfGuests: (baseBundle.companionsAdults || 0) + (baseBundle.companionsChildren || 0) + 1,
         }
     }

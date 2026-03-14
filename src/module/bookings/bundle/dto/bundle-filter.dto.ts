@@ -9,6 +9,11 @@ export class BundleFilterDto extends PaginationDto implements SortDto {
   @IsString()
   status?: string;
 
+  @ApiPropertyOptional({ description: 'Filter by arrival country of all sub-bookings' })
+  @IsOptional()
+  @IsString()
+  arrivalCountry?: string;
+
   @ApiPropertyOptional({ enum: ['createdAt'] })
   @IsOptional()
   @IsString()

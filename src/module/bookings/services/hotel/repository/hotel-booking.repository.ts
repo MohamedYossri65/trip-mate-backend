@@ -31,7 +31,7 @@ export class HotelBookingRepository extends Repository<HotelBooking> {
     dto: HotelFilterDto,
   ): void {
     if (dto.arrivalCountry) {
-      qb.andWhere('hotel.arrivalCountry = :arrivalCountry', { arrivalCountry: dto.arrivalCountry });
+      qb.andWhere('hotel.destinationCountry = :arrivalCountry', { arrivalCountry: dto.arrivalCountry });
     }
     if (dto.status) {
         qb.andWhere('booking.status = :status', { status: dto.status });

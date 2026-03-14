@@ -40,7 +40,7 @@ export class OfferRepository extends Repository<Offer> {
         dto: OfferFilterDto,
     ): void {
         if (dto.status) {
-            qb.andWhere('booking.status = :status', { status: dto.status });
+                qb.andWhere('offer.status = :status', { status: dto.status });
         }
         if (dto.type) {
             qb.andWhere('booking.type = :type', { type: dto.type });

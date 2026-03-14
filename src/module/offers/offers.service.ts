@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { BookingStatus } from '../bookings/domain/enum/booking-status.enum';
 import { Offer } from './entity/offer.entity';
-import { Brackets, DataSource } from 'typeorm';
+import { Brackets, DataSource, EntityManager } from 'typeorm';
 import { Booking } from '../bookings/domain/entity/booking.entity';
 import { CarOfferDetails } from './entity/car-offer-details';
 import { CarOfferMapper } from './mapper/car-offer.mapper';
@@ -29,6 +29,7 @@ import { UpdateVisaOfferDto } from './dto/update-visa-offer.dto';
 import { UpdateFlightOfferDto } from './dto/update-flight-offer.dto';
 import { UpdateHotelOfferDto } from './dto/update-hotel-offer.dto';
 import { UpdateBundleOfferDto } from './dto/update-bundle-offer.dto';
+import { OfficeProfile } from '../office/entity/office.entity';
 
 @Injectable()
 export class OffersService {
@@ -38,6 +39,19 @@ export class OffersService {
 
     private readonly officeService: OfficeService,
   ) { }
+
+  private async findOfficeProfileOrThrow(manager: EntityManager, accountId: bigint): Promise<OfficeProfile> {
+    const office = await manager.getRepository(OfficeProfile).findOne({
+      where: { accountId },
+      relations: ['account'],
+    });
+
+    if (!office) {
+      throw new BadRequestException('Office profile not found for this account');
+    }
+
+    return office;
+  }
 
   // ─── CAR ────────────────────────────────────────────────────────────────────
 
@@ -60,9 +74,11 @@ export class OffersService {
         throw new BadRequestException('An offer from this office already exists for this booking');
       }
 
+      const office = await this.findOfficeProfileOrThrow(manager, accountId);
+
       const offer = manager.create(Offer, {
         booking,
-        office: { accountId },
+        office,
         price: carOfferDetailsDto.price,
         offerDuration: carOfferDetailsDto.offerDuration,
         arrivalCountry: carOfferDetailsDto.arrivalCountry,
@@ -155,9 +171,11 @@ export class OffersService {
         throw new BadRequestException('An offer from this office already exists for this booking');
       }
 
+      const office = await this.findOfficeProfileOrThrow(manager, accountId);
+
       const offer = manager.create(Offer, {
         booking,
-        office: { accountId },
+        office,
         price: visaOfferDto.price,
         offerDuration: visaOfferDto.offerDuration,
         arrivalCountry: visaOfferDto.arrivalCountry,
@@ -250,9 +268,11 @@ export class OffersService {
         throw new BadRequestException('An offer from this office already exists for this booking');
       }
 
+      const office = await this.findOfficeProfileOrThrow(manager, accountId);
+
       const offer = manager.create(Offer, {
         booking,
-        office: { accountId },
+        office,
         price: flightOfferDto.price,
         offerDuration: flightOfferDto.offerDuration,
         arrivalCountry: flightOfferDto.arrivalCountry,
@@ -345,9 +365,11 @@ export class OffersService {
         throw new BadRequestException('An offer from this office already exists for this booking');
       }
 
+      const office = await this.findOfficeProfileOrThrow(manager, accountId);
+
       const offer = manager.create(Offer, {
         booking,
-        office: { accountId },
+        office,
         price: hotelOfferDto.price,
         offerDuration: hotelOfferDto.offerDuration,
         arrivalCountry: hotelOfferDto.arrivalCountry,
@@ -440,9 +462,11 @@ export class OffersService {
         throw new BadRequestException('An offer from this office already exists for this booking');
       }
 
+      const office = await this.findOfficeProfileOrThrow(manager, accountId);
+
       const offer = manager.create(Offer, {
         booking,
-        office: { accountId },
+        office,
         price: bundleOfferDto.price,
         offerDuration: bundleOfferDto.offerDuration,
         arrivalCountry: bundleOfferDto.bundelDetails.visas?.[0]?.arrivalCountry || '',

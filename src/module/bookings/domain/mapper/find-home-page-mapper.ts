@@ -27,7 +27,7 @@ export class FindHomePageMapper {
                     status: bundle.user.account.status,
                 },
                 createdAt: bundle.createdAt,
-                destinationCountry: '', // Bundles don't have a single destination country
+                destinationCountry: bundle.destinationCountry,
                 numberOfGuests: bundle.numberOfGuests,
             })),
             hotels: hotels.map((hotel) => ({
