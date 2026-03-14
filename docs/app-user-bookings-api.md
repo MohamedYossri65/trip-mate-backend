@@ -40,6 +40,7 @@ graph TD
 
 ## Table of Contents
 
+- [0. Create Bundle Booking](#0-create-bundle-booking)
 - [1. Home Page](#1-home-page)
 - [2. All Hotel Bookings](#2-all-hotel-bookings)
 - [3. All Car Bookings](#3-all-car-bookings)
@@ -51,6 +52,106 @@ graph TD
     - [Booking Status Values](#booking-status-values)
     - [Paginated Response Shape](#paginated-response-shape)
     - [Error Responses](#error-responses)
+
+---
+
+## 0. Create Bundle Booking
+
+Creates one comprehensive trip request as a parent bundle booking, with child bookings per service type.
+
+- **Endpoint:** `POST /bookings/bundle`
+
+**Notes**
+
+- `bundleBase` is a **single shared object** for the whole request.
+- `hotels`, `cars`, `flights`, and `visas` are arrays (any can be omitted).
+
+**Example Request Body**
+```json
+{
+  "bundleBase": {
+    "fingerPrintLocation": "Amman - Abdali Branch",
+    "companionsAdults": 2,
+    "companionsChildren": 1,
+    "numberOfTrips": 1
+  },
+  "hotels": [
+    {
+      "arrivalCountry": "UAE",
+      "arrivalCity": "Dubai",
+      "isTherePreferredHotel": true,
+      "preferredHotelName": "Marriott Dubai",
+      "hotelStarRating": 5,
+      "checkInDate": "2026-04-10T00:00:00.000Z",
+      "checkOutDate": "2026-04-17T00:00:00.000Z",
+      "numberOfGuests": 2,
+      "numberOfChildren": 1,
+      "roomDetails": [
+        {
+          "roomType": "Suite",
+          "accommodationType": "King"
+        }
+      ],
+      "notes": "High floor preferred"
+    }
+  ],
+  "cars": [
+    {
+      "arrivalCountry": "UAE",
+      "arrivalCity": "Dubai",
+      "deliveryLocation": "Dubai Airport T3",
+      "deliveryDate": "2026-04-10T10:00:00.000Z",
+      "returnDate": "2026-04-17T10:00:00.000Z",
+      "carType": "SUV",
+      "transmissionType": "Automatic",
+      "carBrand": "Toyota",
+      "carModel": "Fortuner",
+      "hasDrivingLicense": true,
+      "driverAge": 30,
+      "drivingExperienceYears": 5,
+      "requiresPrivateDriver": false,
+      "requiresChildSeat": true,
+      "requiresFullInsurance": true,
+      "notes": ""
+    }
+  ],
+  "flights": [
+    {
+      "departureCountry": "Jordan",
+      "departureCity": "Amman",
+      "arrivalCountry": "UAE",
+      "arrivalCity": "Dubai",
+      "isRoundTrip": true,
+      "departureDate": "2026-04-10T08:00:00.000Z",
+      "returnDate": "2026-04-17T18:00:00.000Z",
+      "hasVisa": false,
+      "hasCompanions": true,
+      "numberOfCompanions": 2,
+      "fullName": "Omar Nasser",
+      "dateOfBirth": "1990-05-15T00:00:00.000Z",
+      "nationalIdNumber": "9876543210",
+      "nationality": "Jordanian",
+      "hasPassport": true,
+      "endingDate": "2030-12-31T00:00:00.000Z",
+      "isYouTravelToThisCountryBefore": false,
+      "isYourVisaRefusedBefore": false,
+      "ticketGrade": "Economy"
+    }
+  ],
+  "visas": [
+    {
+      "fingerPrintLocation": "Amman - Abdali Branch",
+      "arrivalCountry": "UAE",
+      "visaType": "Tourist",
+      "departureDate": "2026-04-10T00:00:00.000Z",
+      "companionsAdults": 1,
+      "companionsChildren": 0,
+      "departureCountry": "Jordan",
+      "returnDate": "2026-04-17T00:00:00.000Z"
+    }
+  ]
+}
+```
 
 ---
 

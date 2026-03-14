@@ -10,6 +10,9 @@ export class BundleOfferDetails {
     @JoinColumn({ name: 'offer_id' })
     offer: Offer;
 
+    @Column({ name: 'bundle_details', type: 'jsonb', nullable: true })
+    bundelDetails?: Record<string, any>;
+
     @Column({ type: 'text', nullable: true })
     notes?: string;
 }

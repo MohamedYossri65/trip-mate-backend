@@ -15,6 +15,8 @@ import { UpdateFlightOfferDto } from "./dto/update-flight-offer.dto";
 import { UpdateHotelOfferDto } from "./dto/update-hotel-offer.dto";
 import { OfferFilterDto } from "./dto/offer-filter.dto";
 import { Public } from "src/common/guards/decorators/public.decorator";
+import { CreateBundleOfferDto } from "./dto/create-bundle-offer.dto";
+import { UpdateBundleOfferDto } from "./dto/update-bundle-offer.dto";
 
 @ApiTags('offers')
 @Public()
@@ -227,19 +229,45 @@ export class OffersController {
         );
     }
 
-    // @Post('bundle')
-    // @Auth()
-    // @ApiOperation({ summary: 'Create a bundle offer' })
-    // @SuccessResponse('Bundle offer created successfully')
-    // async createBundleOffer(
-    //     @Body() dto: CreateBundleOfferDto,
-    //     @CurrentUser() account: Account,
-    // ) {
-    //     return await this.offersService.createBundleOffer(
-    //         dto,
-    //         account.id,
-    //     );
-    // }
+    @Post('bundle')
+    @Auth()
+    @ApiOperation({ summary: 'Create a bundle offer' })
+    @SuccessResponse('Bundle offer created successfully')
+    async createBundleOffer(
+        @Body() dto: CreateBundleOfferDto,
+        @CurrentUser() account: Account,
+    ) {
+        return await this.offersService.createBundleOffer(
+            dto,
+            account.id,
+        );
+    }
+
+    @Get('bundle/:offerId')
+    @Auth()
+    @ApiOperation({ summary: 'Get a bundle offer' })
+    @SuccessResponse('Bundle offer retrieved successfully')
+    async findOneBundleOffer(
+        @Param('offerId') offerId: string,
+    ) {
+        return await this.offersService.findOneBundleOffer(BigInt(offerId));
+    }
+
+    @Patch('bundle/:offerId')
+    @Auth()
+    @ApiOperation({ summary: 'Update a bundle offer' })
+    @SuccessResponse('Bundle offer updated successfully')
+    async updateBundleOffer(
+        @Param('offerId') offerId: string,
+        @Body() dto: UpdateBundleOfferDto,
+        @CurrentUser() account: Account,
+    ) {
+        return await this.offersService.updateBundleOffer(
+            BigInt(offerId),
+            dto,
+            account.id,
+        );
+    }
 
     @Get('office')
     @Auth()

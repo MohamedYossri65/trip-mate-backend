@@ -40,6 +40,10 @@ import { OffersService } from '../offers/offers.service';
 import { MyBookingFilterDto } from './domain/dto/my-booking-filter.dto';
 import { OfficeService } from '../office/office.service';
 import { ReviewService } from '../review/review.service';
+import { HotelBundleBookingMapper } from './bundle/mapper/hotel-bundle-booking.mapper';
+import { CarBundleBookingMapper } from './bundle/mapper/car-bundle-booking.mapper';
+import { VisaBundleBookingMapper } from './bundle/mapper/visa-bundle-booking.mapper';
+import { FlightBundleBookingMapper } from './bundle/mapper/flight-bundle-booking.mapper';
 
 @Injectable()
 export class BookingsService {
@@ -223,47 +227,8 @@ export class BookingsService {
   async createAllBookings(
     accountId: bigint,
     dto: CreateAllBookingsDto,
-  ): Promise<{
-    bundleId: bigint;
-    hotels: HotelBookingMapper[];
-    cars: CarBookingMapper[];
-    flights: FlightBookingMapper[];
-    visas: VisaBookingMapper[];
-  }> {
-    const [hotels, cars, flights, visas] = await Promise.all([
-      await Promise.all((dto.hotels ?? []).map((h) => this.createHotelBooking(accountId, h))),
-      await Promise.all((dto.cars ?? []).map((c) => this.createCarBooking(accountId, c))),
-      await Promise.all((dto.flights ?? []).map((f) => this.createFlightBooking(accountId, f))),
-      await Promise.all((dto.visas ?? []).map((v) => this.createVisaBooking(accountId, v))),
-    ]);
-
-    const allResults = [...hotels, ...cars, ...flights, ...visas];
-    if (!allResults.length) throw new BadRequestException('At least one booking must be provided');
-
-    // Resolve UserProfile
-    const userProfile = await this.dataSource.getRepository(UserProfile).findOne({
-      where: { account: { id: accountId } },
-    });
-    if (!userProfile) throw new NotFoundException('User profile not found');
-
-    // Create a BUNDLE booking to group these child bookings together
-    const bundleBooking = this.dataSource.getRepository(Booking).create({
-      user: { accountId: userProfile.accountId },
-      type: BookingType.BUNDLE,
-      status: BookingStatus.WAITING_FOR_OFFERS,
-    });
-    await this.dataSource.getRepository(Booking).save(bundleBooking);
-
-    // Link every created Booking record to this bundle booking via parent_id
-    const bookingIds: bigint[] = allResults.map((r: any) => r.booking.id);
-    await this.dataSource
-      .createQueryBuilder()
-      .update(Booking)
-      .set({ parent: { id: bundleBooking.id } })
-      .whereInIds(bookingIds)
-      .execute();
-
-    return { bundleId: bundleBooking.id, hotels, cars, flights, visas };
+  ): Promise<BundleMapper> {
+    return this.bundleService.createBundle(accountId, dto);
   }
 
   // Getters for bookings for officers would go here

@@ -38,15 +38,6 @@ export class Booking {
   @JoinColumn({ name: 'selected_offer_id' })
   selectedOffer?: Offer;
 
-  // Self-referencing: a BUNDLE-type booking is the parent of its child bookings
-  @ManyToOne(() => Booking, (b) => b.children, { nullable: true, onDelete: 'SET NULL', eager: false })
-  @JoinColumn({ name: 'parent_id' })
-  parent?: Booking;
-
-  @OneToMany(() => Booking, (b) => b.parent, { eager: false })
-  children?: Booking[];
-
-
   @OneToOne(() => Review, (review) => review.booking, {nullable: true, eager: true })
   @JoinColumn({ name: 'reviewId' })
   review?: Review;

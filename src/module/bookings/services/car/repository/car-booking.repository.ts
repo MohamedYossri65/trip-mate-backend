@@ -16,7 +16,6 @@ export class CarBookingRepository extends Repository<CarBooking> {
       .leftJoinAndSelect('car.booking', 'booking')
       .leftJoinAndSelect('booking.user', 'user')
       .leftJoinAndSelect('user.account', 'account')
-      .where('booking.parent_id IS NULL');
 
     this.applyFilters(qb, dto);
     this.applySort(qb, dto);

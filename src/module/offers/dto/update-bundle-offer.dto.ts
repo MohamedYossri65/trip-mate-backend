@@ -1,7 +1,6 @@
 import { Type } from 'class-transformer';
 import {
     IsDate,
-    IsDefined,
     IsNotEmpty,
     IsNumber,
     IsOptional,
@@ -10,22 +9,25 @@ import {
 } from 'class-validator';
 import { CreateAllBookingsDto } from 'src/module/bookings/domain/dto/create-all-bookings.dto';
 
-export class CreateBundleOfferDto {
+export class UpdateBundleOfferDto {
+    @IsOptional()
     @IsNumber()
-    @Type(() => Number)
-    bookingId: number;
+    price?: number;
 
-    @IsNumber()
-    price: number;
+    @IsOptional()
+    @IsString()
+    @IsNotEmpty()
+    arrivalCountry?: string;
 
-    @IsDefined()
-    @ValidateNested()
-    @Type(() => CreateAllBookingsDto)
-    bundelDetails: CreateAllBookingsDto;
-
+    @IsOptional()
     @IsDate()
     @Type(() => Date)
-    offerDuration: Date;
+    offerDuration?: Date;
+
+    @IsOptional()
+    @ValidateNested()
+    @Type(() => CreateAllBookingsDto)
+    bundelDetails?: CreateAllBookingsDto;
 
     @IsOptional()
     @IsString()

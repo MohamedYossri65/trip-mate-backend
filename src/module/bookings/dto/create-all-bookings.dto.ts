@@ -1,38 +1,46 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { ValidateNested, IsOptional, IsArray } from 'class-validator';
 import { Type } from 'class-transformer';
-import { CreateHotelBookingDto } from '../services/hotel/dto/create-hotel-booking.dto';
-import { CreateCarBookingDto } from '../services/car/dto/create-car-booking.dto';
-import { CreateFlightBookingDto } from '../services/flight/dto/create-flight-booking.dto';
-import { CreateVisaBookingDto } from '../services/visa/dto/create-visa.dto';
+import {
+  CreateBundleBaseDto,
+  CreateBundleCarBookingDto,
+  CreateBundleFlightBookingDto,
+  CreateBundleHotelBookingDto,
+  CreateBundleVisaBookingDto,
+} from '../bundle/dto/create-bundle-booking.dto';
 
 
 export class CreateAllBookingsDto {
-  @ApiProperty({ required: false, type: [CreateHotelBookingDto] })
-  @IsOptional()
-  @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => CreateHotelBookingDto)
-  hotels?: CreateHotelBookingDto[];
+  @ApiProperty({ type: CreateBundleBaseDto })
+  @ValidateNested()
+  @Type(() => CreateBundleBaseDto)
+  bundleBase: CreateBundleBaseDto;
 
-  @ApiProperty({ required: false, type: [CreateCarBookingDto] })
+  @ApiProperty({ required: false, type: [CreateBundleHotelBookingDto] })
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
-  @Type(() => CreateCarBookingDto)
-  cars?: CreateCarBookingDto[];
+  @Type(() => CreateBundleHotelBookingDto)
+  hotels?: CreateBundleHotelBookingDto[];
 
-  @ApiProperty({ required: false, type: [CreateFlightBookingDto] })
+  @ApiProperty({ required: false, type: [CreateBundleCarBookingDto] })
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
-  @Type(() => CreateFlightBookingDto)
-  flights?: CreateFlightBookingDto[];
+  @Type(() => CreateBundleCarBookingDto)
+  cars?: CreateBundleCarBookingDto[];
 
-  @ApiProperty({ required: false, type: [CreateVisaBookingDto] })
+  @ApiProperty({ required: false, type: [CreateBundleFlightBookingDto] })
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
-  @Type(() => CreateVisaBookingDto)
-  visas?: CreateVisaBookingDto[];
+  @Type(() => CreateBundleFlightBookingDto)
+  flights?: CreateBundleFlightBookingDto[];
+
+  @ApiProperty({ required: false, type: [CreateBundleVisaBookingDto] })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateBundleVisaBookingDto)
+  visas?: CreateBundleVisaBookingDto[];
 }

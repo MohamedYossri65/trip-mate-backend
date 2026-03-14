@@ -82,10 +82,6 @@ export class BookingRepository extends Repository<Booking> {
       .leftJoinAndSelect('booking.user', 'user')
       .leftJoinAndSelect('user.account', 'account')
       .where('user.account_id = :accountId', { accountId })
-      .andWhere(new Brackets(qb => {
-        qb.where('booking.parent_id IS NULL')
-          .orWhere('booking.type = :type', { type: BookingType.BUNDLE });
-      }));
     this.applyPagination(qb, dto);
     this.applyFilters(qb, dto);
     this.applySort(qb, dto);

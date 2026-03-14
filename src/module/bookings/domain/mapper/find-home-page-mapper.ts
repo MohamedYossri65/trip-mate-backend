@@ -1,4 +1,5 @@
 import { BundleMapper } from "../../bundle/mapper/bundle.mapper";
+import { findAllBundlesMapper } from "../../bundle/mapper/find-all-bundles.mapper";
 import { CarBookingMapper } from "../../services/car/mapper/car-booking.mapper";
 import { FlightBookingMapper } from "../../services/flight/mapper/flight-booking.mapper";
 import { HotelBookingMapper } from "../../services/hotel/mapper/hotel-booking.mapper";
@@ -9,7 +10,7 @@ import { BookingType } from "../enum/booking-type.enum";
 export class FindHomePageMapper {
 
     static fromEntities(
-        bundles: BundleMapper[],
+        bundles: findAllBundlesMapper[],
         hotels: HotelBookingMapper[],
         cars: CarBookingMapper[],
         visas: VisaBookingMapper[],
@@ -20,7 +21,14 @@ export class FindHomePageMapper {
                 type: BookingType.BUNDLE,
                 id: bundle.id,
                 name: bundle.user.name,
+                account: {
+                    email: bundle.user.account.email,
+                    phone: bundle.user.account.phone,
+                    status: bundle.user.account.status,
+                },
                 createdAt: bundle.createdAt,
+                destinationCountry: '', // Bundles don't have a single destination country
+                numberOfGuests: bundle.numberOfGuests,
             })),
             hotels: hotels.map((hotel) => ({
                 bookingId: hotel.bookingId,

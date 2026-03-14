@@ -28,6 +28,7 @@ import { UpdateCarOfferDto } from './dto/update-car-offer.dto';
 import { UpdateVisaOfferDto } from './dto/update-visa-offer.dto';
 import { UpdateFlightOfferDto } from './dto/update-flight-offer.dto';
 import { UpdateHotelOfferDto } from './dto/update-hotel-offer.dto';
+import { UpdateBundleOfferDto } from './dto/update-bundle-offer.dto';
 
 @Injectable()
 export class OffersService {
@@ -48,10 +49,7 @@ export class OffersService {
       const booking = await manager
         .createQueryBuilder(Booking, 'booking')
         .where('booking.id = :id', { id: carOfferDetailsDto.bookingId })
-        .andWhere(new Brackets(qb => {
-          qb.where('booking.parent_id IS NULL')
-            .orWhere('booking.type = :type', { type: BookingType.BUNDLE });
-        })).getOne();
+        .getOne();
 
 
       if (!booking) throw new BadRequestException('Booking not found');
@@ -147,10 +145,6 @@ export class OffersService {
       const booking = await manager
         .createQueryBuilder(Booking, 'booking')
         .where('booking.id = :id', { id: visaOfferDto.bookingId })
-        .andWhere(new Brackets(qb => {
-          qb.where('booking.parent_id IS NULL')
-            .orWhere('booking.type = :type', { type: BookingType.BUNDLE });
-        }))
         .getOne();
 
       if (!booking) throw new BadRequestException('Booking not found');
@@ -246,10 +240,7 @@ export class OffersService {
       const booking = await manager
         .createQueryBuilder(Booking, 'booking')
         .where('booking.id = :id', { id: flightOfferDto.bookingId })
-        .andWhere(new Brackets(qb => {
-          qb.where('booking.parent_id IS NULL')
-            .orWhere('booking.type = :type', { type: BookingType.BUNDLE });
-        })).getOne();
+        .getOne();
 
       if (!booking) throw new BadRequestException('Booking not found');
 
@@ -344,10 +335,6 @@ export class OffersService {
       const booking = await manager
         .createQueryBuilder(Booking, 'booking')
         .where('booking.id = :id', { id: hotelOfferDto.bookingId })
-        .andWhere(new Brackets(qb => {
-          qb.where('booking.parent_id IS NULL')
-            .orWhere('booking.type = :type', { type: BookingType.BUNDLE });
-        }))
         .getOne();
 
       if (!booking) throw new BadRequestException('Booking not found');
@@ -443,10 +430,6 @@ export class OffersService {
       const booking = await manager
         .createQueryBuilder(Booking, 'booking')
         .where('booking.id = :id', { id: bundleOfferDto.bookingId })
-        .andWhere(new Brackets(qb => {
-          qb.where('booking.parent_id IS NULL')
-            .orWhere('booking.type = :type', { type: BookingType.BUNDLE });
-        }))
         .getOne();
 
       if (!booking) throw new BadRequestException('Booking not found');
@@ -462,7 +445,7 @@ export class OffersService {
         office: { accountId },
         price: bundleOfferDto.price,
         offerDuration: bundleOfferDto.offerDuration,
-        arrivalCountry: bundleOfferDto.arrivalCountry,
+        arrivalCountry: bundleOfferDto.bundelDetails.visas?.[0]?.arrivalCountry || '',
         attachments: await this.savePathAttachments(bundleOfferDto.attachments || []),
       });
 
@@ -498,7 +481,11 @@ export class OffersService {
       ],
     });
     if (!bundleOfferDetails) throw new BadRequestException('Bundle offer not found');
-    return BundleOfferMapper.fromEntities(bundleOfferDetails);
+
+    const canOfficeEditOffer = await this.canOfficeEditOffer(bundleOfferDetails.offer.booking.id, bundleOfferDetails.offer.office.accountId);
+    const officeDetails = await this.officeService.getOfficeDetails(bundleOfferDetails.offer.office.accountId);
+
+    return BundleOfferMapper.fromEntities(bundleOfferDetails, canOfficeEditOffer, officeDetails);
   }
 
   // ─── UPDATE METHODS ─────────────────────────────────────────────────────────
@@ -667,6 +654,31 @@ export class OffersService {
 
     return this.findOneHotelOffer(offerId);
   }
+   
+  async updateBundleOffer(
+    offerId: bigint,
+    dto: UpdateBundleOfferDto,
+    accountId: bigint,
+  ): Promise<BundleOfferMapper> {
+    const offer = await this.findOfferForUpdate(offerId, accountId);
+
+    await this.dataSource.transaction(async (manager) => {
+      if (dto.price !== undefined) offer.price = dto.price;
+      if (dto.offerDuration !== undefined) offer.offerDuration = dto.offerDuration;
+      if (dto.arrivalCountry !== undefined) offer.arrivalCountry = dto.arrivalCountry;
+      if (dto.attachments !== undefined) offer.attachments = await this.savePathAttachments(dto.attachments);
+      await manager.save(offer);
+
+      const details = await manager.getRepository(BundleOfferDetails).findOne({ where: { offerId } });
+      if (!details) throw new BadRequestException('Bundle offer details not found');
+
+      if (dto.bundelDetails !== undefined) details.bundelDetails = dto.bundelDetails;
+      if (dto.notes !== undefined) details.notes = dto.notes;
+      await manager.save(details);
+    });
+
+    return this.findOneBundleOffer(offerId);
+  }
 
   // ─── SHARED ─────────────────────────────────────────────────────────────────
 
@@ -726,14 +738,25 @@ export class OffersService {
 
   async savePathAttachments(attachments: string[]): Promise<string[]> {
 
-    return attachments.map((url) => {
-      const parsedUrl = new URL(url);
-      const path = parsedUrl.pathname;
+    return attachments
+      .filter((value) => typeof value === 'string' && value.trim().length > 0)
+      .map((value) => {
+        const normalizedValue = value.trim().replace(/\\/g, '/');
 
-      const index = path.indexOf('/trip-mate');
+        const directTripMateIndex = normalizedValue.indexOf('/trip-mate');
+        if (directTripMateIndex !== -1) {
+          return normalizedValue.substring(directTripMateIndex);
+        }
 
-      return index !== -1 ? path.substring(index) : path;
-    });
+        try {
+          const parsedUrl = new URL(normalizedValue);
+          const path = parsedUrl.pathname;
+          const tripMateIndex = path.indexOf('/trip-mate');
+          return tripMateIndex !== -1 ? path.substring(tripMateIndex) : path;
+        } catch {
+          return normalizedValue.startsWith('/') ? normalizedValue : `/${normalizedValue}`;
+        }
+      });
 
   }
 
