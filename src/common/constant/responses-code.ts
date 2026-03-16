@@ -8,4 +8,6 @@ export class ResponseCode {
     static readonly OFFICE_REJECTED = 413;  
     static readonly OFFICE_PENDING_OTP = 414;
     static readonly OFFICE_NO_SUBSCRIPTION = 415;
+    static readonly USER_PENDING_OTP = 416;
+    static readonly USER_BLOCKED = 417;
 }

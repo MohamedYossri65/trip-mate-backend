@@ -13,8 +13,8 @@ import { RolesEnum } from '../enums/roles.enum';
 import { IS_PUBLIC_KEY } from '../guards/decorators/public.decorator';
 
 @Injectable()
-export class OfficeProcessInterceptor implements NestInterceptor {
-  constructor(private readonly reflector: Reflector) {}
+export class RoleProcessInterceptor implements NestInterceptor {
+  constructor(private readonly reflector: Reflector) { }
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     const request = context.switchToHttp().getRequest();
@@ -34,7 +34,20 @@ export class OfficeProcessInterceptor implements NestInterceptor {
       return next.handle();
     }
 
-    if (user.role === RolesEnum.OFFICE) {
+    if (user.role === RolesEnum.USER) {
+      if (user.status === AccountStatus.PENDING_OTP ) {
+        throw new HttpException(
+          'User still under review',
+          ResponseCode.USER_PENDING_OTP,
+        );
+      }else if (user.status === AccountStatus.BLOCKED) {
+        throw new HttpException(
+          'User is blocked',
+          ResponseCode.USER_BLOCKED,
+        );
+      }
+
+    } else if (user.role === RolesEnum.OFFICE) {
       if (user.status === AccountStatus.PENDING_REVIEW) {
         throw new HttpException(
           'Office still under review',
