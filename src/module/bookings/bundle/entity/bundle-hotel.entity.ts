@@ -1,10 +1,13 @@
-import { Entity, PrimaryColumn, Column, OneToOne, JoinColumn, ManyToOne } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, OneToOne, JoinColumn, ManyToOne } from 'typeorm';
 import { BundleBase } from './bundle-base.entity';
 import { RoomDetail } from 'src/module/offers/entity/hotel-offer-details';
 
 @Entity('hotel_bundles')
 export class HotelBundle {
-    @PrimaryColumn({ name: 'bundle_base_id', type: 'bigint' })
+    @PrimaryGeneratedColumn({ type: 'bigint' })
+    id: bigint;
+
+    @Column({ name: 'bundle_base_id', type: 'bigint' })
     bundleBaseId: bigint;
 
     @ManyToOne(() => BundleBase, { eager: true })
