@@ -1,0 +1,15 @@
+{
+  "TRIP_BOOKED_TITLE": "Trip Booked Successfully",
+  "TRIP_BOOKED_BODY": "Your trip to {country} has been confirmed.",
+  "VISA_APPROVED_TITLE": "Visa Approved",
+  "VISA_APPROVED_BODY": "Your visa to {country} has been approved.",
+  "BOOKING_STATUS_CHANGED_TITLE": "Booking Update",
+  "BOOKING_STATUS_CHANGED_BODY": "Your {bookingType} booking #{bookingId} status changed to {newStatus}.",
+  "NEW_BOOKING_TITLE": "New Booking Available",
+  "NEW_BOOKING_BODY": "A new {bookingType} booking #{bookingId} is waiting for offers.",
+  "NEW_OFFER_RECEIVED_TITLE": "New Offer Received",
+  "NEW_OFFER_RECEIVED_BODY": "You received a new offer of {offerPrice} on your {bookingType} booking #{bookingId}.",
+  "NOTIFICATION_NOT_FOUND": "Notification not found",
+  "DEVICE_REGISTERED": "Device registered successfully",
+  "DEVICE_REMOVED": "Device removed successfully"
+}
