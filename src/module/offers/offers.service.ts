@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { BookingStatus } from '../bookings/domain/enum/booking-status.enum';
 import { Offer } from './entity/offer.entity';
 import { Brackets, DataSource, EntityManager } from 'typeorm';
@@ -30,11 +31,13 @@ import { UpdateFlightOfferDto } from './dto/update-flight-offer.dto';
 import { UpdateHotelOfferDto } from './dto/update-hotel-offer.dto';
 import { UpdateBundleOfferDto } from './dto/update-bundle-offer.dto';
 import { OfficeProfile } from '../office/entity/office.entity';
+import { NewOfferReceivedEvent } from '../notification/events';
 
 @Injectable()
 export class OffersService {
   constructor(
     private readonly dataSource: DataSource,
+    private readonly eventEmitter: EventEmitter2,
     private readonly offerRepository: OfferRepository,
 
     private readonly officeService: OfficeService,
@@ -62,6 +65,7 @@ export class OffersService {
     const carOfferResult = await this.dataSource.transaction(async (manager) => {
       const booking = await manager
         .createQueryBuilder(Booking, 'booking')
+        .leftJoinAndSelect('booking.user', 'user')
         .where('booking.id = :id', { id: carOfferDetailsDto.bookingId })
         .getOne();
 
@@ -98,10 +102,20 @@ export class OffersService {
         await manager.save(booking);
       }
 
-      return offer;
+      return { offer, booking };
     });
 
-    return this.findOneCarOffer(carOfferResult.id);
+    this.eventEmitter.emit(
+      'new.offer',
+      new NewOfferReceivedEvent(
+        carOfferResult.booking.user.accountId,
+        Number(carOfferResult.booking.id),
+        carOfferResult.booking.type,
+        carOfferDetailsDto.price,
+      ),
+    );
+
+    return this.findOneCarOffer(carOfferResult.offer.id);
   }
 
   async findOneCarOffer(offerId: bigint): Promise<CarOfferMapper> {
@@ -160,6 +174,7 @@ export class OffersService {
     const offerResult = await this.dataSource.transaction(async (manager) => {
       const booking = await manager
         .createQueryBuilder(Booking, 'booking')
+        .leftJoinAndSelect('booking.user', 'user')
         .where('booking.id = :id', { id: visaOfferDto.bookingId })
         .getOne();
 
@@ -195,10 +210,20 @@ export class OffersService {
         await manager.save(booking);
       }
 
-      return offer;
+      return { offer, booking };
     });
 
-    return this.findOneVisaOffer(offerResult.id);
+    this.eventEmitter.emit(
+      'new.offer',
+      new NewOfferReceivedEvent(
+        offerResult.booking.user.accountId,
+        Number(offerResult.booking.id),
+        offerResult.booking.type,
+        visaOfferDto.price,
+      ),
+    );
+
+    return this.findOneVisaOffer(offerResult.offer.id);
   }
 
   async findOneVisaOffer(offerId: bigint): Promise<VisaOfferMapper> {
@@ -257,6 +282,7 @@ export class OffersService {
     const offerResult = await this.dataSource.transaction(async (manager) => {
       const booking = await manager
         .createQueryBuilder(Booking, 'booking')
+        .leftJoinAndSelect('booking.user', 'user')
         .where('booking.id = :id', { id: flightOfferDto.bookingId })
         .getOne();
 
@@ -292,10 +318,20 @@ export class OffersService {
         await manager.save(booking);
       }
 
-      return offer;
+      return { offer, booking };
     });
 
-    return this.findOneFlightOffer(offerResult.id);
+    this.eventEmitter.emit(
+      'new.offer',
+      new NewOfferReceivedEvent(
+        offerResult.booking.user.accountId,
+        Number(offerResult.booking.id),
+        offerResult.booking.type,
+        flightOfferDto.price,
+      ),
+    );
+
+    return this.findOneFlightOffer(offerResult.offer.id);
   }
 
   async findOneFlightOffer(offerId: bigint): Promise<FlightOfferMapper> {
@@ -354,6 +390,7 @@ export class OffersService {
     const offerResult = await this.dataSource.transaction(async (manager) => {
       const booking = await manager
         .createQueryBuilder(Booking, 'booking')
+        .leftJoinAndSelect('booking.user', 'user')
         .where('booking.id = :id', { id: hotelOfferDto.bookingId })
         .getOne();
 
@@ -389,10 +426,20 @@ export class OffersService {
         await manager.save(booking);
       }
 
-      return offer;
+      return { offer, booking };
     });
 
-    return this.findOneHotelOffer(offerResult.id);
+    this.eventEmitter.emit(
+      'new.offer',
+      new NewOfferReceivedEvent(
+        offerResult.booking.user.accountId,
+        Number(offerResult.booking.id),
+        offerResult.booking.type,
+        hotelOfferDto.price,
+      ),
+    );
+
+    return this.findOneHotelOffer(offerResult.offer.id);
   }
 
   async findOneHotelOffer(offerId: bigint): Promise<HotelOfferMapper> {
@@ -451,6 +498,7 @@ export class OffersService {
     const offerResult = await this.dataSource.transaction(async (manager) => {
       const booking = await manager
         .createQueryBuilder(Booking, 'booking')
+        .leftJoinAndSelect('booking.user', 'user')
         .where('booking.id = :id', { id: bundleOfferDto.bookingId })
         .getOne();
 
@@ -486,10 +534,20 @@ export class OffersService {
         await manager.save(booking);
       }
 
-      return offer;
+      return { offer, booking };
     });
 
-    return this.findOneBundleOffer(offerResult.id);
+    this.eventEmitter.emit(
+      'new.offer',
+      new NewOfferReceivedEvent(
+        offerResult.booking.user.accountId,
+        Number(offerResult.booking.id),
+        offerResult.booking.type,
+        bundleOfferDto.price,
+      ),
+    );
+
+    return this.findOneBundleOffer(offerResult.offer.id);
   }
 
   async findOneBundleOffer(offerId: bigint): Promise<BundleOfferMapper> {

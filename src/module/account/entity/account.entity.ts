@@ -40,6 +40,12 @@ export class Account {
   @Column({ default: false })
   isPhoneVerified: boolean;
 
+  @Column({ length: 10, default: 'ar' })
+  language: string;
+
+  @Column({ name: 'onesignal_player_id', nullable: true })
+  onesignalPlayerId: string;
+
   @CreateDateColumn()
   createdAt: Date;
 

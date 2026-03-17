@@ -7,7 +7,7 @@ import { LoggerMiddleware } from './logger.middleware';
 import { AccountModule } from './module/account/account.module';
 import { typeOrmConfig } from './common/config/typeorm.config';
 import { TypeOrmModule } from '@nestjs/typeorm/dist/typeorm.module';
-import { ConfigModule } from '@nestjs/config/dist/config.module';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AuthModule } from './module/auth/auth.module';
 import { OfficeModule } from './module/office/office.module';
 import { UserModule } from './module/user/user.module';
@@ -21,6 +21,9 @@ import { ReviewModule } from './module/review/review.module';
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { RoleProcessInterceptor } from './common/interceptors/role-process.interceptor';
 import { SubscriptionInterceptor } from './common/interceptors/subscription.interceptor';
+import { EventEmitterModule } from '@nestjs/event-emitter';
+import { BullModule } from '@nestjs/bull';
+import { NotificationModule } from './module/notification/notification.module';
 
 
 
@@ -39,6 +42,17 @@ import { SubscriptionInterceptor } from './common/interceptors/subscription.inte
       fallbackLanguage: 'ar',
       resolvers: [AcceptLanguageResolver],
     }),
+    EventEmitterModule.forRoot(),
+    BullModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        redis: {
+          host: config.get<string>('REDIS_HOST', 'localhost'),
+          port: config.get<number>('REDIS_PORT', 6379),
+        },
+      }),
+    }),
     AccountModule,
     OtpModule,
     UserModule,
@@ -50,6 +64,7 @@ import { SubscriptionInterceptor } from './common/interceptors/subscription.inte
     BannerModule,
     SubscriptionModule,
     ReviewModule,
+    NotificationModule,
   ],
   controllers: [AppController],
   providers: [
