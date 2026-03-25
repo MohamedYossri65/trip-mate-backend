@@ -44,6 +44,15 @@ export class SubscriptionController {
     return this.subscriptionService.subscribeToPlan(account.id, dto.planId);
   }
 
+  @Post('cancel')
+  @Public()
+  @Auth(RolesEnum.OFFICE)
+  @ApiOperation({ summary: 'Cancel current subscription' })
+  @SuccessResponse('Subscription cancelled successfully')
+  async cancelSubscription(@CurrentUser() account: Account) {
+    return this.subscriptionService.cancelSubscription(account.id);
+  }
+
   @Get('my-subscription')
   @Public()
   @Auth(RolesEnum.OFFICE)

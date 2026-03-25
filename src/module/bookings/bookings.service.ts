@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { DataSource, In } from 'typeorm';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Booking } from './domain/entity/booking.entity';
 import { BookingType } from './domain/enum/booking-type.enum';
 import { BookingStatus } from './domain/enum/booking-status.enum';
@@ -39,12 +40,14 @@ import { RolesEnum } from 'src/common/enums/roles.enum';
 import { OffersService } from '../offers/offers.service';
 import { MyBookingFilterDto } from './domain/dto/my-booking-filter.dto';
 import { ReviewService } from '../review/review.service';
+import { BookingStatusChangedEvent, NewBookingCreatedEvent } from '../notification/events';
 
 
 @Injectable()
 export class BookingsService {
   constructor(
     private readonly dataSource: DataSource,
+    private readonly eventEmitter: EventEmitter2,
     private readonly hotelService: HotelService,
     private readonly flightService: FlightService,
     private readonly carService: CarService,
@@ -90,6 +93,21 @@ export class BookingsService {
       booking.changeStatus(BookingStatus.WAITING_FOR_OFFERS);
       await manager.save(booking);
 
+      this.eventEmitter.emit(
+        'booking.status_changed',
+        new BookingStatusChangedEvent(
+          userProfile.accountId,
+          Number(booking.id),
+          BookingStatus.WAITING_FOR_OFFERS,
+          BookingType.HOTEL,
+        ),
+      );
+
+      this.eventEmitter.emit(
+        'new.booking',
+        new NewBookingCreatedEvent(Number(booking.id), BookingType.HOTEL),
+      );
+
       hotelDetails.booking = booking;
       return hotelDetails;
     });
@@ -130,6 +148,21 @@ export class BookingsService {
       // 3️⃣ move status
       booking.changeStatus(BookingStatus.WAITING_FOR_OFFERS);
       await manager.save(booking);
+
+      this.eventEmitter.emit(
+        'booking.status_changed',
+        new BookingStatusChangedEvent(
+          userProfile.accountId,
+          Number(booking.id),
+          BookingStatus.WAITING_FOR_OFFERS,
+          BookingType.CAR,
+        ),
+      );
+
+      this.eventEmitter.emit(
+        'new.booking',
+        new NewBookingCreatedEvent(Number(booking.id), BookingType.CAR),
+      );
 
       carDetails.booking = booking;
       return carDetails;
@@ -172,6 +205,21 @@ export class BookingsService {
       booking.changeStatus(BookingStatus.WAITING_FOR_OFFERS);
       await manager.save(booking);
 
+      this.eventEmitter.emit(
+        'booking.status_changed',
+        new BookingStatusChangedEvent(
+          userProfile.accountId,
+          Number(booking.id),
+          BookingStatus.WAITING_FOR_OFFERS,
+          BookingType.FLIGHT,
+        ),
+      );
+
+      this.eventEmitter.emit(
+        'new.booking',
+        new NewBookingCreatedEvent(Number(booking.id), BookingType.FLIGHT),
+      );
+
       flightDetails.booking = booking;
       return flightDetails;
     });
@@ -212,6 +260,21 @@ export class BookingsService {
       // 3️⃣ move status
       booking.changeStatus(BookingStatus.WAITING_FOR_OFFERS);
       await manager.save(booking);
+
+      this.eventEmitter.emit(
+        'booking.status_changed',
+        new BookingStatusChangedEvent(
+          userProfile.accountId,
+          Number(booking.id),
+          BookingStatus.WAITING_FOR_OFFERS,
+          BookingType.VISA,
+        ),
+      );
+
+      this.eventEmitter.emit(
+        'new.booking',
+        new NewBookingCreatedEvent(Number(booking.id), BookingType.VISA),
+      );
 
       visaDetails.booking = booking;
       return visaDetails;

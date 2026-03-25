@@ -166,6 +166,33 @@ export class SubscriptionService {
     return OfficeSubscriptionMapper.fromEntity(savedSubscription);
   }
 
+
+  async cancelSubscription(officeAccountId: bigint): Promise<void> {
+    const subscription = await this.officeSubscriptionRepository.findOne({
+      where: {
+        office: { accountId: officeAccountId },
+        status: SubscriptionStatus.ACTIVE,
+      },
+    });
+
+    if (!subscription) {
+      throw new NotFoundException('No active subscription found to cancel');
+    }
+
+    subscription.status = SubscriptionStatus.EXPIRED;
+    subscription.endDate = new Date();
+    await this.officeSubscriptionRepository.save(subscription);
+
+    await this.accountService.updateStatus(
+      officeAccountId,
+      AccountStatus.OFFICE_NO_SUBSCRIPTION,
+    );
+
+    // Invalidate cache for this office
+    await this.cacheManager.del(`subscription_status_${officeAccountId}`);
+    await this.cacheManager.del(`active_subscription_${officeAccountId}`);
+  }
+
   // ─── Get active subscription for an office ────────────────────
   async getActiveSubscription(
     officeAccountId: bigint,

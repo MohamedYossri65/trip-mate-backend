@@ -140,4 +140,8 @@ export class AccountService {
     const result = await query.getOne();
     return !!result;
   }
+
+  async softDelete(accountId: bigint): Promise<void> {
+    await this.accountRepository.softDelete({ id: accountId });
+  }
 }

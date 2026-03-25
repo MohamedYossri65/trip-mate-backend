@@ -31,7 +31,9 @@ export class FileUploadController {
         return this.fileUploadService.uploadAttachments(files);
     }
 
+
     @Delete('attachments')
+    @ApiBody({ schema: { type: 'object', properties: { attachmentUrl: { type: 'string' } } } })
     @ApiOperation({ summary: 'Delete attachment' })
     async deleteAttachments(
         @Body() attachmentUrl: string,

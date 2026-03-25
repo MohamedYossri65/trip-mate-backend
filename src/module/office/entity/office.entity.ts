@@ -4,6 +4,15 @@ import { ReviewOfficeStatus } from "../enum/review-office-status.enum";
 import { OfficeEmployee } from "./employee.entity";
 import { Review } from "src/module/review/entity/review.entity";
 
+export interface OfficeChangeRequestData {
+  officeName?: string;
+  phoneNumber?: string;
+  email?: string;
+  commerceNumber?: string;
+  commerceCertificate?: string;
+  taxCertificate?: string;
+}
+
 @Entity('office_profiles')
 export class OfficeProfile {
 
@@ -67,6 +76,21 @@ export class OfficeProfile {
 
   @Column({ nullable: true })
   rejectionReason: string;
+
+  @Column({
+    name: 'change_request_status',
+    nullable: true,
+  })
+  changeRequestStatus: ReviewOfficeStatus;
+
+  @Column({ name: 'change_request_data', type: 'simple-json', nullable: true })
+  changeRequestData: OfficeChangeRequestData | null;
+
+  @Column({ name: 'change_request_rejection_reason', nullable: true })
+  changeRequestRejectionReason: string ;
+
+  @Column({ name: 'change_request_submitted_at', type: 'timestamp', nullable: true })
+  changeRequestSubmittedAt: Date | null;
 
   @OneToMany(() => OfficeEmployee, (employee) => employee.office)
   employees: OfficeEmployee[];

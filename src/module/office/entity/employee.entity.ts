@@ -1,7 +1,17 @@
-import { Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
-import { OfficeProfile } from "./office.entity";
+import { Account } from 'src/module/account/entity/account.entity';
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  JoinColumn,
+  ManyToOne,
+  PrimaryGeneratedColumn,
+  Unique,
+} from 'typeorm';
+import { OfficeProfile } from './office.entity';
 
 @Entity('office_employees')
+@Unique(['accountId'])
 export class OfficeEmployee {
 
   @PrimaryGeneratedColumn('identity')
@@ -11,6 +21,13 @@ export class OfficeEmployee {
   @JoinColumn()
   office: OfficeProfile;
 
+  @Column({ name: 'account_id', type: 'bigint', nullable: true })
+  accountId: bigint | null;
+
+  @ManyToOne(() => Account, { onDelete: 'SET NULL', nullable: true })
+  @JoinColumn({ name: 'account_id' })
+  account: Account | null;
+
   @Column()
   name: string;
 
@@ -19,4 +36,13 @@ export class OfficeEmployee {
 
   @Column()
   roleInOffice: string;
+
+  @Column({ default: true })
+  isActive: boolean;
+
+  @Column({ name: 'invited_by_account_id', type: 'bigint', nullable: true })
+  invitedByAccountId: bigint | null;
+
+  @CreateDateColumn({ name: 'invited_at' })
+  invitedAt: Date;
 }
