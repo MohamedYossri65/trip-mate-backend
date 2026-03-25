@@ -56,6 +56,19 @@ export class OffersService {
     return office;
   }
 
+  private filterAcceptedOffersIfBookingCompleted<T extends { offer: Offer }>(offers: T[]): T[] {
+    if (offers.length === 0) {
+      return offers;
+    }
+
+    const bookingStatus = offers[0].offer.booking?.status;
+    if (bookingStatus !== BookingStatus.COMPLETED) {
+      return offers;
+    }
+
+    return offers.filter((details) => details.offer.status === OfferStatus.ACCEPTED);
+  }
+
   // ─── CAR ────────────────────────────────────────────────────────────────────
 
   async createCarRentalOffer(
@@ -152,14 +165,16 @@ export class OffersService {
       ],
     });
 
+    const filteredCarOfferDetailsList = this.filterAcceptedOffersIfBookingCompleted(carOfferDetailsList);
+
     const offersWithOfficeDetails = await Promise.all(
-      carOfferDetailsList.map(async (details) => {
+      filteredCarOfferDetailsList.map(async (details) => {
         const officeId = details.offer.office.accountId;
         return await this.officeService.getOfficeDetails(officeId);
       })
     );
 
-    return carOfferDetailsList.map(
+    return filteredCarOfferDetailsList.map(
       (details) => CarOfferMapper.fromEntities(details, false, offersWithOfficeDetails.find(
         office => office.officeId === details.offer.office.accountId))
     );
@@ -261,14 +276,16 @@ export class OffersService {
       ],
     });
 
+    const filteredVisaOfferDetailsList = this.filterAcceptedOffersIfBookingCompleted(visaOfferDetailsList);
+
     const offersWithOfficeDetails = await Promise.all(
-      visaOfferDetailsList.map(async (details) => {
+      filteredVisaOfferDetailsList.map(async (details) => {
         const officeId = details.offer.office.accountId;
         return await this.officeService.getOfficeDetails(officeId);
       })
     );
 
-    return visaOfferDetailsList.map(
+    return filteredVisaOfferDetailsList.map(
       (details) => VisaOfferMapper.fromEntities(details, false, offersWithOfficeDetails.find(
         office => office.officeId === details.offer.office.accountId))
     );
@@ -368,14 +385,16 @@ export class OffersService {
       ],
     });
 
+    const filteredFlightOfferDetailsList = this.filterAcceptedOffersIfBookingCompleted(flightOfferDetailsList);
+
     const offersWithOfficeDetails = await Promise.all(
-      flightOfferDetailsList.map(async (details) => {
+      filteredFlightOfferDetailsList.map(async (details) => {
         const officeId = details.offer.office.accountId;
         return await this.officeService.getOfficeDetails(officeId);
       })
     );
 
-    return flightOfferDetailsList.map(
+    return filteredFlightOfferDetailsList.map(
       (details) => FlightOfferMapper.fromEntities(details, false, offersWithOfficeDetails.find(
         office => office.officeId === details.offer.office.accountId))
     );
@@ -476,14 +495,16 @@ export class OffersService {
       ],
     });
 
+    const filteredHotelOfferDetailsList = this.filterAcceptedOffersIfBookingCompleted(hotelOfferDetailsList);
+
     const offersWithOfficeDetails = await Promise.all(
-      hotelOfferDetailsList.map(async (details) => {
+      filteredHotelOfferDetailsList.map(async (details) => {
         const officeId = details.offer.office.accountId;
         return await this.officeService.getOfficeDetails(officeId);
       })
     );
 
-    return hotelOfferDetailsList.map(
+    return filteredHotelOfferDetailsList.map(
       (details) => HotelOfferMapper.fromEntities(details, false, offersWithOfficeDetails.find(
         office => office.officeId === details.offer.office.accountId))
     );

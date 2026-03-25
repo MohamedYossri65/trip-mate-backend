@@ -7,6 +7,7 @@ import { FileUploadModule } from 'src/module/fileUpload/file-upload.module';
 import { NotificationModule } from 'src/module/notification/notification.module';
 import { OffersModule } from 'src/module/offers/offers.module';
 import { OfficeModule } from 'src/module/office/office.module';
+import { ReportModule } from 'src/module/report/report.module';
 import { ReviewModule } from 'src/module/review/review.module';
 import { SubscriptionModule } from 'src/module/subscription/subscription.module';
 import { UserModule } from 'src/module/user/user.module';
@@ -32,7 +33,8 @@ export function setupSwagger(app: INestApplication) {
       BannerModule,
       SubscriptionModule,
       ReviewModule,
-      NotificationModule
+      NotificationModule,
+      ReportModule,
     ],
   });
 

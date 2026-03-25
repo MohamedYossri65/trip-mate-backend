@@ -24,6 +24,7 @@ import { SubscriptionInterceptor } from './common/interceptors/subscription.inte
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { BullModule } from '@nestjs/bull';
 import { NotificationModule } from './module/notification/notification.module';
+import { ReportModule } from './module/report/report.module';
 
 
 
@@ -65,6 +66,7 @@ import { NotificationModule } from './module/notification/notification.module';
     SubscriptionModule,
     ReviewModule,
     NotificationModule,
+    ReportModule,
   ],
   controllers: [AppController],
   providers: [

@@ -39,36 +39,34 @@ export class NotificationController {
   @Get()
   @ApiOperation({ summary: 'Get user notifications (paginated)' })
   async getNotifications(
-    @Req() req: any,
     @Query() query: NotificationQueryDto,
+    @CurrentUser() user: Account,
   ) {
-    const accountId = BigInt(req.user.sub);
-    return this.notificationService.getUserNotifications(accountId, query);
+    return this.notificationService.getUserNotifications(user.id, query);
   }
 
   @Get('unread-count')
   @ApiOperation({ summary: 'Get unread notification count' })
-  async getUnreadCount(@Req() req: any) {
-    const accountId = BigInt(req.user.sub);
-    const count = await this.notificationService.getUnreadCount(accountId);
+  async getUnreadCount(@CurrentUser() user: Account) {
+    const count = await this.notificationService.getUnreadCount(user.id);
     return { unreadCount: count };
   }
 
   @Patch(':id/read')
   @ApiOperation({ summary: 'Mark a notification as read' })
   async markAsRead(
-    @Req() req: any,
+    @CurrentUser() user: Account,
     @Param('id', ParseIntPipe) id: number,
   ) {
-    const accountId = BigInt(req.user.sub);
+    const accountId = user.id;
     return this.notificationService.markAsRead(id, accountId);
   }
 
   @Patch('read-all')
   @ApiOperation({ summary: 'Mark all notifications as read' })
   @HttpCode(HttpStatus.NO_CONTENT)
-  async markAllAsRead(@Req() req: any) {
-    const accountId = BigInt(req.user.sub);
+  async markAllAsRead(@CurrentUser() user: Account) {
+    const accountId = user.id;
     await this.notificationService.markAllAsRead(accountId);
   }
 
@@ -107,21 +105,20 @@ export class NotificationController {
   @Post('devices')
   @ApiOperation({ summary: 'Register a device for push notifications' })
   async registerDevice(
-    @Req() req: any,
+    @CurrentUser() user: Account,
     @Body() dto: RegisterDeviceDto,
   ) {
-    const accountId = BigInt(req.user.sub);
-    return this.notificationService.registerDevice(accountId, dto);
+    return this.notificationService.registerDevice(user.id, dto);
   }
 
   @Delete('devices')
   @ApiOperation({ summary: 'Remove a device from push notifications' })
   @HttpCode(HttpStatus.NO_CONTENT)
   async removeDevice(
-    @Req() req: any,
+    @CurrentUser() user: Account,
     @Body() dto: RemoveDeviceDto,
   ) {
-    const accountId = BigInt(req.user.sub);
+    const accountId = user.id;
     await this.notificationService.removeDevice(accountId, dto);
   }
 }

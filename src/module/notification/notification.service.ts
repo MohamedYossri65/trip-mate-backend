@@ -400,6 +400,14 @@ export class NotificationService {
     return Array.from(uniqueIds, (id) => BigInt(id));
   }
 
+  async getAdminAccountIds(): Promise<bigint[]> {
+    const admins = await this.accountRepo.find({
+      where: { role: RolesEnum.ADMIN },
+      select: ['id'],
+    });
+    return admins.map((admin) => admin.id);
+  }
+
 
   async deleteNotification(id: number, accountId: bigint): Promise<void> {
     const result = await this.notificationRepo.delete({ id, accountId });

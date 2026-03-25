@@ -195,6 +195,40 @@ export class NotificationTemplateSeed implements OnModuleInit {
         bodyTemplate: 'تلقيت عرضاً جديداً بقيمة {{offerPrice}} على حجز {{bookingType}} رقم #{{bookingId}}.',
         direction: 'rtl',
       },
+
+      // ─── OFFICE_CHANGE_REQUEST (sent to admin) ──────
+      {
+        templateKey: 'OFFICE_CHANGE_REQUEST',
+        language: 'en',
+        channel: NotificationChannel.PUSH,
+        titleTemplate: 'Office Profile Change Request',
+        bodyTemplate: 'New change request from office {{officeName}} is pending review.',
+        direction: 'ltr',
+      },
+      {
+        templateKey: 'OFFICE_CHANGE_REQUEST',
+        language: 'ar',
+        channel: NotificationChannel.PUSH,
+        titleTemplate: 'طلب تغيير ملف المكتب',
+        bodyTemplate: 'طلب تغيير جديد من المكتب {{officeName}} بانتظار المراجعة.',
+        direction: 'rtl',
+      },
+      {
+        templateKey: 'OFFICE_CHANGE_REQUEST',
+        language: 'en',
+        channel: NotificationChannel.IN_APP,
+        titleTemplate: 'Office Profile Change Request',
+        bodyTemplate: 'New change request from office {{officeName}} is pending review.',
+        direction: 'ltr',
+      },
+      {
+        templateKey: 'OFFICE_CHANGE_REQUEST',
+        language: 'ar',
+        channel: NotificationChannel.IN_APP,
+        titleTemplate: 'طلب تغيير ملف المكتب',
+        bodyTemplate: 'طلب تغيير جديد من المكتب {{officeName}} بانتظار المراجعة.',
+        direction: 'rtl',
+      },
     ];
 
     let created = 0;

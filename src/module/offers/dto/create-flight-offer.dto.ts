@@ -87,6 +87,7 @@ export class CreateFlightOfferDto {
 
     @IsDate()
     @Type(() => Date)
+    @IsOptional()
     endingDate: Date;
 
     @ValidateIf(o => o.hasVisa === false)

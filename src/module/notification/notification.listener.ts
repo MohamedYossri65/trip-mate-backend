@@ -8,6 +8,7 @@ import {
   BookingStatusChangedEvent,
   NewBookingCreatedEvent,
   NewOfferReceivedEvent,
+  OfficeChangeRequestEvent,
 } from './events';
 
 @Injectable()
@@ -105,6 +106,31 @@ export class NotificationListener {
         offerPrice: event.offerPrice,
       },
       [NotificationChannel.PUSH],
+    );
+  }
+
+  @OnEvent('office.change_request')
+  async handleOfficeChangeRequest(event: OfficeChangeRequestEvent): Promise<void> {
+    this.logger.log(
+      `Handling office.change_request event for office=${event.officeAccountId}`,
+    );
+
+    const adminAccountIds =
+      await this.notificationService.getAdminAccountIds();
+
+    for (const accountId of adminAccountIds) {
+      await this.notificationService.createAndQueue(
+        'OFFICE_CHANGE_REQUEST',
+        accountId,
+        {
+          officeName: event.officeName,
+        },
+        [NotificationChannel.PUSH, NotificationChannel.IN_APP],
+      );
+    }
+
+    this.logger.log(
+      `Office change request notification sent to ${adminAccountIds.length} admin accounts`,
     );
   }
 }
