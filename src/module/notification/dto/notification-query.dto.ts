@@ -1,20 +1,27 @@
-import { IsOptional, IsInt, Min, Max } from 'class-validator';
+import { IsOptional, IsInt, Min, Max, IsEnum, IsString } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
+import { PaginationDto } from 'src/common/dto/pagination.dto';
+import { NotificationSource } from '../enums/notification-source';
 
-export class NotificationQueryDto {
-  @ApiPropertyOptional({ default: 1, minimum: 1 })
+export class NotificationQueryDto extends PaginationDto {
+  @ApiPropertyOptional({ description: 'Search in title and body' })
   @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  page?: number = 1;
+  @IsString()
+  search?: string;
 
-  @ApiPropertyOptional({ default: 20, minimum: 1, maximum: 100 })
+  @ApiPropertyOptional({ description: 'Filter by source' })
   @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  @Max(100)
-  limit?: number = 20;
+  @IsEnum(NotificationSource)
+  source?: NotificationSource;
+
+  @ApiPropertyOptional({ description: 'Filter by start date' })
+  @IsOptional()
+  @Type(() => Date)
+  fromDate?: Date;
+
+  @ApiPropertyOptional({ description: 'Filter by end date' })
+  @IsOptional()
+  @Type(() => Date)
+  toDate?: Date;
 }

@@ -5,6 +5,7 @@ import { NotificationService } from './notification.service';
 import { PushService } from './channels/push.service';
 import { TemplateService } from './services/template.service';
 import { NotificationStatus, NotificationChannel } from './enums';
+import { NotificationSource } from './enums/notification-source';
 
 @Processor('notification-queue')
 export class NotificationProcessor {
@@ -213,6 +214,107 @@ export class NotificationProcessor {
 
     this.logger.log(
       `Bulk batch ${batchIndex + 1}/${totalBatches} done – sent=${successCount}, failed=${failCount}`,
+    );
+  }
+
+  @Process('send-bulk-direct-batch')
+  async handleSendDirectBulkBatch(
+    job: Job<{
+      templateKey: string;
+      title: string;
+      body: string;
+      accountIds: string[];
+      data: Record<string, any>;
+      channel: NotificationChannel;
+      batchIndex: number;
+      totalBatches: number;
+    }>,
+  ): Promise<void> {
+    const {
+      templateKey,
+      title,
+      body,
+      accountIds,
+      data,
+      channel,
+      batchIndex,
+      totalBatches,
+    } = job.data;
+
+    this.logger.log(
+      `Processing direct bulk batch ${batchIndex + 1}/${totalBatches} – ${accountIds.length} recipients`,
+    );
+
+    let successCount = 0;
+    let failCount = 0;
+
+    for (const accountIdStr of accountIds) {
+      const accountId = BigInt(accountIdStr);
+
+      try {
+        const [saved] = await this.notificationService.saveBulkNotifications([
+          {
+            accountId,
+            templateKey,
+            title,
+            body,
+            channel,
+            status: NotificationStatus.PENDING,
+            data,
+            source: NotificationSource.ADMIN,
+          },
+        ]);
+
+        let success = false;
+
+        switch (channel) {
+          case NotificationChannel.PUSH:
+            const tokens =
+              await this.notificationService.getDeviceTokens(accountId);
+            if (tokens.length > 0) {
+              success = await this.pushService.sendPush(
+                title,
+                body,
+                tokens,
+                { type: templateKey, notificationId: saved.id.toString(), ...data },
+              );
+            } else {
+              success = await this.pushService.sendPushByExternalIds(
+                title,
+                body,
+                [accountIdStr],
+                { type: templateKey, notificationId: saved.id.toString(), ...data },
+              );
+            }
+            break;
+
+          case NotificationChannel.IN_APP:
+            success = true;
+            break;
+
+          default:
+            this.logger.warn(
+              `Channel "${channel}" not yet implemented for direct bulk`,
+            );
+            break;
+        }
+
+        await this.notificationService.updateStatus(
+          saved.id,
+          success ? NotificationStatus.SENT : NotificationStatus.FAILED,
+        );
+
+        success ? successCount++ : failCount++;
+      } catch (error) {
+        this.logger.error(
+          `Direct bulk send failed for account=${accountIdStr}: ${error.message}`,
+        );
+        failCount++;
+      }
+    }
+
+    this.logger.log(
+      `Direct bulk batch ${batchIndex + 1}/${totalBatches} done – sent=${successCount}, failed=${failCount}`,
     );
   }
 

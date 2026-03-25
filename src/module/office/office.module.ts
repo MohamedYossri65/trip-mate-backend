@@ -8,6 +8,8 @@ import { OfficeEmployee } from './entity/employee.entity';
 import { FileUploadModule } from '../fileUpload/file-upload.module';
 import { SubscriptionModule } from '../subscription/subscription.module';
 import { ReviewModule } from '../review/review.module';
+import { AccountModule } from '../account/account.module';
+import { OtpModule } from '../otp/otp.module';
 
 @Module({
   imports: [
@@ -18,6 +20,8 @@ import { ReviewModule } from '../review/review.module';
     FileUploadModule,
     SubscriptionModule,
     ReviewModule,
+    AccountModule,
+    OtpModule,
   ],
   controllers: [OfficeController],
   providers: [OfficeService],

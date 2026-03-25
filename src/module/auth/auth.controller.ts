@@ -18,6 +18,7 @@ import { ResetPasswordDto } from './dto/reset-password.dto';
 import { UpdatePasswordDto } from './dto/update-password.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { ChangePhoneDto } from './dto/change-phone.dto';
+import { ActivateOfficeEmployeeInviteDto } from './dto/activate-office-employee-invite.dto';
 import { Auth } from 'src/common/guards/decorators/auth.decorator';
 import { Public } from 'src/common/guards/decorators/public.decorator';
 

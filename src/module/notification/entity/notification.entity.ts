@@ -8,6 +8,7 @@ import {
 } from 'typeorm';
 import { Account } from 'src/module/account/entity/account.entity';
 import { NotificationStatus, NotificationChannel } from '../enums';
+import { NotificationSource } from '../enums/notification-source';
 
 @Entity('notifications')
 export class Notification {
@@ -42,6 +43,9 @@ export class Notification {
 
   @Column({ type: 'jsonb', nullable: true })
   data: Record<string, any>;
+
+  @Column({ type: 'enum', enum: NotificationSource, default: NotificationSource.SYSTEM })
+  source: NotificationSource;
 
   @Column({ name: 'read_at', type: 'timestamp', nullable: true })
   readAt: Date;

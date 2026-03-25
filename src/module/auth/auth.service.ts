@@ -18,6 +18,7 @@ import { UpdatePasswordDto } from './dto/update-password.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { ChangePhoneDto } from './dto/change-phone.dto';
 import { ResponseCode } from 'src/common/constant/responses-code';
+import { AccountStatus } from 'src/common/enums/account-status.enum';
 
 @Injectable()
 export class AuthService {
@@ -289,6 +290,12 @@ export class AuthService {
     }
 
     if (account.role === RolesEnum.OFFICE) {
+      const employeeMembership =
+        await this.officeService.findEmployeeMembershipByAccountId(account.id);
+      if (employeeMembership?.isActive) {
+        return 'ACTIVE';
+      }
+
       const officeProfile = await this.officeService.findByAccountId(
         account.id,
       );

@@ -88,9 +88,12 @@ export class RegisteriationService {
     if (account.role === RolesEnum.USER) {
       await this.accountService.updateStatus(account.id, AccountStatus.ACTIVE);
     } else if (account.role === RolesEnum.OFFICE) {
+      const employeeMembership =
+        await this.officeService.findEmployeeMembershipByAccountId(account.id);
+
       await this.accountService.updateStatus(
         account.id,
-        AccountStatus.PENDING_REVIEW,
+        employeeMembership ? AccountStatus.ACTIVE : AccountStatus.PENDING_REVIEW,
       );
     }
   }

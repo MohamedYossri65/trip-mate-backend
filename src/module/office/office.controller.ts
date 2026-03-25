@@ -18,6 +18,7 @@ import { Account } from '../account/entity/account.entity';
 import { RolesEnum } from 'src/common/enums/roles.enum';
 import { UploadLogoDto } from './dto/upload-logo.dto';
 import { AddEmployeeDto } from './dto/add-employee.dto';
+import { InviteOfficeEmployeeDto } from './dto/add-office-employee-account.dto';
 import { FileUploadService } from '../fileUpload/file-upload.service';
 import { Public } from 'src/common/guards/decorators/public.decorator';
 
@@ -66,6 +67,19 @@ export class OfficeController {
   ) {
     await this.officeService.addOfficeEmployees(account.id, employeeDtos);
     return;
+  }
+
+  @Post('employees/accounts')
+  @Public()
+  @Auth(RolesEnum.OFFICE)
+  @ApiOperation({ summary: 'add office employees with login accounts' })
+  @ApiBody({ type: [InviteOfficeEmployeeDto] })
+  @SuccessResponse('Employees created and OTP sent successfully')
+  async AddOfficeEmployeesWithAccounts(
+    @Body() employeeDtos: InviteOfficeEmployeeDto[],
+    @CurrentUser() account: Account,
+  ) {
+    return this.officeService.AddOfficeEmployeesWithAccounts(account.id, employeeDtos);
   }
 
   @Post('upload-logo')

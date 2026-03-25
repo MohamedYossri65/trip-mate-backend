@@ -4,6 +4,11 @@ import { ValidationPipe, ConsoleLogger } from '@nestjs/common';
 import { setupSwagger } from './common/config/swagger-config';
 import { GlobalExceptionFilter } from './common/exception/glocal-exception-filter';
 import { ConfigService } from '@nestjs/config/dist/config.service';
+import { createBullBoard } from '@bull-board/api';
+import { BullAdapter } from '@bull-board/api/bullAdapter';
+import { ExpressAdapter } from '@bull-board/express';
+import { getQueueToken } from '@nestjs/bull';
+import { Queue } from 'bull';
 
 // Suppress noisy startup route-mapping logs
 class FilteredLogger extends ConsoleLogger {
@@ -17,6 +22,17 @@ class FilteredLogger extends ConsoleLogger {
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { logger: new FilteredLogger() });
   app.enableCors();
+
+  const queue = app.get<Queue>(getQueueToken('notification-queue'));
+  const serverAdapter = new ExpressAdapter();
+  serverAdapter.setBasePath('/admin/queues');
+
+  createBullBoard({
+    queues: [new BullAdapter(queue)],
+    serverAdapter,
+  });
+
+  app.use('/admin/queues', serverAdapter.getRouter());
 
   app.useGlobalPipes(
     new ValidationPipe({

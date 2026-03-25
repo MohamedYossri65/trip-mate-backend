@@ -12,6 +12,8 @@ import { NotificationProcessor } from './notification.processor';
 import { TemplateService } from './services/template.service';
 import { PushService } from './channels/push.service';
 import { NotificationTemplateSeed } from './seed/notification-template.seed';
+import { OfficeProfile } from '../office/entity/office.entity';
+import { OfficeEmployee } from '../office/entity/employee.entity';
 
 @Module({
   imports: [
@@ -20,6 +22,8 @@ import { NotificationTemplateSeed } from './seed/notification-template.seed';
       Notification,
       UserDevice,
       Account,
+      OfficeProfile,
+      OfficeEmployee,
     ]),
     BullModule.registerQueue({
       name: 'notification-queue',

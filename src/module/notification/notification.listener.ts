@@ -2,7 +2,6 @@ import { Injectable, Logger } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import { NotificationService } from './notification.service';
 import { NotificationChannel } from './enums';
-import { RolesEnum } from 'src/common/enums/roles.enum';
 import {
   TripBookedEvent,
   VisaApprovedEvent,
@@ -28,7 +27,7 @@ export class NotificationListener {
         country: event.country,
         tripId: event.tripId,
       },
-      [NotificationChannel.PUSH, NotificationChannel.IN_APP],
+      [NotificationChannel.PUSH],
     );
   }
 
@@ -43,7 +42,7 @@ export class NotificationListener {
         country: event.country,
         visaId: event.visaId,
       },
-      [NotificationChannel.PUSH, NotificationChannel.IN_APP],
+      [NotificationChannel.PUSH],
     );
   }
 
@@ -61,7 +60,7 @@ export class NotificationListener {
         newStatus: event.newStatus,
         bookingType: event.bookingType,
       },
-      [NotificationChannel.PUSH, NotificationChannel.IN_APP],
+      [NotificationChannel.PUSH],
     );
   }
 
@@ -72,7 +71,7 @@ export class NotificationListener {
     );
 
     const officeAccountIds =
-      await this.notificationService.getAccountIdsByRole(RolesEnum.OFFICE);
+      await this.notificationService.getAllOfficeTeamAccountIds();
 
     for (const accountId of officeAccountIds) {
       await this.notificationService.createAndQueue(
@@ -82,12 +81,12 @@ export class NotificationListener {
           bookingId: event.bookingId,
           bookingType: event.bookingType,
         },
-        [NotificationChannel.PUSH, NotificationChannel.IN_APP],
+        [NotificationChannel.PUSH],
       );
     }
 
     this.logger.log(
-      `New booking notification sent to ${officeAccountIds.length} offices`,
+      `New booking notification sent to ${officeAccountIds.length} office team accounts`,
     );
   }
 
@@ -105,7 +104,7 @@ export class NotificationListener {
         bookingType: event.bookingType,
         offerPrice: event.offerPrice,
       },
-      [NotificationChannel.PUSH, NotificationChannel.IN_APP],
+      [NotificationChannel.PUSH],
     );
   }
 }
