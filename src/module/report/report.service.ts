@@ -24,6 +24,20 @@ export class ReportService {
     return 0;
   }
 
+  private buildMonthlyDaySeries(year: number, month: number) {
+    const daysInMonth = new Date(year, month, 0).getDate();
+    const series = [] as Array<{ day: string; profit: number }>;
+
+    for (let day = 1; day <= daysInMonth; day += 1) {
+      series.push({
+        day: `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`,
+        profit: 0,
+      });
+    }
+
+    return series;
+  }
+
   private async resolveOfficeAccountId(accountId: bigint): Promise<bigint> {
     const officeProfile = await this.officeService.findByAccountId(accountId);
     if (officeProfile?.accountId) {
@@ -232,6 +246,59 @@ export class ReportService {
           totalOffers: this.toNumber(row.total_offers),
         })),
       },
+    };
+  }
+
+  async getOfficeDailyProfit(accountId: bigint, month?: number, year?: number) {
+    const officeAccountId = await this.resolveOfficeAccountId(accountId);
+    const now = new Date();
+    const selectedYear = year ?? now.getFullYear();
+    const selectedMonth = month ?? now.getMonth() + 1;
+
+    if (selectedMonth < 1 || selectedMonth > 12) {
+      throw new BadRequestException('month must be between 1 and 12');
+    }
+
+    const startDate = new Date(selectedYear, selectedMonth - 1, 1, 0, 0, 0, 0);
+    const endDate = new Date(selectedYear, selectedMonth, 0, 23, 59, 59, 999);
+
+    const offerRepo = this.dataSource.getRepository(Offer);
+    const rawDailyProfit = await offerRepo
+      .createQueryBuilder('offer')
+      .select('DATE_TRUNC(\'day\', offer."createdAt")::date', 'day')
+      .addSelect('COALESCE(SUM(offer.price), 0)', 'profit')
+      .where('offer.office_id = :officeId', { officeId: officeAccountId })
+      .andWhere('offer.status = :status', { status: OfferStatus.ACCEPTED })
+      .andWhere('offer."createdAt" BETWEEN :startDate AND :endDate', {
+        startDate,
+        endDate,
+      })
+      .groupBy('DATE_TRUNC(\'day\', offer."createdAt")::date')
+      .orderBy('DATE_TRUNC(\'day\', offer."createdAt")::date', 'ASC')
+      .getRawMany();
+
+    const chart = this.buildMonthlyDaySeries(selectedYear, selectedMonth);
+    const profitByDay = new Map<string, number>();
+
+    for (const row of rawDailyProfit) {
+      profitByDay.set(String(row.day), this.toNumber(row.profit));
+    }
+
+    const result = chart.map((item) => ({
+      day: item.day,
+      profit: profitByDay.get(item.day) ?? 0,
+    }));
+
+    return {
+      officeAccountId,
+      period: {
+        month: selectedMonth,
+        year: selectedYear,
+        fromDate: startDate,
+        toDate: endDate,
+      },
+      chart: result,
+      totalProfit: result.reduce((sum, item) => sum + item.profit, 0),
     };
   }
 }

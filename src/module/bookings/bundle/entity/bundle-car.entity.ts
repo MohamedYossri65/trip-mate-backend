@@ -54,4 +54,7 @@ export class CarBundle {
 
     @Column({ nullable: true })
     notes?: string;
+
+    @Column({ nullable: true })
+    numberOfTrip?: number;
 }

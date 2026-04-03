@@ -14,9 +14,26 @@ import { HotelBundle } from '../entity/bundle-hotel.entity';
 import { CarBundle } from '../entity/bundle-car.entity';
 import { FlightBundle } from '../entity/bundle-flight.entity';
 import { VisaBundle } from '../entity/bundle-visa.entity';
+import { BookingType } from '../../domain/enum/booking-type.enum';
 
 export class BundleMapper {
   id: bigint;
+  type: BookingType;
+  booking: {
+        id: bigint;
+        user: {
+            accountId: bigint;
+            name: string;
+            account: {
+                email: string;
+                phone: string; status: string;
+            };
+        };
+        type: string;
+        status: string;
+        createdAt: Date;
+        updatedAt: Date;
+    }
   user: {
     accountId: bigint;
     name: string;
@@ -32,13 +49,11 @@ export class BundleMapper {
     companionsAdults: number;
     companionsChildren: number;
     numberOfTrips: number;
-    createdAt: Date;
   };
   hotels: HotelBundleBookingMapper[];
   cars: CarBundleBookingMapper[];
   flights: FlightBundleBookingMapper[];
   visas: VisaBundleBookingMapper[];
-
   canChatbeEnabled?: boolean;
   canOfficeAddOffers?: boolean;
   canUserReviewBooking?: boolean;
@@ -54,6 +69,23 @@ export class BundleMapper {
   ): BundleMapper {
     return {
       id: baseBundle.bookingId,
+      type: BookingType.BUNDLE,
+      booking: {
+        id: baseBundle.booking.id,
+        user: {
+          accountId: baseBundle.booking.user.accountId,
+          name: baseBundle.booking.user.name,
+          account: {
+            email: baseBundle.booking.user.account.email,
+            phone: baseBundle.booking.user.account.phone,
+            status: baseBundle.booking.user.account.status,
+          },
+        },
+        type: baseBundle.booking.type,
+        status: baseBundle.booking.status,
+        createdAt: baseBundle.booking.createdAt,
+        updatedAt: baseBundle.booking.updatedAt,
+      },
       user: {
         accountId: baseBundle.booking.user.accountId,
         name: baseBundle.booking.user.name,
@@ -69,7 +101,6 @@ export class BundleMapper {
         companionsAdults: baseBundle.companionsAdults || 0,
         companionsChildren: baseBundle.companionsChildren || 0,
         numberOfTrips: baseBundle.numberOfTrips || 1,
-        createdAt: baseBundle.createdAt,
       },
       hotels: subEntities.hotels.map(HotelBundleBookingMapper.toDto),
       cars: subEntities.cars.map(CarBundleBookingMapper.toDto),
@@ -125,6 +156,7 @@ export class BundleMapper {
       requiresChildSeat: dto.requiresChildSeat,
       requiresFullInsurance: dto.requiresFullInsurance,
       notes: dto.notes || '',
+      numberOfTrip: dto.numberOfTrip,
     };
   }
 
@@ -144,6 +176,7 @@ export class BundleMapper {
   ): Partial<VisaBundle> {
     return {
       bundleBaseId: bookingId,
+      depretureCountry: dto.depretureCountry,
       arrivalCountry: dto.arrivalCountry,
       visaType: dto.visaType,
       departureDate: dto.departureDate,

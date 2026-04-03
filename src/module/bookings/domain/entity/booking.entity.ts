@@ -34,6 +34,9 @@ export class Booking {
   })
   status: BookingStatus;
 
+  @Column({ type: 'decimal', precision: 12, scale: 2, default: 0 })
+  paidAmount: number;
+
   @OneToOne(() => Offer, { nullable: true })
   @JoinColumn({ name: 'selected_offer_id' })
   selectedOffer?: Offer;

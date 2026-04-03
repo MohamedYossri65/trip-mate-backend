@@ -26,6 +26,7 @@ import { ChangeOfficeDataRequestDto } from './dto/chnge-office-data-request.dto'
 import { Account } from '../account/entity/account.entity';
 import { OfficeChangeRequestData } from './entity/office.entity';
 import { OfficeChangeRequestEvent } from '../notification/events';
+import { AccountStatus } from 'src/common/enums/account-status.enum';
 
 @Injectable()
 export class OfficeService {
@@ -86,7 +87,14 @@ export class OfficeService {
     );
   }
 
-  async addOfficeEmployees(accountId: bigint, employeeDto: AddEmployeeDto[]) {
+  async addOfficeEmployees(
+    accountId: bigint,
+    employeeDto: AddEmployeeDto[] | { employees: AddEmployeeDto[] },
+  ) {
+    const employeesInput = Array.isArray(employeeDto)
+      ? employeeDto
+      : employeeDto.employees;
+
     const office = await this.officeProfileRepository.findOne({
       where: { account: { id: accountId } },
     });
@@ -94,7 +102,7 @@ export class OfficeService {
       throw new BadRequestException('Office profile not found');
     }
 
-    const employees = employeeDto.map((emp) =>
+    const employees = employeesInput.map((emp) =>
       this.officeEmployeeRepository.create({
         office: { accountId: office.accountId },
         accountId: null,
@@ -225,18 +233,12 @@ export class OfficeService {
     );
   }
 
-  async approveOffice(accountId: bigint) {
-    await this.officeProfileRepository.update(
-      { account: { id: accountId } },
-      { reviewStatus: ReviewOfficeStatus.APPROVED },
-    );
+  async approveOfficeRegistration(accountId: bigint) {
+    await this.accountService.updateStatus(accountId, AccountStatus.OFFICE_NO_SUBSCRIPTION);
   }
 
-  async rejectOffice(accountId: bigint, reason: string) {
-    await this.officeProfileRepository.update(
-      { account: { id: accountId } },
-      { reviewStatus: ReviewOfficeStatus.REJECTED, rejectionReason: reason },
-    );
+  async rejectOfficeRegistration(accountId: bigint, reason: string) {
+    await this.accountService.updateStatus(accountId, AccountStatus.REJECTED);
   }
 
   async getOfficeDetails(officeId: bigint): Promise<OfficeDetailsMapper> {

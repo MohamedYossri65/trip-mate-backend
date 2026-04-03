@@ -18,6 +18,7 @@ export class CarBundleBookingMapper {
     requiresChildSeat: boolean;
     requiresFullInsurance: boolean;
     notes: string;
+    numberOfTrip?: number;
 
     static toEntity(dto: CreateBundleCarBookingDto): CarBundle {
         const entity = new CarBundle();
@@ -35,6 +36,7 @@ export class CarBundleBookingMapper {
         entity.requiresChildSeat = dto.requiresChildSeat;
         entity.requiresFullInsurance = dto.requiresFullInsurance;
         entity.notes = dto.notes;
+        entity.numberOfTrip = dto.numberOfTrip ?? 0;
 
         return entity;
     }
@@ -56,6 +58,7 @@ export class CarBundleBookingMapper {
             requiresChildSeat: entity.requiresChildSeat,
             requiresFullInsurance: entity.requiresFullInsurance,
             notes: entity.notes || '',
+            numberOfTrip: entity.numberOfTrip ?? 0,
         };
     }
 

@@ -7,6 +7,7 @@ import { RolesEnum } from 'src/common/enums/roles.enum';
 import { Account } from '../account/entity/account.entity';
 import { ReportService } from './report.service';
 import { OfficeReportQueryDto } from './dto/office-report-query.dto';
+import { OfficeDailyProfitQueryDto } from './dto/office-daily-profit-query.dto';
 
 @ApiTags('reports')
 @Controller({ path: 'reports', version: '1' })
@@ -27,6 +28,23 @@ export class ReportController {
       account.id,
       query.fromDate,
       query.toDate,
+    );
+  }
+
+  @Get('office/daily-profit')
+  @Auth(RolesEnum.OFFICE)
+  @ApiOperation({
+    summary: 'Get daily profit chart data for a selected month and year',
+  })
+  @SuccessResponse('Office daily profit report retrieved successfully')
+  async getOfficeDailyProfit(
+    @CurrentUser() account: Account,
+    @Query() query: OfficeDailyProfitQueryDto,
+  ) {
+    return this.reportService.getOfficeDailyProfit(
+      account.id,
+      query.month,
+      query.year,
     );
   }
 }

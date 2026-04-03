@@ -20,6 +20,7 @@ import { Account } from '../account/entity/account.entity';
 import { RolesEnum } from 'src/common/enums/roles.enum';
 import { UploadLogoDto } from './dto/upload-logo.dto';
 import { AddEmployeeDto } from './dto/add-employee.dto';
+import { AddOfficeEmployeesDto } from './dto/add-office-employees.dto';
 import { InviteOfficeEmployeeDto } from './dto/add-office-employee-account.dto';
 import { FileUploadService } from '../fileUpload/file-upload.service';
 import { Public } from 'src/common/guards/decorators/public.decorator';
@@ -32,6 +33,30 @@ export class OfficeController {
     private readonly officeService: OfficeService,
     private readonly fileUploadService: FileUploadService,
   ) { }
+
+
+  @Post('admin/approve/:officeAccountId')
+  @Auth(RolesEnum.ADMIN)
+  @ApiOperation({ summary: 'Approve office registration (Admin)' })
+  @SuccessResponse('Office registration approved successfully')
+  async approveOfficeRegistration(
+    @Param('officeAccountId') officeAccountId: bigint,
+  ) {
+    await this.officeService.approveOfficeRegistration(officeAccountId);
+    return;
+  }
+
+  @Post('admin/reject/:officeAccountId')
+  @Auth(RolesEnum.ADMIN)
+  @ApiOperation({ summary: 'Reject office registration (Admin)' })
+  @SuccessResponse('Office registration rejected successfully')
+  async rejectOfficeRegistration(
+    @Param('officeAccountId') officeAccountId: bigint,
+    @Body() dto: RejectOfficeChangeRequestDto,
+  ) {
+    await this.officeService.rejectOfficeRegistration(officeAccountId, dto.reason);
+    return;
+  }
 
   @Post('commerce-details')
   @Public()
@@ -63,13 +88,13 @@ export class OfficeController {
   @Public()
   @Auth(RolesEnum.OFFICE)
   @ApiOperation({ summary: 'Add office employees' })
-  @ApiBody({ type: [AddEmployeeDto] })
+  @ApiBody({ type: AddOfficeEmployeesDto })
   @SuccessResponse('Employees added successfully')
   async addOfficeEmployees(
-    @Body() employeeDtos: AddEmployeeDto[],
+    @Body() body: AddOfficeEmployeesDto,
     @CurrentUser() account: Account,
   ) {
-    await this.officeService.addOfficeEmployees(account.id, employeeDtos);
+    await this.officeService.addOfficeEmployees(account.id, body.employees);
     return;
   }
 

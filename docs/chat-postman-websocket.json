@@ -1,0 +1,256 @@
+{
+  "info": {
+    "_postman_id": "a3f5eec8-7f4c-4a80-8f29-3e7f2fce0c61",
+    "name": "Trip Mate Chat (REST + WebSocket)",
+    "description": "Importable collection for Trip Mate chat testing. IMPORTANT: backend uses Socket.IO (not raw WebSocket).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "REST - Create Or Open Conversation",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"bookingId\": \"{{booking_id}}\",\n  \"officeAccountId\": \"{{office_account_id}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{api_base_url}}/v1/conversations",
+          "host": [
+            "{{api_base_url}}"
+          ],
+          "path": [
+            "v1",
+            "conversations"
+          ]
+        },
+        "description": "Creates or returns existing direct conversation for booking + office if active offer is valid."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is success', function () {",
+              "  pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+              "});",
+              "",
+              "let json = {};",
+              "try { json = pm.response.json(); } catch (e) {}",
+              "",
+              "const conversationId = json?.data?.id || json?.id;",
+              "if (conversationId) {",
+              "  pm.collectionVariables.set('conversation_id', String(conversationId));",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "REST - Get Conversation Messages",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{api_base_url}}/v1/conversations/{{conversation_id}}/messages?page=1&limit=20",
+          "host": [
+            "{{api_base_url}}"
+          ],
+          "path": [
+            "v1",
+            "conversations",
+            "{{conversation_id}}",
+            "messages"
+          ],
+          "query": [
+            {
+              "key": "page",
+              "value": "1"
+            },
+            {
+              "key": "limit",
+              "value": "20"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Socket.IO - Connect",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{api_base_url}}",
+          "host": [
+            "{{api_base_url}}"
+          ]
+        },
+        "description": "Open this as a Socket.IO request in Postman (not WebSocket). Namespace: {{socket_namespace}}. Auth: either Authorization header Bearer token or Socket.IO auth object { \"token\": \"{{access_token}}\" }."
+      }
+    },
+    {
+      "name": "WebSocket Payload - send_message",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"event\": \"send_message\",\n  \"data\": {\n    \"conversationId\": \"{{conversation_id}}\",\n    \"content\": \"Hello from Postman\",\n    \"attachmentUrl\": null,\n    \"type\": \"TEXT\"\n  }\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://postman.local/payload-template",
+          "protocol": "https",
+          "host": [
+            "postman",
+            "local"
+          ],
+          "path": [
+            "payload-template"
+          ]
+        },
+        "description": "Template only. In Postman Socket.IO tab emit event name send_message and send only data object (not wrapper)."
+      }
+    },
+    {
+      "name": "WebSocket Payload - typing",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"event\": \"typing\",\n  \"data\": {\n    \"conversationId\": \"{{conversation_id}}\",\n    \"isTyping\": true\n  }\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://postman.local/payload-template",
+          "protocol": "https",
+          "host": [
+            "postman",
+            "local"
+          ],
+          "path": [
+            "payload-template"
+          ]
+        },
+        "description": "Template only. In Postman Socket.IO tab emit event name typing and send only data object (not wrapper)."
+      }
+    },
+    {
+      "name": "WebSocket Payload - mark_as_read",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"event\": \"mark_as_read\",\n  \"data\": {\n    \"conversationId\": \"{{conversation_id}}\"\n  }\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://postman.local/payload-template",
+          "protocol": "https",
+          "host": [
+            "postman",
+            "local"
+          ],
+          "path": [
+            "payload-template"
+          ]
+        },
+        "description": "Template only. In Postman Socket.IO tab emit event name mark_as_read and send only data object (not wrapper)."
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "api_base_url",
+      "value": "http://localhost:3000"
+    },
+    {
+      "key": "ws_base_url",
+      "value": "ws://localhost:3000"
+    },
+    {
+      "key": "socket_namespace",
+      "value": "/chat"
+    },
+    {
+      "key": "access_token",
+      "value": ""
+    },
+    {
+      "key": "booking_id",
+      "value": ""
+    },
+    {
+      "key": "office_account_id",
+      "value": ""
+    },
+    {
+      "key": "conversation_id",
+      "value": ""
+    }
+  ]
+}
