@@ -36,6 +36,7 @@ chat_conversations:
 - id
 - type = DIRECT
 - bookingId
+- booking: object with `bookingId`, `bookingType`, and `activeOfferId`
 - userAccountId
 - officeAccountId
 - createdByAccountId
@@ -58,11 +59,13 @@ All endpoints are JWT protected.
 Returns accessible active conversations for current account:
 - user sees their booking conversations
 - office owner/employee sees office conversations
+- each conversation includes a nested `booking` object with `bookingId`, `bookingType`, and `activeOfferId`
 - Each participant includes `isActive` flag indicating if they're currently connected
 - Response is paginated: `data`, `total`, `page`, `limit`
 
 ### GET /conversations/:id
 Returns one conversation details if account is allowed.
+- response includes a nested `booking` object with `bookingId`, `bookingType`, and `activeOfferId`
 - Each participant includes `isActive` flag indicating if they're currently connected
 - `latestMessage` shows the most recent message
 - `myLastReadMessageId` and `myLastReadAt` show your read position

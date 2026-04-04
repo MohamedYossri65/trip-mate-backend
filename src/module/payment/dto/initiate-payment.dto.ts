@@ -1,5 +1,5 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsNumber } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
 
 export class InitiateSubscriptionPaymentDto {
   @ApiProperty({ description: 'Subscription plan ID to pay for' })
@@ -13,4 +13,9 @@ export class InitiateBookingPaymentDto {
   @IsNotEmpty()
   @IsNumber()
   bookingId: number;
+
+  @ApiPropertyOptional({ description: 'Coupon code to apply for a discount' })
+  @IsOptional()
+  @IsString()
+  couponCode?: string;
 }

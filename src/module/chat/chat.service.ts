@@ -178,6 +178,19 @@ export class ChatService {
       latestMessageByConversation.has(conversation.id.toString()),
     );
 
+    const activeOfferEntries = await Promise.all(
+      conversationsWithMessages.map(async (conversation) => {
+        const activeOffer = await this.findActiveOfferOrThrow(
+          conversation.bookingId,
+          conversation.officeAccountId,
+        );
+
+        return [conversation.id.toString(), activeOffer] as const;
+      }),
+    );
+
+    const activeOfferMap = new Map(activeOfferEntries);
+
     const participantRows = await this.participantRepository.find({
       where: { accountId, conversationId: In(conversationIds) },
     });
@@ -221,21 +234,17 @@ export class ChatService {
       unreadCountMap.set(conversation.id.toString(), count);
     }
 
-    const offerDurationEntries = await Promise.all(
-      conversationsWithMessages.map(async (conversation) => {
-        const activeOffer = await this.findActiveOfferOrThrow(
-          conversation.bookingId,
-          conversation.officeAccountId,
-        );
-        return [conversation.id.toString(), activeOffer.offerDuration ?? null] as const;
-      }),
-    );
+    const offerDurationEntries = activeOfferEntries.map(([conversationId, activeOffer]) => [
+      conversationId,
+      activeOffer.offerDuration ?? null,
+    ] as const);
     const offerDurationMap = new Map<string, Date | null>(offerDurationEntries);
 
     return conversationsWithMessages.map((conversation) => {
       const me = participantMap.get(conversation.id.toString());
       const officeProfile = officeProfileMap.get(conversation.officeAccountId.toString());
       const userProfile = userProfileMap.get(conversation.userAccountId.toString());
+      const activeOffer = activeOfferMap.get(conversation.id.toString());
       
       // Get active status for all participants
       const participantIds = conversation.participants.map((p) => p.accountId.toString());
@@ -247,6 +256,11 @@ export class ChatService {
       
       return {
         ...conversation,
+        booking: {
+          bookingId: conversation.bookingId,
+          bookingType: activeOffer!.booking.type,
+          activeOfferId: activeOffer!.id,
+        },
         userName: userProfile?.name ?? null,
         officeName: officeProfile?.officeName ?? null,
         officeLogo: officeProfile?.logoUrl ?? null,
@@ -309,6 +323,11 @@ export class ChatService {
 
     return {
       ...hydratedConversation,
+      booking: {
+        bookingId: hydratedConversation.bookingId,
+        bookingType: activeOffer.booking.type,
+        activeOfferId: activeOffer.id,
+      },
       userName: userProfile?.name ?? null,
       officeName: officeProfile?.officeName ?? null,
       officeLogo: officeProfile?.logoUrl ?? null,

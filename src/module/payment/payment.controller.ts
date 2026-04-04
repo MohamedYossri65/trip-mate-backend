@@ -56,6 +56,7 @@ export class PaymentController {
     return this.paymentService.initiateBookingPartialPayment(
       account.id,
       dto.bookingId,
+      dto.couponCode,
     );
   }
 
@@ -74,6 +75,7 @@ export class PaymentController {
     return this.paymentService.initiateBookingFullPayment(
       account.id,
       dto.bookingId,
+      dto.couponCode,
     );
   }
 

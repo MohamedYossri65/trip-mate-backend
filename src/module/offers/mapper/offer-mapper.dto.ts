@@ -22,6 +22,7 @@ export class OfferMapper {
         id: bigint;
         type: string;
         destinationCountry: string;
+        createdAt: Date;
     };
     office: OfficeDetailsMapper| null;
 
@@ -49,6 +50,7 @@ export class OfferMapper {
                 id: offer.booking.id,
                 type: offer.booking.type,
                 destinationCountry: offer.arrivalCountry,
+                createdAt: offer.booking.createdAt,
             },
             office: offer.office ? officeDetails : null,
             canOfficeEditOffer

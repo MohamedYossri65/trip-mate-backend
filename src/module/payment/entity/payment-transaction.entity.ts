@@ -52,6 +52,12 @@ export class PaymentTransaction {
   @JoinColumn({ name: 'subscription_plan_id' })
   subscriptionPlan: SubscriptionPlan;
 
+  @Column({ nullable: true })
+  couponCode: string;
+
+  @Column({ type: 'decimal', precision: 12, scale: 2, nullable: true })
+  discountAmount: number;
+
   @Column({ type: 'jsonb', nullable: true })
   gatewayResponse: Record<string, any>;
 

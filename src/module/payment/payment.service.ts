@@ -18,6 +18,7 @@ import { BookingStatus } from '../bookings/domain/enum/booking-status.enum';
 import { SubscriptionPlan } from '../subscription/entity/subscription-plan.entity';
 import { Account } from '../account/entity/account.entity';
 import { WalletService } from '../wallet/wallet.service';
+import { CouponService } from '../coupon/coupon.service';
 
 const PARTIAL_PAYMENT_PERCENTAGE = 0.25;
 
@@ -48,6 +49,7 @@ export class PaymentService {
     private readonly offersService: OffersService,
     private readonly configService: ConfigService,
     private readonly walletService: WalletService,
+    private readonly couponService: CouponService,
   ) {
     this.secretKey = this.configService.get<string>('TAP_SECRET_KEY', '');
     this.currency = this.configService.get<string>('TAP_CURRENCY', 'SAR');
@@ -116,7 +118,8 @@ export class PaymentService {
   async initiateBookingPartialPayment(
     accountId: bigint,
     bookingId: number,
-  ): Promise<{ redirectUrl: string; transactionId: bigint; chargeId: string }> {
+    couponCode?: string,
+  ): Promise<{ redirectUrl: string; transactionId: bigint; chargeId: string; discountAmount?: number }> {
     const booking = await this.bookingRepo.findOne({
       where: { id: BigInt(bookingId) },
       relations: ['selectedOffer', 'user', 'user.account'],
@@ -140,7 +143,20 @@ export class PaymentService {
     }
 
     const offerPrice = Number(booking.selectedOffer.price);
-    const partialAmount = Math.round(offerPrice * PARTIAL_PAYMENT_PERCENTAGE * 100) / 100;
+    let chargeAmount = Math.round(offerPrice * PARTIAL_PAYMENT_PERCENTAGE * 100) / 100;
+    let discountAmount: number | undefined;
+
+    // Apply coupon discount if provided
+    if (couponCode) {
+      const couponResult = await this.couponService.validateAndApply(
+        couponCode,
+        accountId,
+        BigInt(bookingId),
+        chargeAmount,
+      );
+      discountAmount = couponResult.discountAmount;
+      chargeAmount = couponResult.finalAmount;
+    }
 
     const account = await this.accountRepo.findOne({
       where: { id: accountId },
@@ -153,17 +169,18 @@ export class PaymentService {
       cartId,
       type: PaymentType.BOOKING_PARTIAL,
       status: PaymentStatus.PENDING,
-      amount: partialAmount,
+      amount: chargeAmount,
       currency: this.currency,
       payerAccount: account,
       booking,
+      ...(couponCode ? { couponCode, discountAmount } : {}),
     });
     const savedPayment = await this.paymentRepo.save(payment);
 
     const tapResponse = await this.createCharge({
       cartId,
       description: `Booking #${bookingId} - Partial Payment (25%)`,
-      amount: partialAmount,
+      amount: chargeAmount,
       customerName: account.email || account.phone || 'Customer',
       customerEmail: account.email || 'no-email@tripmate.com',
       customerPhone: account.phone || '0500000000',
@@ -174,13 +191,14 @@ export class PaymentService {
     await this.paymentRepo.save(savedPayment);
 
     this.logger.log(
-      `Booking partial payment initiated: cartId=${cartId}, amount=${partialAmount}, chargeId=${tapResponse.id}`,
+      `Booking partial payment initiated: cartId=${cartId}, amount=${chargeAmount}, discount=${discountAmount || 0}, chargeId=${tapResponse.id}`,
     );
 
     return {
       redirectUrl: tapResponse.transaction.url,
       transactionId: savedPayment.id,
       chargeId: tapResponse.id,
+      discountAmount,
     };
   }
 
@@ -189,7 +207,8 @@ export class PaymentService {
   async initiateBookingFullPayment(
     accountId: bigint,
     bookingId: number,
-  ): Promise<{ redirectUrl: string; transactionId: bigint; chargeId: string }> {
+    couponCode?: string,
+  ): Promise<{ redirectUrl: string; transactionId: bigint; chargeId: string; discountAmount?: number }> {
     const booking = await this.bookingRepo.findOne({
       where: { id: BigInt(bookingId) },
       relations: ['selectedOffer', 'user', 'user.account'],
@@ -214,10 +233,23 @@ export class PaymentService {
 
     const offerPrice = Number(booking.selectedOffer.price);
     const paidAmount = Number(booking.paidAmount || 0);
-    const remainingAmount = Math.round((offerPrice - paidAmount) * 100) / 100;
+    let chargeAmount = Math.round((offerPrice - paidAmount) * 100) / 100;
+    let discountAmount: number | undefined;
 
-    if (remainingAmount <= 0) {
+    if (chargeAmount <= 0) {
       throw new BadRequestException('No remaining amount to pay');
+    }
+
+    // Apply coupon discount if provided
+    if (couponCode) {
+      const couponResult = await this.couponService.validateAndApply(
+        couponCode,
+        accountId,
+        BigInt(bookingId),
+        chargeAmount,
+      );
+      discountAmount = couponResult.discountAmount;
+      chargeAmount = couponResult.finalAmount;
     }
 
     const account = await this.accountRepo.findOne({
@@ -231,17 +263,18 @@ export class PaymentService {
       cartId,
       type: PaymentType.BOOKING_FULL,
       status: PaymentStatus.PENDING,
-      amount: remainingAmount,
+      amount: chargeAmount,
       currency: this.currency,
       payerAccount: account,
       booking,
+      ...(couponCode ? { couponCode, discountAmount } : {}),
     });
     const savedPayment = await this.paymentRepo.save(payment);
 
     const tapResponse = await this.createCharge({
       cartId,
       description: `Booking #${bookingId} - Full Payment (Remaining)`,
-      amount: remainingAmount,
+      amount: chargeAmount,
       customerName: account.email || account.phone || 'Customer',
       customerEmail: account.email || 'no-email@tripmate.com',
       customerPhone: account.phone || '0500000000',
@@ -252,13 +285,14 @@ export class PaymentService {
     await this.paymentRepo.save(savedPayment);
 
     this.logger.log(
-      `Booking full payment initiated: cartId=${cartId}, amount=${remainingAmount}, chargeId=${tapResponse.id}`,
+      `Booking full payment initiated: cartId=${cartId}, amount=${chargeAmount}, discount=${discountAmount || 0}, chargeId=${tapResponse.id}`,
     );
 
     return {
       redirectUrl: tapResponse.transaction.url,
       transactionId: savedPayment.id,
       chargeId: tapResponse.id,
+      discountAmount,
     };
   }
 
