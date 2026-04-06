@@ -1,0 +1,7 @@
+export enum WalletTransactionStatus {
+  PENDING = 'PENDING',
+  RELEASED = 'RELEASED',
+  WITHDRAWN = 'WITHDRAWN',
+  REJECTED = 'REJECTED',
+  CANCELLED = 'CANCELLED',
+}

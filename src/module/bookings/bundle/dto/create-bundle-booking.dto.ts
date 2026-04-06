@@ -97,6 +97,11 @@ export class CreateBundleCarBookingDto {
     @IsOptional()
     @IsString()
     notes?: string;
+
+    @IsOptional()
+    @IsInt()
+    @Type(() => Number)
+    numberOfTrip: number;
 }
 export class CreateBundleFlightBookingDto {
     @ApiProperty()

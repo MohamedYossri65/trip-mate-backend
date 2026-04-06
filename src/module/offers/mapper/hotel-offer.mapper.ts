@@ -10,6 +10,10 @@ export class HotelOfferMapper {
         status: string;
         offerDuration: Date;
     };
+     booking:{
+        id: bigint;
+        createdAt: Date;
+    };
     arrivalCountry: string;
     destinationCity: string;
     isTherePreferredHotel: boolean;
@@ -33,6 +37,10 @@ export class HotelOfferMapper {
                 price: hotelOfferDetails.offer.price,
                 status: hotelOfferDetails.offer.status,
                 offerDuration: hotelOfferDetails.offer.offerDuration,
+            },
+            booking: {
+                id: hotelOfferDetails.offer.booking.id,
+                createdAt: hotelOfferDetails.offer.booking.createdAt,
             },
             arrivalCountry: hotelOfferDetails.offer.arrivalCountry,
             destinationCity: hotelOfferDetails.destinationCity,

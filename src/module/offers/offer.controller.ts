@@ -5,6 +5,7 @@ import { Account } from "../account/entity/account.entity";
 import { CurrentUser } from "src/common/guards/decorators/user.decorator";
 import { SuccessResponse } from "src/common/interceptors/success-response.interceptor";
 import { Auth } from "src/common/guards/decorators/auth.decorator";
+import { RolesEnum } from "src/common/enums/roles.enum";
 import { CreateCarOfferDto } from "./dto/create-car-offer.dto";
 import { CreateVisaOfferDto } from "./dto/create-visa-offer.dto";
 import { CreateFlightOfferDto } from "./dto/create-flight-offer.dto";
@@ -243,6 +244,17 @@ export class OffersController {
         );
     }
 
+    @Get('bundle/booking/:bookingId')
+    @Auth()
+    @ApiOperation({ summary: 'Get bundle offers for a booking' })
+    @SuccessResponse('Bundle offers retrieved successfully')
+    async findBundleOffersByBookingId(
+        @Param('bookingId') bookingId: string,
+    ) {
+        return await this.offersService.findBundleOffersByBookingId(BigInt(bookingId));
+    }
+
+
     @Get('bundle/:offerId')
     @Auth()
     @ApiOperation({ summary: 'Get a bundle offer' })
@@ -298,5 +310,17 @@ export class OffersController {
         @CurrentUser() account: Account,
     ) {
         return await this.offersService.findLastOfferPendingForUser(account.id);
+    }
+
+    @Post(':offerId/accept')
+    @Auth(RolesEnum.USER)
+    @ApiOperation({ summary: 'Accept an offer on your booking' })
+    @SuccessResponse('Offer accepted successfully')
+    async acceptOffer(
+        @Param('offerId') offerId: string,
+        @CurrentUser() account: Account,
+    ) {
+        await this.offersService.acceptOffer(BigInt(offerId), account.id);
+        return { message: 'Offer accepted successfully' };
     }
 }

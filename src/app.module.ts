@@ -25,6 +25,10 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
 import { BullModule } from '@nestjs/bull';
 import { NotificationModule } from './module/notification/notification.module';
 import { ReportModule } from './module/report/report.module';
+import { ChatModule } from './module/chat/chat.module';
+import { PaymentModule } from './module/payment/payment.module';
+import { WalletModule } from './module/wallet/wallet.module';
+import { CouponModule } from './module/coupon/coupon.module';
 
 
 
@@ -67,6 +71,10 @@ import { ReportModule } from './module/report/report.module';
     ReviewModule,
     NotificationModule,
     ReportModule,
+    ChatModule,
+    PaymentModule,
+    WalletModule,
+    CouponModule,
   ],
   controllers: [AppController],
   providers: [

@@ -33,9 +33,10 @@ export class SubscriptionController {
   }
 
   @Post('subscribe')
-  @Public()
-  @Auth(RolesEnum.OFFICE)
-  @ApiOperation({ summary: 'Subscribe office to a plan' })
+  @Auth(RolesEnum.ADMIN)
+  @ApiOperation({
+    summary: 'Subscribe office to a plan directly (Admin only). For payment-based subscription, use POST /payments/subscription',
+  })
   @SuccessResponse('Subscribed successfully')
   async subscribe(
     @Body() dto: SubscribeOfficeDto,

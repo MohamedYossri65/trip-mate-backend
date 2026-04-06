@@ -11,6 +11,10 @@ import { ReportModule } from 'src/module/report/report.module';
 import { ReviewModule } from 'src/module/review/review.module';
 import { SubscriptionModule } from 'src/module/subscription/subscription.module';
 import { UserModule } from 'src/module/user/user.module';
+import { ChatModule } from 'src/module/chat/chat.module';
+import { PaymentModule } from 'src/module/payment/payment.module';
+import { WalletModule } from 'src/module/wallet/wallet.module';
+import { CouponModule } from 'src/module/coupon/coupon.module';
 
 export function setupSwagger(app: INestApplication) {
   const config = new DocumentBuilder()
@@ -35,6 +39,10 @@ export function setupSwagger(app: INestApplication) {
       ReviewModule,
       NotificationModule,
       ReportModule,
+      ChatModule,
+      PaymentModule,
+      WalletModule,
+      CouponModule
     ],
   });
 

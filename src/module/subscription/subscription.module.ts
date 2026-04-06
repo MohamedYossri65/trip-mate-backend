@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm/dist/typeorm.module';
 import { CacheModule } from '@nestjs/cache-manager';
 import { SubscriptionPlan } from './entity/subscription-plan.entity';
@@ -9,6 +9,7 @@ import { OfficeEmployee } from '../office/entity/employee.entity';
 import { SubscriptionService } from './subscription.service';
 import { SubscriptionController } from './subscription.controller';
 import { AccountModule } from '../account/account.module';
+import { OfficeModule } from '../office/office.module';
 
 @Module({
   imports: [
@@ -22,7 +23,8 @@ import { AccountModule } from '../account/account.module';
     CacheModule.register({
       ttl: 86400000, // 1 day in milliseconds
     }),
-    AccountModule
+    AccountModule,
+    forwardRef(() => OfficeModule),
   ],
   controllers: [SubscriptionController],
   providers: [SubscriptionService],

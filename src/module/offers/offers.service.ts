@@ -62,7 +62,7 @@ export class OffersService {
     }
 
     const bookingStatus = offers[0].offer.booking?.status;
-    if (bookingStatus !== BookingStatus.COMPLETED) {
+    if (bookingStatus !== BookingStatus.COMPLETED && bookingStatus !== BookingStatus.PARTIALLY_PAID) {
       return offers;
     }
 
@@ -85,11 +85,7 @@ export class OffersService {
 
       if (!booking) throw new BadRequestException('Booking not found');
 
-      const hasPendingOfferFromOffice = await this.hasPendingOfferFromOffice(BigInt(carOfferDetailsDto.bookingId), accountId);
-
-      if (hasPendingOfferFromOffice) {
-        throw new BadRequestException('An offer from this office already exists for this booking');
-      }
+      await this.replacePendingOfferFromOffice(manager, BigInt(carOfferDetailsDto.bookingId), accountId);
 
       const office = await this.findOfficeProfileOrThrow(manager, accountId);
 
@@ -195,11 +191,7 @@ export class OffersService {
 
       if (!booking) throw new BadRequestException('Booking not found');
 
-      const hasPendingOfferFromOffice = await this.hasPendingOfferFromOffice(BigInt(visaOfferDto.bookingId), accountId);
-
-      if (hasPendingOfferFromOffice) {
-        throw new BadRequestException('An offer from this office already exists for this booking');
-      }
+      await this.replacePendingOfferFromOffice(manager, BigInt(visaOfferDto.bookingId), accountId);
 
       const office = await this.findOfficeProfileOrThrow(manager, accountId);
 
@@ -305,11 +297,7 @@ export class OffersService {
 
       if (!booking) throw new BadRequestException('Booking not found');
 
-      const hasPendingOfferFromOffice = await this.hasPendingOfferFromOffice(BigInt(flightOfferDto.bookingId), accountId);
-
-      if (hasPendingOfferFromOffice) {
-        throw new BadRequestException('An offer from this office already exists for this booking');
-      }
+      await this.replacePendingOfferFromOffice(manager, BigInt(flightOfferDto.bookingId), accountId);
 
       const office = await this.findOfficeProfileOrThrow(manager, accountId);
 
@@ -415,11 +403,7 @@ export class OffersService {
 
       if (!booking) throw new BadRequestException('Booking not found');
 
-      const hasPendingOfferFromOffice = await this.hasPendingOfferFromOffice(BigInt(hotelOfferDto.bookingId), accountId);
-
-      if (hasPendingOfferFromOffice) {
-        throw new BadRequestException('An offer from this office already exists for this booking');
-      }
+      await this.replacePendingOfferFromOffice(manager, BigInt(hotelOfferDto.bookingId), accountId);
 
       const office = await this.findOfficeProfileOrThrow(manager, accountId);
 
@@ -525,11 +509,7 @@ export class OffersService {
 
       if (!booking) throw new BadRequestException('Booking not found');
 
-      const hasPendingOfferFromOffice = await this.hasPendingOfferFromOffice(BigInt(bundleOfferDto.bookingId), accountId);
-
-      if (hasPendingOfferFromOffice) {
-        throw new BadRequestException('An offer from this office already exists for this booking');
-      }
+      await this.replacePendingOfferFromOffice(manager, BigInt(bundleOfferDto.bookingId), accountId);
 
       const office = await this.findOfficeProfileOrThrow(manager, accountId);
 
@@ -589,6 +569,28 @@ export class OffersService {
     const officeDetails = await this.officeService.getOfficeDetails(bundleOfferDetails.offer.office.accountId);
 
     return BundleOfferMapper.fromEntities(bundleOfferDetails, canOfficeEditOffer, officeDetails);
+  }
+
+  async findBundleOffersByBookingId(bookingId: bigint): Promise<BundleOfferMapper[]> {
+    const bundleOfferDetailsList = await this.dataSource.getRepository(BundleOfferDetails).find({
+      where: { offer: { booking: { id: bookingId } } },
+      relations: [
+        'offer',
+        'offer.office',
+        'offer.office.account',
+        'offer.booking',
+        'offer.booking.user',
+        'offer.booking.user.account'
+      ],
+    });
+    return Promise.all(
+      bundleOfferDetailsList.map(async (details) => {
+        const canOfficeEditOffer = await this.canOfficeEditOffer(details.offer.booking.id, details.offer.office.accountId);
+        const officeDetails = await this.officeService.getOfficeDetails(details.offer.office.accountId);
+
+        return BundleOfferMapper.fromEntities(details, canOfficeEditOffer, officeDetails);
+      })
+    );
   }
 
   // ─── UPDATE METHODS ─────────────────────────────────────────────────────────
@@ -798,22 +800,20 @@ export class OffersService {
   }
 
 
-  private async hasPendingOfferFromOffice(
+  private async replacePendingOfferFromOffice(
+    manager: EntityManager,
     bookingId: bigint,
     officeId: bigint
-  ): Promise<boolean> {
-
-    const existingOffer = await this.dataSource
+  ): Promise<void> {
+    await manager
       .getRepository(Offer)
-      .findOne({
-        where: {
-          booking: { id: bookingId },
-          office: { accountId: officeId },
-          status: OfferStatus.PENDING
-        },
-      });
-
-    return !!existingOffer;
+      .createQueryBuilder()
+      .update(Offer)
+      .set({ status: OfferStatus.REPLACED })
+      .where('booking_id = :bookingId', { bookingId })
+      .andWhere('office_id = :officeId', { officeId })
+      .andWhere('status = :pendingStatus', { pendingStatus: OfferStatus.PENDING })
+      .execute();
   }
 
   async getOfferHomePage(officeId: bigint) {
@@ -861,6 +861,73 @@ export class OffersService {
         }
       });
 
+  }
+
+  // ─── ACCEPT OFFER ───────────────────────────────────────────────────────────
+
+  async acceptOffer(
+    offerId: bigint,
+    userAccountId: bigint,
+  ): Promise<void> {
+    await this.dataSource.transaction(async (manager) => {
+      const offer = await manager.getRepository(Offer).findOne({
+        where: { id: offerId },
+        relations: ['booking', 'booking.user', 'booking.user.account', 'office'],
+      });
+
+      if (!offer) throw new BadRequestException('Offer not found');
+
+      if (offer.booking.user.account.id.toString() !== userAccountId.toString()) {
+        throw new BadRequestException('This offer does not belong to your booking');
+      }
+
+      if (offer.status !== OfferStatus.PENDING) {
+        throw new BadRequestException('Only pending offers can be accepted');
+      }
+
+      const validStatuses = [BookingStatus.UNDER_NEGOTIATION, BookingStatus.WAITING_FOR_OFFERS];
+      if (!validStatuses.includes(offer.booking.status)) {
+        throw new BadRequestException(
+          'Booking is not in a valid state for accepting offers. Current status: ' + offer.booking.status,
+        );
+      }
+
+      // Accept this offer
+      offer.status = OfferStatus.ACCEPTED;
+      await manager.save(offer);
+
+      // Reject all other pending offers for this booking
+      await manager
+        .getRepository(Offer)
+        .createQueryBuilder()
+        .update(Offer)
+        .set({ status: OfferStatus.REJECTED })
+        .where('booking_id = :bookingId', { bookingId: offer.booking.id })
+        .andWhere('id != :offerId', { offerId: offer.id })
+        .andWhere('status = :status', { status: OfferStatus.PENDING })
+        .execute();
+
+      // Set selected offer on booking and transition status
+      const booking = offer.booking;
+      booking.selectedOffer = offer;
+
+      // Handle transition: if still WAITING_FOR_OFFERS, go through UNDER_NEGOTIATION first
+      if (booking.status === BookingStatus.WAITING_FOR_OFFERS) {
+        booking.changeStatus(BookingStatus.UNDER_NEGOTIATION);
+      }
+      booking.changeStatus(BookingStatus.OFFER_ACCEPTED);
+      await manager.save(booking);
+    });
+  }
+
+  async getAcceptedOffer(bookingId: bigint): Promise<Offer | null> {
+    return this.dataSource.getRepository(Offer).findOne({
+      where: {
+        booking: { id: bookingId },
+        status: OfferStatus.ACCEPTED,
+      },
+      relations: ['office', 'booking'],
+    });
   }
 
 

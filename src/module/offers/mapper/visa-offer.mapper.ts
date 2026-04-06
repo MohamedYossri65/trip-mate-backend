@@ -10,6 +10,10 @@ export class VisaOfferMapper {
         status: string;
         offerDuration: Date;
     };
+     booking:{
+        id: bigint;
+        createdAt: Date;
+    };
     arrivalCountry: string;
     fingerPrintLocation: string;
     visaType: string;
@@ -29,6 +33,10 @@ export class VisaOfferMapper {
                 price: visaOfferDetails.offer.price,
                 status: visaOfferDetails.offer.status,
                 offerDuration: visaOfferDetails.offer.offerDuration,
+            },
+            booking: {
+                id: visaOfferDetails.offer.booking.id,
+                createdAt: visaOfferDetails.offer.booking.createdAt,
             },
             arrivalCountry: visaOfferDetails.offer.arrivalCountry,
             fingerPrintLocation: visaOfferDetails.fingerPrintLocation,

@@ -11,6 +11,10 @@ export class BundleOfferMapper {
         status: string;
         offerDuration: Date;
     };
+    booking: {
+        id: bigint;
+        createdAt: Date;
+    };
     arrivalCountry: string;
     bookingRequestDate: Date;
     bundelDetails?: CreateAllBookingsDto;
@@ -30,6 +34,10 @@ export class BundleOfferMapper {
                 price: bundleOfferDetails.offer.price,
                 status: bundleOfferDetails.offer.status,
                 offerDuration: bundleOfferDetails.offer.offerDuration,
+            },
+            booking: {
+                id: bundleOfferDetails.offer.booking.id,
+                createdAt: bundleOfferDetails.offer.booking.createdAt,
             },
             arrivalCountry: bundleOfferDetails.offer.arrivalCountry,
             bookingRequestDate: bundleOfferDetails.offer.booking.createdAt,

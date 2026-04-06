@@ -58,10 +58,10 @@ async generate(accountId: bigint, purpose: OtpPurpose): Promise<boolean> {
   return true;
 }
 
-  async verify(accountId: bigint, purpose: OtpPurpose, inputCode: string) {
+  async verify(phoneNumber: string, purpose: OtpPurpose, inputCode: string) {
     const otp = await this.otpRepository.findOne({
       where: {
-        accountId,
+        account: { phone: phoneNumber },
         purpose,
         status: OtpStatus.PENDING,
       },
