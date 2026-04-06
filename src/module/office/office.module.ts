@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm/dist/typeorm.module';
 import { CacheModule } from '@nestjs/cache-manager';
 import { OfficeService } from './office.service';
@@ -18,7 +18,7 @@ import { OtpModule } from '../otp/otp.module';
       ttl: 10800000, // 3 hours in milliseconds
     }),
     FileUploadModule,
-    SubscriptionModule,
+    forwardRef(() => SubscriptionModule),
     ReviewModule,
     AccountModule,
     OtpModule,

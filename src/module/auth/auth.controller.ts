@@ -58,7 +58,7 @@ export class AuthController {
   @Post('verify-otp')
   @SuccessResponse('Phone number verified successfully')
   async verifyOtp(@Body() body: VerifyOtpDto, @Req() req: Request) {
-    return await this.authService.verifyPhoneOtp(body.accountId, body.otp, req);
+    return await this.authService.verifyPhoneOtp(body.phoneNumber, body.otp, req);
   }
 
   @Post('resend-otp/:accountId')

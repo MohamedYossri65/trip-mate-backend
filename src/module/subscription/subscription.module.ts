@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm/dist/typeorm.module';
 import { CacheModule } from '@nestjs/cache-manager';
 import { SubscriptionPlan } from './entity/subscription-plan.entity';
@@ -24,7 +24,7 @@ import { OfficeModule } from '../office/office.module';
       ttl: 86400000, // 1 day in milliseconds
     }),
     AccountModule,
-    OfficeModule
+    forwardRef(() => OfficeModule),
   ],
   controllers: [SubscriptionController],
   providers: [SubscriptionService],

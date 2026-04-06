@@ -1,9 +1,9 @@
-import { IsNotEmpty, IsNumber } from 'class-validator';
+import { IsNotEmpty, IsNumber, IsString } from 'class-validator';
 
 export class VerifyOtpDto {
-  @IsNumber()
+  @IsString()
   @IsNotEmpty()
-  accountId: bigint;
+  phoneNumber: string;
 
   @IsNotEmpty()
   otp: string;

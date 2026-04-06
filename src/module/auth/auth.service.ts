@@ -54,13 +54,13 @@ export class AuthService {
   }
 
   async verifyPhoneOtp(
-    accountId: bigint,
+    phoneNumber: string,
     otp: string,
     req: Request,
   ): Promise<LoginResponse> {
-    await this.otpService.verify(accountId, OtpPurpose.PHONE_VERIFICATION, otp);
+    await this.otpService.verify(phoneNumber, OtpPurpose.PHONE_VERIFICATION, otp);
 
-    const account = await this.registrationService.markPhoneVerified(accountId);
+    const account = await this.registrationService.markPhoneVerified(phoneNumber);
     await this.registrationService.changeAccountStatusAfterVerification(account);
 
     const tokens = await this.generateTokens(account);
@@ -132,7 +132,7 @@ export class AuthService {
     if (!account) {
       throw new BadRequestException('Account not found');
     }
-    await this.otpService.verify(account.id, OtpPurpose.PASSWORD_RESET, otp);
+    await this.otpService.verify(account.phone, OtpPurpose.PASSWORD_RESET, otp);
 
     // Issue a short-lived reset token (5 min) to authorize the password change
     const resetToken = await this.jwtService.signAsync(

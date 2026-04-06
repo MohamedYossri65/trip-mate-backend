@@ -1,7 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
 
-export class PayWithSavedCardDto {
+export class PayWithSavedOfferCardDto {
   @ApiProperty({
     description: 'Saved card ID',
     example: 1,
@@ -11,12 +11,12 @@ export class PayWithSavedCardDto {
   cardId: number;
 
   @ApiProperty({
-    description: 'Booking ID',
+    description: 'Offer ID',
     example: 123,
   })
   @IsNotEmpty()
   @IsNumber()
-  bookingId: number;
+  offerId: number;
 
   @ApiProperty({
     description: 'Payment type: PARTIAL or FULL',

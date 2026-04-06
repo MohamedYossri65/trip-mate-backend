@@ -12,11 +12,11 @@ import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { PaymentService } from './payment.service';
 import {
   InitiateSubscriptionPaymentDto,
-  InitiateBookingPaymentDto,
+  InitiateOfferPaymentDto,
 } from './dto/initiate-payment.dto';
 import { VerifyAndSaveCardDto, UpdateSavedCardDto } from './dto/verify-save-card.dto';
 import {
-  PayWithSavedCardDto,
+  PayWithSavedOfferCardDto,
   PaySubscriptionWithSavedCardDto,
 } from './dto/payment-with-saved-card.dto';
 import { Auth } from 'src/common/guards/decorators/auth.decorator';
@@ -50,38 +50,38 @@ export class PaymentController {
 
   // ─── Booking Partial Payment (25%) ────────────────────────────────
 
-  @Post('booking/partial')
+  @Post('offer/partial')
   @Auth(RolesEnum.USER)
   @ApiOperation({
-    summary: 'Initiate partial booking payment (25%) via Tap',
+    summary: 'Initiate partial offer payment (25%) via Tap',
   })
   @SuccessResponse('Payment page created successfully')
-  async initiateBookingPartialPayment(
-    @Body() dto: InitiateBookingPaymentDto,
+  async initiateOfferPartialPayment(
+    @Body() dto: InitiateOfferPaymentDto,
     @CurrentUser() account: Account,
   ) {
-    return this.paymentService.initiateBookingPartialPayment(
+    return this.paymentService.initiateOfferPartialPayment(
       account.id,
-      dto.bookingId,
+      dto.offerId,
       dto.couponCode,
     );
   }
 
-  // ─── Booking Full Payment (remaining 75%) ─────────────────────────
+  // ─── Offer Full Payment (remaining 75%) ──────────────────────────
 
-  @Post('booking/full')
+  @Post('offer/full')
   @Auth(RolesEnum.USER)
   @ApiOperation({
-    summary: 'Initiate full booking payment (remaining 75%) via Tap',
+    summary: 'Initiate full offer payment (remaining 75%) via Tap',
   })
   @SuccessResponse('Payment page created successfully')
-  async initiateBookingFullPayment(
-    @Body() dto: InitiateBookingPaymentDto,
+  async initiateOfferFullPayment(
+    @Body() dto: InitiateOfferPaymentDto,
     @CurrentUser() account: Account,
   ) {
-    return this.paymentService.initiateBookingFullPayment(
+    return this.paymentService.initiateOfferFullPayment(
       account.id,
-      dto.bookingId,
+      dto.offerId,
       dto.couponCode,
     );
   }
@@ -177,18 +177,18 @@ export class PaymentController {
 
   // ─── PAY WITH SAVED CARD ──────────────────────────────────────────
 
-  @Post('booking/saved-card')
+  @Post('offer/saved-card')
   @Auth(RolesEnum.USER)
-  @ApiOperation({ summary: 'Pay for booking using saved card' })
+  @ApiOperation({ summary: 'Pay for offer using saved card' })
   @SuccessResponse('Payment processed successfully')
-  async payBookingWithSavedCard(
-    @Body() dto: PayWithSavedCardDto,
+  async payOfferWithSavedCard(
+    @Body() dto: PayWithSavedOfferCardDto,
     @CurrentUser() account: Account,
   ) {
-    return this.paymentService.payWithSavedCard({
+    return this.paymentService.payWithSavedOfferCard({
       accountId: account.id,
       cardId: dto.cardId,
-      bookingId: dto.bookingId,
+      offerId: dto.offerId,
       paymentType: dto.paymentType,
       couponCode: dto.couponCode,
     });

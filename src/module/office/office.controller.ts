@@ -148,6 +148,16 @@ export class OfficeController {
     return;
   }
 
+  @Get('office-main-data')
+  @Auth(RolesEnum.OFFICE)
+  @ApiOperation({ summary: 'Get office main data' })
+  @SuccessResponse('Office main data retrieved successfully')
+  async getOfficeData(@CurrentUser() account: Account) {
+    const office = await this.officeService.getOfficeData(account.id);
+    return office;
+  }
+
+  
   @Get('details/:officeId')
   @Auth()
   @ApiOperation({ summary: 'Get office details' })

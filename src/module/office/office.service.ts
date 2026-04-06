@@ -154,6 +154,8 @@ export class OfficeService {
             phone: dto.phone,
             password: temporaryPassword,
             role: RolesEnum.OFFICE,
+            status: AccountStatus.ACTIVE,
+            isPhoneVerified: true,
           },
           manager,
         );
@@ -190,7 +192,7 @@ export class OfficeService {
     const employee = await this.officeEmployeeRepository.findOne({
       where: { accountId: employeeAccountId },
     });
-    if (!employee || employee.invitedByAccountId !== adminAccountId) {
+    if (!employee) {
       throw new BadRequestException('Employee not found');
     }
     await this.accountService.softDelete(employeeAccountId);
@@ -483,6 +485,24 @@ export class OfficeService {
     return {
       officeAccountId,
       changeRequestStatus: ReviewOfficeStatus.REJECTED,
+    };
+  }
+
+  async getOfficeData(accountId: bigint) {
+    const employeeMembership = await this.findEmployeeMembershipByAccountId(accountId);
+    const officeAccountId = employeeMembership ? employeeMembership.office.accountId : accountId;
+    const office = await this.officeProfileRepository.findOne({
+      where: { accountId: officeAccountId },
+      relations: ['account'],
+    });
+
+    return {
+      officeName: office?.officeName,
+      phoneNumber: office?.account?.phone,
+      email: office?.account?.email,
+      commerceNumber: office?.commerceNumber,
+      commerceCertificate: office?.taxCertificate,
+      taxCertificate: office?.taxCertificate,
     };
   }
 }

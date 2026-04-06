@@ -8,11 +8,11 @@ export class InitiateSubscriptionPaymentDto {
   planId: number;
 }
 
-export class InitiateBookingPaymentDto {
-  @ApiProperty({ description: 'Booking ID to pay for' })
+export class InitiateOfferPaymentDto {
+  @ApiProperty({ description: 'Offer ID to pay for' })
   @IsNotEmpty()
   @IsNumber()
-  bookingId: number;
+  offerId: number;
 
   @ApiPropertyOptional({ description: 'Coupon code to apply for a discount' })
   @IsOptional()

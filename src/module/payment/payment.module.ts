@@ -7,6 +7,7 @@ import { PaymentController } from './payment.controller';
 import { SubscriptionModule } from '../subscription/subscription.module';
 import { OffersModule } from '../offers/offers.module';
 import { Booking } from '../bookings/domain/entity/booking.entity';
+import { Offer } from '../offers/entity/offer.entity';
 import { SubscriptionPlan } from '../subscription/entity/subscription-plan.entity';
 import { Account } from '../account/entity/account.entity';
 import { WalletModule } from '../wallet/wallet.module';
@@ -18,6 +19,7 @@ import { CouponModule } from '../coupon/coupon.module';
       PaymentTransaction,
       SavedCard,
       Booking,
+      Offer,
       SubscriptionPlan,
       Account,
     ]),

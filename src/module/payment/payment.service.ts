@@ -14,6 +14,8 @@ import { PaymentType } from './enum/payment-type.enum';
 import { PaymentStatus } from './enum/payment-status.enum';
 import { SubscriptionService } from '../subscription/subscription.service';
 import { OffersService } from '../offers/offers.service';
+import { Offer } from '../offers/entity/offer.entity';
+import { OfferStatus } from '../offers/enum/offer-status.enum';
 import { Booking } from '../bookings/domain/entity/booking.entity';
 import { BookingStatus } from '../bookings/domain/enum/booking-status.enum';
 import { SubscriptionPlan } from '../subscription/entity/subscription-plan.entity';
@@ -39,6 +41,9 @@ export class PaymentService {
 
     @InjectRepository(Booking)
     private readonly bookingRepo: Repository<Booking>,
+
+    @InjectRepository(Offer)
+    private readonly offerRepo: Repository<Offer>,
 
     @InjectRepository(SubscriptionPlan)
     private readonly planRepo: Repository<SubscriptionPlan>,
@@ -119,21 +124,12 @@ export class PaymentService {
 
   // ─── BOOKING PARTIAL PAYMENT (25%) ────────────────────────────────
 
-  async initiateBookingPartialPayment(
+  async initiateOfferPartialPayment(
     accountId: bigint,
-    bookingId: number,
+    offerId: number,
     couponCode?: string,
   ): Promise<{ redirectUrl: string; transactionId: bigint; chargeId: string; discountAmount?: number }> {
-    const booking = await this.bookingRepo.findOne({
-      where: { id: BigInt(bookingId) },
-      relations: ['selectedOffer', 'user', 'user.account'],
-    });
-
-    if (!booking) throw new NotFoundException('Booking not found');
-
-    if (booking.user.account.id.toString() !== accountId.toString()) {
-      throw new BadRequestException('This booking does not belong to you');
-    }
+    const { offer, booking, account } = await this.resolveOfferPaymentContext(accountId, offerId);
 
     if (booking.status !== BookingStatus.OFFER_ACCEPTED) {
       throw new BadRequestException(
@@ -142,11 +138,7 @@ export class PaymentService {
       );
     }
 
-    if (!booking.selectedOffer) {
-      throw new BadRequestException('No accepted offer found for this booking');
-    }
-
-    const offerPrice = Number(booking.selectedOffer.price);
+    const offerPrice = Number(offer.price);
     let chargeAmount = Math.round(offerPrice * PARTIAL_PAYMENT_PERCENTAGE * 100) / 100;
     let discountAmount: number | undefined;
 
@@ -155,19 +147,18 @@ export class PaymentService {
       const couponResult = await this.couponService.validateAndApply(
         couponCode,
         accountId,
-        BigInt(bookingId),
+        BigInt(booking.id),
         chargeAmount,
       );
       discountAmount = couponResult.discountAmount;
       chargeAmount = couponResult.finalAmount;
     }
 
-    const account = await this.accountRepo.findOne({
-      where: { id: accountId },
-    });
-    if (!account) throw new NotFoundException('Account not found');
+    if (chargeAmount <= 0) {
+      throw new BadRequestException('No remaining amount to pay');
+    }
 
-    const cartId = `BK-PARTIAL-${bookingId}-${Date.now()}`;
+    const cartId = `OF-PARTIAL-${offerId}-${Date.now()}`;
 
     const payment = this.paymentRepo.create({
       cartId,
@@ -183,7 +174,7 @@ export class PaymentService {
 
     const tapResponse = await this.createCharge({
       cartId,
-      description: `Booking #${bookingId} - Partial Payment (25%)`,
+      description: `Booking #${booking.id} - Partial Payment (Offer #${offerId}, 25%)`,
       amount: chargeAmount,
       customerName: account.email || account.phone || 'Customer',
       customerEmail: account.email || 'no-email@tripmate.com',
@@ -195,7 +186,7 @@ export class PaymentService {
     await this.paymentRepo.save(savedPayment);
 
     this.logger.log(
-      `Booking partial payment initiated: cartId=${cartId}, amount=${chargeAmount}, discount=${discountAmount || 0}, chargeId=${tapResponse.id}`,
+      `Offer partial payment initiated: cartId=${cartId}, amount=${chargeAmount}, discount=${discountAmount || 0}, chargeId=${tapResponse.id}`,
     );
 
     return {
@@ -208,21 +199,12 @@ export class PaymentService {
 
   // ─── BOOKING FULL PAYMENT (remaining 75%) ─────────────────────────
 
-  async initiateBookingFullPayment(
+  async initiateOfferFullPayment(
     accountId: bigint,
-    bookingId: number,
+    offerId: number,
     couponCode?: string,
   ): Promise<{ redirectUrl: string; transactionId: bigint; chargeId: string; discountAmount?: number }> {
-    const booking = await this.bookingRepo.findOne({
-      where: { id: BigInt(bookingId) },
-      relations: ['selectedOffer', 'user', 'user.account'],
-    });
-
-    if (!booking) throw new NotFoundException('Booking not found');
-
-    if (booking.user.account.id.toString() !== accountId.toString()) {
-      throw new BadRequestException('This booking does not belong to you');
-    }
+    const { offer, booking, account } = await this.resolveOfferPaymentContext(accountId, offerId);
 
     if (booking.status !== BookingStatus.PARTIALLY_PAID) {
       throw new BadRequestException(
@@ -231,11 +213,7 @@ export class PaymentService {
       );
     }
 
-    if (!booking.selectedOffer) {
-      throw new BadRequestException('No accepted offer found for this booking');
-    }
-
-    const offerPrice = Number(booking.selectedOffer.price);
+    const offerPrice = Number(offer.price);
     const paidAmount = Number(booking.paidAmount || 0);
     let chargeAmount = Math.round((offerPrice - paidAmount) * 100) / 100;
     let discountAmount: number | undefined;
@@ -249,19 +227,18 @@ export class PaymentService {
       const couponResult = await this.couponService.validateAndApply(
         couponCode,
         accountId,
-        BigInt(bookingId),
+        BigInt(booking.id),
         chargeAmount,
       );
       discountAmount = couponResult.discountAmount;
       chargeAmount = couponResult.finalAmount;
     }
 
-    const account = await this.accountRepo.findOne({
-      where: { id: accountId },
-    });
-    if (!account) throw new NotFoundException('Account not found');
+    if (chargeAmount <= 0) {
+      throw new BadRequestException('No remaining amount to pay');
+    }
 
-    const cartId = `BK-FULL-${bookingId}-${Date.now()}`;
+    const cartId = `OF-FULL-${offerId}-${Date.now()}`;
 
     const payment = this.paymentRepo.create({
       cartId,
@@ -277,7 +254,7 @@ export class PaymentService {
 
     const tapResponse = await this.createCharge({
       cartId,
-      description: `Booking #${bookingId} - Full Payment (Remaining)`,
+      description: `Booking #${booking.id} - Full Payment (Offer #${offerId}, Remaining)`,
       amount: chargeAmount,
       customerName: account.email || account.phone || 'Customer',
       customerEmail: account.email || 'no-email@tripmate.com',
@@ -289,7 +266,7 @@ export class PaymentService {
     await this.paymentRepo.save(savedPayment);
 
     this.logger.log(
-      `Booking full payment initiated: cartId=${cartId}, amount=${chargeAmount}, discount=${discountAmount || 0}, chargeId=${tapResponse.id}`,
+      `Offer full payment initiated: cartId=${cartId}, amount=${chargeAmount}, discount=${discountAmount || 0}, chargeId=${tapResponse.id}`,
     );
 
     return {
@@ -390,7 +367,7 @@ export class PaymentService {
       );
 
       return response.data;
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(
         `Failed to retrieve charge ${chargeId}: ${error.message}`,
       );
@@ -577,10 +554,10 @@ export class PaymentService {
 
   // ─── PAYMENT WITH SAVED CARD ──────────────────────────────────────
 
-  async payWithSavedCard(params: {
+  async payWithSavedOfferCard(params: {
     accountId: bigint;
     cardId: number;
-    bookingId: number;
+    offerId: number;
     paymentType: 'PARTIAL' | 'FULL';
     couponCode?: string;
   }): Promise<{ transactionId: bigint; chargeId: string }> {
@@ -590,20 +567,7 @@ export class PaymentService {
       throw new BadRequestException('This card is inactive');
     }
 
-    const booking = await this.bookingRepo.findOne({
-      where: { id: BigInt(params.bookingId) },
-      relations: ['selectedOffer', 'user', 'user.account'],
-    });
-
-    if (!booking) throw new NotFoundException('Booking not found');
-
-    if (booking.user.account.id.toString() !== params.accountId.toString()) {
-      throw new BadRequestException('This booking does not belong to you');
-    }
-
-    if (!booking.selectedOffer) {
-      throw new BadRequestException('No accepted offer found for this booking');
-    }
+    const { offer, booking, account } = await this.resolveOfferPaymentContext(params.accountId, params.offerId);
 
     // Calculate amount based on payment type
     let chargeAmount: number;
@@ -616,18 +580,18 @@ export class PaymentService {
           'Booking must have an accepted offer before payment',
         );
       }
-      const offerPrice = Number(booking.selectedOffer.price);
+      const offerPrice = Number(offer.price);
       chargeAmount = Math.round(offerPrice * PARTIAL_PAYMENT_PERCENTAGE * 100) / 100;
-      description = `Booking #${params.bookingId} - Partial Payment (25%)`;
+      description = `Booking #${booking.id} - Partial Payment (Offer #${params.offerId}, 25%)`;
       type = PaymentType.BOOKING_PARTIAL;
     } else {
       if (booking.status !== BookingStatus.PARTIALLY_PAID) {
         throw new BadRequestException('Booking must be partially paid first');
       }
-      const offerPrice = Number(booking.selectedOffer.price);
+      const offerPrice = Number(offer.price);
       const paidAmount = Number(booking.paidAmount || 0);
       chargeAmount = Math.round((offerPrice - paidAmount) * 100) / 100;
-      description = `Booking #${params.bookingId} - Full Payment (Remaining)`;
+      description = `Booking #${booking.id} - Full Payment (Offer #${params.offerId}, Remaining)`;
       type = PaymentType.BOOKING_FULL;
     }
 
@@ -637,19 +601,18 @@ export class PaymentService {
       const couponResult = await this.couponService.validateAndApply(
         params.couponCode,
         params.accountId,
-        BigInt(params.bookingId),
+        BigInt(booking.id),
         chargeAmount,
       );
       discountAmount = couponResult.discountAmount;
       chargeAmount = couponResult.finalAmount;
     }
 
-    const account = await this.accountRepo.findOne({
-      where: { id: params.accountId },
-    });
-    if (!account) throw new NotFoundException('Account not found');
+    if (chargeAmount <= 0) {
+      throw new BadRequestException('No remaining amount to pay');
+    }
 
-    const cartId = `BK-SAVED-${params.bookingId}-${Date.now()}`;
+    const cartId = `OF-SAVED-${params.offerId}-${Date.now()}`;
 
     // Create payment record
     const payment = this.paymentRepo.create({
@@ -678,7 +641,7 @@ export class PaymentService {
     await this.paymentRepo.save(savedPayment);
 
     this.logger.log(
-      `Payment with saved card: cardId=${params.cardId}, bookingId=${params.bookingId}, chargeId=${tapResponse.id}`,
+      `Payment with saved card: cardId=${params.cardId}, offerId=${params.offerId}, chargeId=${tapResponse.id}`,
     );
 
     return {
@@ -761,7 +724,7 @@ export class PaymentService {
       this.logger.log(
         `Subscription activated for account ${payment.payerAccount.id}, plan ${payment.subscriptionPlan.id}`,
       );
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(
         `Failed to activate subscription: ${error.message}`,
       );
@@ -806,7 +769,7 @@ export class PaymentService {
       this.logger.log(
         `Booking ${booking.id} partially paid. Amount: ${payment.amount}`,
       );
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(
         `Failed to update booking for partial payment: ${error.message}`,
       );
@@ -851,7 +814,7 @@ export class PaymentService {
       this.logger.log(
         `Booking ${booking.id} fully paid and confirmed. Total paid: ${booking.paidAmount}`,
       );
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(
         `Failed to update booking for full payment: ${error.message}`,
       );
@@ -913,7 +876,7 @@ export class PaymentService {
       }
 
       return response.data;
-    } catch (error) {
+    } catch (error: any) {
       console.log('TAP ERROR:', error.response?.data);
 
       if (error instanceof BadRequestException) throw error;
@@ -976,7 +939,7 @@ export class PaymentService {
       }
 
       return response.data;
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error('TAP VERIFY ERROR:', error.response?.data);
 
       if (error instanceof BadRequestException) throw error;
@@ -1031,7 +994,7 @@ export class PaymentService {
       }
 
       return response.data;
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error('TAP SAVED CARD ERROR:', error.response?.data);
 
       if (error instanceof BadRequestException) throw error;
@@ -1040,5 +1003,36 @@ export class PaymentService {
         error.response?.data || 'Failed to charge saved card',
       );
     }
+  }
+
+  private async resolveOfferPaymentContext(
+    accountId: bigint,
+    offerId: number,
+  ): Promise<{ offer: Offer; booking: Booking; account: Account }> {
+    const offer = await this.offerRepo.findOne({
+      where: { id: BigInt(offerId) },
+      relations: ['booking', 'booking.user', 'booking.user.account', 'booking.selectedOffer'],
+    });
+
+    if (!offer) throw new NotFoundException('Offer not found');
+
+    if (offer.booking.user.account.id.toString() !== accountId.toString()) {
+      throw new BadRequestException('This offer does not belong to your booking');
+    }
+
+    if (offer.status !== OfferStatus.ACCEPTED) {
+      throw new BadRequestException('Offer must be accepted before payment');
+    }
+
+    if (!offer.booking.selectedOffer || offer.booking.selectedOffer.id.toString() !== offer.id.toString()) {
+      throw new BadRequestException('This offer is not the accepted offer for this booking');
+    }
+
+    const account = await this.accountRepo.findOne({
+      where: { id: accountId },
+    });
+    if (!account) throw new NotFoundException('Account not found');
+
+    return { offer, booking: offer.booking, account };
   }
 }

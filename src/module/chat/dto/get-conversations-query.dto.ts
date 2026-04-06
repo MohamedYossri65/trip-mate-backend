@@ -1,7 +1,6 @@
-import { IsOptional, IsEnum, IsBoolean } from 'class-validator';
+import { IsOptional, IsBoolean } from 'class-validator';
 import { Transform } from 'class-transformer';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
-import { BookingStatus } from 'src/module/bookings/domain/enum/booking-status.enum';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
 export class GetConversationsQueryDto extends PaginationDto {

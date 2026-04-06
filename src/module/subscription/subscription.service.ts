@@ -198,8 +198,12 @@ export class SubscriptionService {
 
   // ─── Get active subscription for an office ────────────────────
   async getActiveSubscription(
-    officeAccountId: bigint,
+    accountId: bigint,
   ): Promise<OfficeSubscriptionMapper | null> {
+
+    const employeeMembership = await this.officeService.findEmployeeMembershipByAccountId(accountId);
+    const officeAccountId = employeeMembership ? employeeMembership.office.accountId : accountId;
+
     const cacheKey = `active_subscription_${officeAccountId}`;
 
     // Try to get from cache

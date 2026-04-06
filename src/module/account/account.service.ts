@@ -43,7 +43,7 @@ export class AccountService {
       phone: data.phone,
       password: hashedPassword,
       role: data.role,
-      status: AccountStatus.PENDING_OTP,
+      status: data.status || AccountStatus.PENDING_OTP,
       isPhoneVerified: false,
     });
     return await repo.save(account);
@@ -94,13 +94,13 @@ export class AccountService {
     await this.accountRepository.update({ id: accountId }, { status });
   }
 
-  async verifyPhone(accountId: bigint): Promise<Account> {
+  async verifyPhone(phoneNumber: string): Promise<Account> {
     await this.accountRepository.update(
-      { id: accountId },
+      { phone: phoneNumber },
       { isPhoneVerified: true },
     );
     const updatedAccount = await this.accountRepository.findOne({
-      where: { id: accountId },
+      where: { phone: phoneNumber },
     });
     if (!updatedAccount) {
       throw new BadRequestException('Account not found after phone verification');

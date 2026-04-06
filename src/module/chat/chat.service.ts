@@ -8,7 +8,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { ChatConversation } from './entities/chat-conversation.entity';
 import { ChatParticipant } from './entities/chat-participant.entity';
 import { ChatMessage } from './entities/chat-message.entity';
-import { In, Repository } from 'typeorm';
+import { Brackets, In, Repository } from 'typeorm';
 import { CreateConversationDto } from './dto/create-conversation.dto';
 import { ConversationType, MessageType } from './enums/chat.enums';
 import { Account } from '../account/entity/account.entity';
@@ -21,7 +21,6 @@ import { BookingStatus } from '../bookings/domain/enum/booking-status.enum';
 import { OfficeEmployee } from '../office/entity/employee.entity';
 import { OfficeService } from '../office/office.service';
 import { OnlineStatusService } from './services/online-status.service';
-import { PaginationDto } from 'src/common/dto/pagination.dto';
 import { UserProfile } from '../user/entity/user.entity';
 import { OfficeProfile } from '../office/entity/office.entity';
 import { RolesEnum } from 'src/common/enums/roles.enum';
@@ -36,8 +35,6 @@ export class ChatService {
     private readonly participantRepository: Repository<ChatParticipant>,
     @InjectRepository(ChatMessage)
     private readonly messageRepository: Repository<ChatMessage>,
-    @InjectRepository(Account)
-    private readonly accountRepository: Repository<Account>,
     @InjectRepository(Offer)
     private readonly offerRepository: Repository<Offer>,
     @InjectRepository(OfficeEmployee)
@@ -107,16 +104,6 @@ export class ChatService {
 
   async getConversationsForUser(accountId: bigint, query?: GetConversationsQueryDto) {
     let conversations = await this.listConversationsForUser(accountId, query);
-
-    // Apply filters if provided
-    if (query?.status) {
-      conversations = conversations.filter((conv) => conv.booking.bookingStatus === query.status);
-    }
-
-    if (query?.isEnded !== undefined) {
-      conversations = conversations.filter((conv) => conv.isEnded === query.isEnded);
-    }
-
     if (!query) {
       return conversations;
     }
@@ -132,16 +119,20 @@ export class ChatService {
     };
   }
 
-  private async listConversationsForUser(accountId: bigint, query?: PaginationDto) {
+  private async listConversationsForUser(accountId: bigint, query?: GetConversationsQueryDto) {
     const officeScopeIds = await this.getOfficeScopeIds(accountId);
     const qb = this.conversationRepository
       .createQueryBuilder('conversation')
       .leftJoinAndSelect('conversation.participants', 'participants')
-      .where('conversation.user_account_id = :accountId', { accountId });
+      .where(
+        new Brackets((scopeQb) => {
+          scopeQb.where('conversation.user_account_id = :accountId', { accountId });
 
-    if (officeScopeIds.length) {
-      qb.orWhere('conversation.office_account_id IN (:...officeScopeIds)', { officeScopeIds });
-    }
+          if (officeScopeIds.length) {
+            scopeQb.orWhere('conversation.office_account_id IN (:...officeScopeIds)', { officeScopeIds });
+          }
+        }),
+      );
 
     qb.orderBy('conversation.created_at', 'DESC');
 
@@ -184,12 +175,8 @@ export class ChatService {
       latestMessages.map((message) => [message.conversationId.toString(), message]),
     );
 
-    const conversationsWithMessages = activeConversations.filter((conversation) =>
-      latestMessageByConversation.has(conversation.id.toString()),
-    );
-
     const activeOfferEntries = await Promise.all(
-      conversationsWithMessages.map(async (conversation) => {
+      activeConversations.map(async (conversation) => {
         const activeOffer = await this.findActiveOfferOrThrow(
           conversation.bookingId,
           conversation.officeAccountId,
@@ -209,8 +196,8 @@ export class ChatService {
     );
 
     // Batch-fetch office profiles for all conversations
-    const uniqueOfficeAccountIds = [...new Set(conversationsWithMessages.map((c) => c.officeAccountId))];
-    const uniqueUserAccountIds = [...new Set(conversationsWithMessages.map((c) => c.userAccountId))];
+    const uniqueOfficeAccountIds = [...new Set(activeConversations.map((c) => c.officeAccountId))];
+    const uniqueUserAccountIds = [...new Set(activeConversations.map((c) => c.userAccountId))];
 
     const [officeProfiles, userProfiles] = await Promise.all([
       Promise.all(uniqueOfficeAccountIds.map((id) => this.officeService.findByAccountId(id))),
@@ -229,7 +216,7 @@ export class ChatService {
 
     // Batch-count unread messages per conversation
     const unreadCountMap = new Map<string, number>();
-    for (const conversation of conversationsWithMessages) {
+    for (const conversation of activeConversations) {
       const me = participantMap.get(conversation.id.toString());
       const qb = this.messageRepository
         .createQueryBuilder('message')
@@ -250,7 +237,7 @@ export class ChatService {
     ] as const);
     const offerDurationMap = new Map<string, Date | null>(offerDurationEntries);
 
-    return conversationsWithMessages.map((conversation) => {
+    const mappedConversations = activeConversations.map((conversation) => {
       const me = participantMap.get(conversation.id.toString());
       const officeProfile = officeProfileMap.get(conversation.officeAccountId.toString());
       const userProfile = userProfileMap.get(conversation.userAccountId.toString());
@@ -265,7 +252,7 @@ export class ChatService {
       }));
 
       const bookingStatus = activeOffer!.booking.status;
-      const isEnded = [BookingStatus.COMPLETED, BookingStatus.CANCELLED].includes(bookingStatus);
+      const isEnded = this.isEndedBookingStatus(bookingStatus);
       
       return {
         ...conversation,
@@ -287,6 +274,12 @@ export class ChatService {
         myLastReadAt: me?.lastReadAt ?? null,
       };
     });
+
+    if (typeof query?.isEnded === 'boolean') {
+      return mappedConversations.filter((conversation) => conversation.isEnded === query.isEnded);
+    }
+
+    return mappedConversations;
   }
 
   async getConversationById(accountId: bigint, conversationIdRaw: string) {
@@ -337,7 +330,7 @@ export class ChatService {
     }));
 
     const bookingStatus = activeOffer.booking.status;
-    const isEnded = [BookingStatus.COMPLETED, BookingStatus.CANCELLED].includes(bookingStatus);
+    const isEnded = this.isEndedBookingStatus(bookingStatus);
 
     return {
       ...hydratedConversation,
@@ -776,5 +769,13 @@ export class ChatService {
     } catch {
       throw new BadRequestException(`${fieldName} must be a valid bigint`);
     }
+  }
+
+  private isEndedBookingStatus(status: BookingStatus): boolean {
+    return (
+      status === BookingStatus.COMPLETED ||
+      status === BookingStatus.CANCELLED ||
+      status === BookingStatus.PARTIALLY_PAID
+    );
   }
 }

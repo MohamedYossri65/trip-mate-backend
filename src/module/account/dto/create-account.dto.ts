@@ -1,6 +1,7 @@
 import { ApiHideProperty } from '@nestjs/swagger';
 import { Exclude, Transform } from 'class-transformer';
-import { IsEmail, IsNotEmpty } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsOptional } from 'class-validator';
+import { AccountStatus } from 'src/common/enums/account-status.enum';
 import { RolesEnum } from 'src/common/enums/roles.enum';
 
 export class CreateAccountDto {
@@ -18,4 +19,14 @@ export class CreateAccountDto {
   @ApiHideProperty()
   @Transform(() => undefined)
   role: RolesEnum;
+
+  @Exclude()
+  @IsOptional()
+  @ApiHideProperty()
+  status?: AccountStatus;
+
+  @Exclude()
+  @IsOptional()
+  @ApiHideProperty()      
+  isPhoneVerified?: boolean;
 }
