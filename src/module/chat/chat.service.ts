@@ -25,6 +25,7 @@ import { PaginationDto } from 'src/common/dto/pagination.dto';
 import { UserProfile } from '../user/entity/user.entity';
 import { OfficeProfile } from '../office/entity/office.entity';
 import { RolesEnum } from 'src/common/enums/roles.enum';
+import { GetConversationsQueryDto } from './dto/get-conversations-query.dto';
 
 @Injectable()
 export class ChatService {
@@ -104,8 +105,17 @@ export class ChatService {
     return this.getConversationById(requesterId, createdConversation.id.toString());
   }
 
-  async getConversationsForUser(accountId: bigint, query?: PaginationDto) {
-    const conversations = await this.listConversationsForUser(accountId);
+  async getConversationsForUser(accountId: bigint, query?: GetConversationsQueryDto) {
+    let conversations = await this.listConversationsForUser(accountId, query);
+
+    // Apply filters if provided
+    if (query?.status) {
+      conversations = conversations.filter((conv) => conv.booking.bookingStatus === query.status);
+    }
+
+    if (query?.isEnded !== undefined) {
+      conversations = conversations.filter((conv) => conv.isEnded === query.isEnded);
+    }
 
     if (!query) {
       return conversations;
@@ -122,7 +132,7 @@ export class ChatService {
     };
   }
 
-  private async listConversationsForUser(accountId: bigint) {
+  private async listConversationsForUser(accountId: bigint, query?: PaginationDto) {
     const officeScopeIds = await this.getOfficeScopeIds(accountId);
     const qb = this.conversationRepository
       .createQueryBuilder('conversation')
@@ -138,10 +148,10 @@ export class ChatService {
     const conversations = await qb.getMany();
     const activeConversations: ChatConversation[] = [];
     for (const conversation of conversations) {
-      const isActive = await this.isConversationActive(conversation);
-      if (!isActive) {
-        continue;
-      }
+      // const isActive = await this.isConversationActive(conversation);
+      // if (!isActive) {
+      //   continue;
+      // }
       await this.syncOfficeParticipants(conversation.id, conversation.officeAccountId);
       await this.ensureParticipantRow(conversation.id, accountId);
       activeConversations.push(conversation);
@@ -253,14 +263,19 @@ export class ChatService {
         ...p,
         isActive: onlineStatus.get(p.accountId.toString()) ?? false,
       }));
+
+      const bookingStatus = activeOffer!.booking.status;
+      const isEnded = [BookingStatus.COMPLETED, BookingStatus.CANCELLED].includes(bookingStatus);
       
       return {
         ...conversation,
         booking: {
           bookingId: conversation.bookingId,
           bookingType: activeOffer!.booking.type,
+          bookingStatus,
           activeOfferId: activeOffer!.id,
         },
+        isEnded,
         userName: userProfile?.name ?? null,
         officeName: officeProfile?.officeName ?? null,
         officeLogo: officeProfile?.logoUrl ?? null,
@@ -321,13 +336,18 @@ export class ChatService {
       isActive: onlineStatus.get(p.accountId.toString()) ?? false,
     }));
 
+    const bookingStatus = activeOffer.booking.status;
+    const isEnded = [BookingStatus.COMPLETED, BookingStatus.CANCELLED].includes(bookingStatus);
+
     return {
       ...hydratedConversation,
       booking: {
         bookingId: hydratedConversation.bookingId,
         bookingType: activeOffer.booking.type,
+        bookingStatus,
         activeOfferId: activeOffer.id,
       },
+      isEnded,
       userName: userProfile?.name ?? null,
       officeName: officeProfile?.officeName ?? null,
       officeLogo: officeProfile?.logoUrl ?? null,
@@ -510,9 +530,24 @@ export class ChatService {
       .getOne();
 
     if (!offer) {
-      throw new ForbiddenException(
-        'No active offer exists between this booking and office, or the offer time has finished',
-      );
+      // If no active offer, return the last offer regardless of status/duration
+      const lastOffer = await this.offerRepository
+        .createQueryBuilder('offer')
+        .leftJoinAndSelect('offer.booking', 'booking')
+        .leftJoinAndSelect('booking.user', 'bookingUser')
+        .leftJoinAndSelect('offer.office', 'office')
+        .where('booking.id = :bookingId', { bookingId })
+        .andWhere('office.accountId = :officeAccountId', { officeAccountId })
+        .orderBy('offer.updatedAt', 'DESC')
+        .getOne();
+
+      if (!lastOffer) {
+        throw new ForbiddenException(
+          'No active offer exists between this booking and office, or the offer time has finished',
+        );
+      }
+
+      return lastOffer;
     }
 
     return offer;

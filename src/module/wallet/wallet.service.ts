@@ -15,6 +15,7 @@ import { WithdrawDto } from './dto/withdraw.dto';
 import { Account } from '../account/entity/account.entity';
 import { RolesEnum } from 'src/common/enums/roles.enum';
 import { WithdrawRequestsQueryDto } from './dto/withdraw-requests-query.dto';
+import { PaginatedResponseDto } from 'src/common/dto/paginated-response.dto';
 
 const HOLD_PERIOD_DAYS = 7;
 
@@ -331,7 +332,16 @@ export class WalletService {
       throw new NotFoundException('Withdrawal request not found');
     }
 
-    return transaction;
+    return {
+      transactionId: transaction.id,
+      amount: Number(transaction.amount),
+      status: transaction.status,
+      requestedAt: transaction.createdAt,
+      rejectedAt: transaction.releasedAt,
+      rejectionReason: transaction.rejectionReason,
+      taxInvoiceAttachment: transaction.taxInvoiceAttachment,
+      notes: transaction.notes,
+    };
   }
 
   async listWithdrawalRequests(account: Account, query: WithdrawRequestsQueryDto) {
@@ -346,19 +356,19 @@ export class WalletService {
     const qb = this.txRepo
       .createQueryBuilder('tx')
       .leftJoinAndSelect('tx.wallet', 'wallet')
-      .leftJoin('office_profiles', 'officeProfile', 'officeProfile.account_id = wallet.office_account_id')
-      .where('tx.type = :type', { type: WalletTransactionType.WITHDRAWAL })
-      .orderBy('tx.created_at', 'DESC');
+      .where('tx.type = :type', { type: WalletTransactionType.WITHDRAWAL });
+
+    // Add search by office name if provided
+    if (query.search?.trim()) {
+      qb.leftJoin('office_profiles', 'officeProfile', 'officeProfile.account_id = wallet.office_account_id')
+        .andWhere('officeProfile.office_name ILIKE :search', {
+          search: `%${query.search.trim()}%`,
+        });
+    }
 
     if (account.role === RolesEnum.OFFICE) {
       qb.andWhere('wallet.office_account_id = :officeAccountId', {
         officeAccountId: account.id,
-      });
-    }
-
-    if (query.search?.trim()) {
-      qb.andWhere('officeProfile.office_name ILIKE :search', {
-        search: `%${query.search.trim()}%`,
       });
     }
 
@@ -379,14 +389,10 @@ export class WalletService {
     const [data, total] = await qb
       .skip(query.skip)
       .take(query.limit)
+      .orderBy('tx.id', 'DESC')
       .getManyAndCount();
 
-    return {
-      data,
-      total,
-      page: query.page,
-      limit: query.limit,
-    };
+    return  new PaginatedResponseDto(data, total, query.page, query.limit);
   }
 
   private toBigInt(value: string, fieldName: string): bigint {

@@ -10,6 +10,10 @@ export class FlightOfferMapper {
         status: string;
         offerDuration: Date;
     };
+    booking:{
+        id: bigint;
+        createdAt: Date;
+    };
     arrivalCountry: string;
     departureCountry: string;
     departureCity: string;
@@ -41,6 +45,10 @@ export class FlightOfferMapper {
                 price: flightOfferDetails.offer.price,
                 status: flightOfferDetails.offer.status,
                 offerDuration: flightOfferDetails.offer.offerDuration,
+            },
+            booking: {
+                id: flightOfferDetails.offer.booking.id,
+                createdAt: flightOfferDetails.offer.booking.createdAt,
             },
             arrivalCountry: flightOfferDetails.offer.arrivalCountry,
             departureCountry: flightOfferDetails.departureCountry,

@@ -10,7 +10,11 @@ export class CarOfferMapper {
         price: number;
         status: string;
         offerDuration: Date;
-    }
+    };
+     booking:{
+        id: bigint;
+        createdAt: Date;
+    };
     arrivalCountry: string;
     arrivalCity: string
     deliveryLocation: string;
@@ -38,6 +42,10 @@ export class CarOfferMapper {
                 price: carofferDetails.offer.price,
                 status: carofferDetails.offer.status,
                 offerDuration: carofferDetails.offer.offerDuration,
+            },
+            booking: {
+                id: carofferDetails.offer.booking.id,
+                createdAt: carofferDetails.offer.booking.createdAt,
             },
             bookingRequestDate: carofferDetails.offer.booking.createdAt,
             arrivalCountry: carofferDetails.offer.arrivalCountry,

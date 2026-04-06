@@ -1,8 +1,10 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
+  Patch,
   Post,
   Req,
 } from '@nestjs/common';
@@ -12,6 +14,11 @@ import {
   InitiateSubscriptionPaymentDto,
   InitiateBookingPaymentDto,
 } from './dto/initiate-payment.dto';
+import { VerifyAndSaveCardDto, UpdateSavedCardDto } from './dto/verify-save-card.dto';
+import {
+  PayWithSavedCardDto,
+  PaySubscriptionWithSavedCardDto,
+} from './dto/payment-with-saved-card.dto';
 import { Auth } from 'src/common/guards/decorators/auth.decorator';
 import { CurrentUser } from 'src/common/guards/decorators/user.decorator';
 import { Account } from '../account/entity/account.entity';
@@ -107,5 +114,98 @@ export class PaymentController {
   @SuccessResponse('Payments retrieved successfully')
   async getMyPayments(@CurrentUser() account: Account) {
     return this.paymentService.getPaymentsByAccount(account.id);
+  }
+
+  // ─── SAVED CARD ENDPOINTS ─────────────────────────────────────────
+
+  @Post('cards/verify')
+  @Auth()
+  @ApiOperation({ summary: 'Verify and save a new card' })
+  @SuccessResponse('Card verification initiated')
+  async verifyAndSaveCard(
+    @Body() dto: VerifyAndSaveCardDto,
+    @CurrentUser() account: Account,
+  ) {
+    return this.paymentService.verifyAndSaveCard(
+      account.id,
+      dto.setAsDefault,
+    );
+  }
+
+  @Get('cards')
+  @Auth()
+  @ApiOperation({ summary: 'Get all saved cards' })
+  @SuccessResponse('Saved cards retrieved successfully')
+  async getSavedCards(@CurrentUser() account: Account) {
+    return this.paymentService.getSavedCards(account.id);
+  }
+
+  @Get('cards/:cardId')
+  @Auth()
+  @ApiOperation({ summary: 'Get a specific saved card' })
+  @SuccessResponse('Saved card retrieved successfully')
+  async getSavedCard(
+    @Param('cardId') cardId: number,
+    @CurrentUser() account: Account,
+  ) {
+    return this.paymentService.getSavedCard(account.id, cardId);
+  }
+
+  @Patch('cards/:cardId')
+  @Auth()
+  @ApiOperation({ summary: 'Update saved card (set default, activate/deactivate)' })
+  @SuccessResponse('Saved card updated successfully')
+  async updateSavedCard(
+    @Param('cardId') cardId: number,
+    @Body() dto: UpdateSavedCardDto,
+    @CurrentUser() account: Account,
+  ) {
+    return this.paymentService.updateSavedCard(account.id, cardId, dto);
+  }
+
+  @Delete('cards/:cardId')
+  @Auth()
+  @ApiOperation({ summary: 'Delete a saved card' })
+  @SuccessResponse('Saved card deleted successfully')
+  async deleteSavedCard(
+    @Param('cardId') cardId: number,
+    @CurrentUser() account: Account,
+  ) {
+    await this.paymentService.deleteSavedCard(account.id, cardId);
+    return { message: 'Card deleted successfully' };
+  }
+
+  // ─── PAY WITH SAVED CARD ──────────────────────────────────────────
+
+  @Post('booking/saved-card')
+  @Auth(RolesEnum.USER)
+  @ApiOperation({ summary: 'Pay for booking using saved card' })
+  @SuccessResponse('Payment processed successfully')
+  async payBookingWithSavedCard(
+    @Body() dto: PayWithSavedCardDto,
+    @CurrentUser() account: Account,
+  ) {
+    return this.paymentService.payWithSavedCard({
+      accountId: account.id,
+      cardId: dto.cardId,
+      bookingId: dto.bookingId,
+      paymentType: dto.paymentType,
+      couponCode: dto.couponCode,
+    });
+  }
+
+  @Post('subscription/saved-card')
+  @Auth(RolesEnum.OFFICE)
+  @ApiOperation({ summary: 'Pay for subscription using saved card' })
+  @SuccessResponse('Payment processed successfully')
+  async paySubscriptionWithSavedCard(
+    @Body() dto: PaySubscriptionWithSavedCardDto,
+    @CurrentUser() account: Account,
+  ) {
+    return this.paymentService.paySubscriptionWithSavedCard(
+      account.id,
+      dto.cardId,
+      dto.planId,
+    );
   }
 }

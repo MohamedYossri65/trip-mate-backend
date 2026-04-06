@@ -20,6 +20,7 @@ import { SubscriptionPlanMapper } from './mapper/subscription-plan.mapper';
 import { OfficeSubscriptionMapper } from './mapper/office-subscription.mapper';
 import { AccountService } from '../account/account.service';
 import { AccountStatus } from 'src/common/enums/account-status.enum';
+import { OfficeService } from '../office/office.service';
 
 @Injectable()
 export class SubscriptionService {
@@ -40,6 +41,8 @@ export class SubscriptionService {
     private readonly officeEmployeeRepository: Repository<OfficeEmployee>,
 
     private readonly accountService: AccountService,
+
+    private readonly officeService: OfficeService,
 
     @Inject(CACHE_MANAGER)
     private cacheManager: Cache,
@@ -324,8 +327,11 @@ export class SubscriptionService {
 
   // ─── Check subscription status with daily cache ───────────────
   async checkSubscriptionStatus(
-    officeAccountId: bigint,
+    accountId: bigint,
   ): Promise<SubscriptionStatus> {
+
+    const employeeMembership = await this.officeService.findEmployeeMembershipByAccountId(accountId);
+    const officeAccountId = employeeMembership ? employeeMembership.office.accountId : accountId;
 
     const cacheKey = `subscription_status_${officeAccountId}`;
 
