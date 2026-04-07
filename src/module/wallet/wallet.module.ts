@@ -5,10 +5,11 @@ import { OfficeWallet } from './entity/office-wallet.entity';
 import { WalletTransaction } from './entity/wallet-transaction.entity';
 import { WalletService } from './wallet.service';
 import { WalletController } from './wallet.controller';
+import { Account } from '../account/entity/account.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([OfficeWallet, WalletTransaction]),
+    TypeOrmModule.forFeature([OfficeWallet, WalletTransaction, Account]),
     ScheduleModule.forRoot(),
   ],
   controllers: [WalletController],

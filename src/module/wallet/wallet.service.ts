@@ -28,6 +28,8 @@ export class WalletService {
     private readonly walletRepo: Repository<OfficeWallet>,
     @InjectRepository(WalletTransaction)
     private readonly txRepo: Repository<WalletTransaction>,
+    @InjectRepository(Account)
+    private readonly accountRepo: Repository<Account>,
   ) {}
 
   // ─── GET OR CREATE WALLET ──────────────────────────────────────────
@@ -83,6 +85,55 @@ export class WalletService {
     );
 
     return savedTx;
+  }
+
+  async getPrimaryAdminAccountId(): Promise<bigint | null> {
+    const admin = await this.accountRepo.findOne({
+      where: { role: RolesEnum.ADMIN },
+      order: { id: 'ASC' },
+    });
+
+    if (!admin) {
+      return null;
+    }
+
+    return admin.id;
+  }
+
+  async creditAdminPending(
+    amount: number,
+    bookingId: bigint,
+  ): Promise<WalletTransaction | null> {
+    if (amount <= 0) {
+      return null;
+    }
+
+    const adminAccountId = await this.getPrimaryAdminAccountId();
+    if (!adminAccountId) {
+      this.logger.warn(
+        `No admin account found while crediting admin wallet for booking ${bookingId}`,
+      );
+      return null;
+    }
+
+    return this.creditPending(adminAccountId, amount, bookingId);
+  }
+
+  async getTotalCreditedForBooking(
+    accountId: bigint,
+    bookingId: bigint,
+  ): Promise<number> {
+    const wallet = await this.getOrCreateWallet(accountId);
+
+    const result = await this.txRepo
+      .createQueryBuilder('tx')
+      .select('COALESCE(SUM(tx.amount), 0)', 'total')
+      .where('tx.wallet_id = :walletId', { walletId: wallet.id })
+      .andWhere('tx.type = :type', { type: WalletTransactionType.CREDIT_PENDING })
+      .andWhere('tx.booking_id = :bookingId', { bookingId })
+      .getRawOne<{ total: string | number }>();
+
+    return Number(result?.total ?? 0);
   }
 
   // ─── RELEASE PENDING FUNDS (CRON) ─────────────────────────────────

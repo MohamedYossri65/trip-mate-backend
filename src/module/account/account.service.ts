@@ -137,6 +137,15 @@ export class AccountService {
   }
 
   async softDelete(accountId: bigint): Promise<void> {
-    await this.accountRepository.softDelete({ id: accountId });
+    const stamp = Date.now();
+    await this.accountRepository.update(
+      { id: accountId },
+      {
+        status: AccountStatus.BLOCKED,
+        isPhoneVerified: false,
+        email: `deleted_${accountId.toString()}_${stamp}@deleted.local`,
+        phone: `DEL-${accountId.toString()}-${stamp}`,
+      },
+    );
   }
 }

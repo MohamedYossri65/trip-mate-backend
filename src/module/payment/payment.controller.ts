@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  Header,
   Param,
   Patch,
   Post,
@@ -131,6 +132,21 @@ export class PaymentController {
   async handleWebhook(@Req() req: any) {
     await this.paymentService.handleWebhook(req.body);
     return { status: 'received' };
+  }
+
+  @Get('redirect')
+  @Public()
+  @Header('Content-Type', 'text/html; charset=utf-8')
+  @ApiOperation({ summary: 'Verify Tap redirect and render payment result HTML' })
+  async paymentRedirect(@Req() req: any) {
+    const transactionRef =
+      req?.query?.transactionRef ||
+      req?.query?.chargeId ||
+      req?.query?.tap_id ||
+      req?.query?.id ||
+      req?.query?.tapId;
+
+    return this.paymentService.renderPaymentRedirectPage(transactionRef);
   }
 
   // ─── Verify Payment ───────────────────────────────────────────────

@@ -26,6 +26,7 @@ import { FileUploadService } from '../fileUpload/file-upload.service';
 import { Public } from 'src/common/guards/decorators/public.decorator';
 import { ChangeOfficeDataRequestDto } from './dto/chnge-office-data-request.dto';
 import { RejectOfficeChangeRequestDto } from './dto/reject-office-change-request.dto';
+import { UpsertOfficePaymentDetailsDto } from './dto/upsert-office-payment-details.dto';
 
 @Controller('offices')
 export class OfficeController {
@@ -155,6 +156,39 @@ export class OfficeController {
   async getOfficeData(@CurrentUser() account: Account) {
     const office = await this.officeService.getOfficeData(account.id);
     return office;
+  }
+
+  @Post('payment-details')
+  @Auth(RolesEnum.OFFICE)
+  @ApiOperation({ summary: 'Create or update office payment details' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({ type: UpsertOfficePaymentDetailsDto })
+  @UseInterceptors(FileInterceptor('ibanAttachment'))
+  @SuccessResponse('Office payment details saved successfully')
+  async upsertOfficePaymentDetails(
+    @Body() dto: UpsertOfficePaymentDetailsDto,
+    @UploadedFile() ibanAttachmentFile: any,
+    @CurrentUser() account: Account,
+  ) {
+    const ibanAttachmentUrl = ibanAttachmentFile
+      ? await this.fileUploadService.uploadImage(
+          ibanAttachmentFile,
+          '/office-documents',
+        )
+      : undefined;
+
+    return this.officeService.upsertOfficePaymentDetails(account.id, {
+      ...dto,
+      ibanAttachment: ibanAttachmentUrl || dto.ibanAttachment,
+    });
+  }
+
+  @Get('payment-details')
+  @Auth(RolesEnum.OFFICE)
+  @ApiOperation({ summary: 'Get office payment details' })
+  @SuccessResponse('Office payment details retrieved successfully')
+  async getOfficePaymentDetails(@CurrentUser() account: Account) {
+    return this.officeService.getOfficePaymentDetails(account.id);
   }
 
   

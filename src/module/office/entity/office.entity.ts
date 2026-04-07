@@ -35,6 +35,32 @@ export class OfficeProfile {
   @Column({ nullable: true })
   commerceNumber: string;
 
+  @Column({ name: 'bank_name', nullable: true })
+  bankName!: string;
+
+  @Column({ name: 'bank_account_number', nullable: true })
+  bankAccountNumber!: string;
+
+  @Column({ name: 'iban_number', nullable: true })
+  ibanNumber!: string;
+
+  @Column({
+    name: 'iban_attachment',
+    nullable: true,
+    transformer: {
+      to: (value: string) => value,
+      from: (value: string) => {
+        const baseUrl = process.env.IMAGEKIT_URL_ENDPOINT || 'https://yourbaseurl.com';
+        if (!value) return value;
+        if (value.startsWith('http://') || value.startsWith('https://')) {
+          return value.replace(/^(http:\/\/|https:\/\/)[^\/]+/, baseUrl);
+        }
+        return `${baseUrl}${value}`;
+      },
+    },
+  })
+  ibanAttachment!: string;
+
     @Column({
 		nullable: true,
 		transformer: {

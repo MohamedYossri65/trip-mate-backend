@@ -53,7 +53,8 @@ export class OtpService {
       { status: OtpStatus.EXPIRED },
     );
 
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    // const code = Math.floor(100000 + Math.random() * 900000).toString();
+      const code = '123456'; // For testing purposes, use a fixed code
 
     const codeHash = await bcrypt.hash(code, 10);
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 mins
@@ -70,16 +71,16 @@ export class OtpService {
 
     await this.otpRepository.save(otp);
 
-    const smsSent = await this.msegatSmsService.sendSms({
-      numbers: [account.phone],
-      msg: `Verification Code: ${code}`,
-      reqFilter: false,
-    });
+    // const smsSent = await this.msegatSmsService.sendSms({
+    //   numbers: [account.phone],
+    //   msg: `Verification Code: ${code}`,
+    //   reqFilter: false,
+    // });
 
-    if (!smsSent) {
-      await this.otpRepository.update({ id: otp.id }, { status: OtpStatus.EXPIRED });
-      throw new BadRequestException('Failed to send OTP SMS');
-    }
+    // if (!smsSent) {
+    //   await this.otpRepository.update({ id: otp.id }, { status: OtpStatus.EXPIRED });
+    //   throw new BadRequestException('Failed to send OTP SMS');
+    // }
 
     return true;
   }

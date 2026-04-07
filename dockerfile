@@ -28,6 +28,9 @@ RUN npm ci --only=production
 # copy dist from builder
 COPY --from=builder /app/dist ./dist
 
+# copy static assets used by payment redirect pages
+COPY --from=builder /app/public ./public
+
 # expose port
 EXPOSE 6500
 

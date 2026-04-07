@@ -8,6 +8,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
+import { readFile } from 'fs/promises';
+import { join } from 'path';
 import { PaymentTransaction } from './entity/payment-transaction.entity';
 import { SavedCard } from './entity/saved-card.entity';
 import { PaymentSetting } from './entity/payment-setting.entity';
@@ -245,6 +247,10 @@ export class PaymentService {
   ): Promise<{ redirectUrl: string; transactionId: bigint; chargeId: string; discountAmount?: number }> {
     const { offer, booking, account } = await this.resolveOfferPaymentContext(accountId, offerId);
 
+    // if(offer.status === OfferStatus.ACCEPTED) {
+    //   throw new BadRequestException('Offer already accepted, cannot initiate partial payment');
+    // }
+
     const offerSummery = await this.getOfferPaymentSummary(accountId, BigInt(offerId), couponCode);
 
     const cartId = `OF-PARTIAL-${offerId}-${Date.now()}`;
@@ -295,6 +301,9 @@ export class PaymentService {
   ): Promise<{ redirectUrl: string; transactionId: bigint; chargeId: string; discountAmount?: number }> {
     const { offer, booking, account } = await this.resolveOfferPaymentContext(accountId, offerId);
 
+    // if(booking.status === BookingStatus.COMPLETED) {
+    //   throw new BadRequestException('Booking already completed, cannot initiate full payment');
+    // }
     const offerSummery = await this.getOfferPaymentSummary(accountId, BigInt(offerId), couponCode);
 
     const cartId = `OF-FULL-${offerId}-${Date.now()}`;
@@ -431,6 +440,51 @@ export class PaymentService {
         `Failed to retrieve charge ${chargeId}: ${error.message}`,
       );
       throw new BadRequestException('Payment verification failed');
+    }
+  }
+
+  async renderPaymentRedirectPage(transactionRef?: string): Promise<string> {
+    const chargeId = this.resolveRedirectTransactionRef(transactionRef);
+
+    if (!chargeId) {
+      return this.loadPaymentHtml('payment-fail.html');
+    }
+
+    const payment = await this.paymentRepo.findOne({
+      where: [{ transactionReference: chargeId }, { cartId: chargeId }],
+      relations: ['booking', 'subscriptionPlan', 'payerAccount'],
+    });
+
+    if (!payment) {
+      this.logger.error(`Redirect payment not found for chargeId: ${chargeId}`);
+      return this.loadPaymentHtml('payment-fail.html');
+    }
+
+    const wasAlreadySuccessful = payment.status === PaymentStatus.SUCCESS;
+
+    try {
+      const verificationResult = await this.retrieveCharge(chargeId);
+      const isSuccess = verificationResult.status === 'CAPTURED';
+
+      payment.status = isSuccess ? PaymentStatus.SUCCESS : PaymentStatus.FAILED;
+      payment.gatewayResponse = verificationResult;
+      payment.transactionReference = chargeId;
+      await this.paymentRepo.save(payment);
+
+      if (!isSuccess) {
+        return this.loadPaymentHtml('payment-fail.html');
+      }
+
+      if (!wasAlreadySuccessful && verificationResult?.metadata?.type !== 'card_verification') {
+        await this.handlePaymentSuccessSideEffects(payment);
+      }
+
+      return this.loadPaymentHtml('payment-success.html');
+    } catch (error: any) {
+      this.logger.error(
+        `Failed to render payment redirect page for ${chargeId}: ${error.message}`,
+      );
+      return this.loadPaymentHtml('payment-fail.html');
     }
   }
 
@@ -851,8 +905,15 @@ export class PaymentService {
         booking.changeStatus(BookingStatus.OFFER_ACCEPTED);
       }
 
+      const split = await this.calculateWalletSplitForBookingPayment(
+        offer,
+        booking.id,
+        Number(payment.amount),
+        payment.cartId,
+      );
+
       // Update paid amount
-      booking.paidAmount = Number(booking.paidAmount || 0) + Number(payment.amount);
+      booking.paidAmount = Number(booking.paidAmount || 0) + split.officeAmount;
 
       // Transition to PARTIALLY_PAID
       if (booking.status === BookingStatus.OFFER_ACCEPTED) {
@@ -862,16 +923,20 @@ export class PaymentService {
       await this.bookingRepo.save(booking);
 
       // Credit office wallet with pending funds
-      if (offer.office?.accountId) {
+      if (offer.office?.accountId && split.officeAmount > 0) {
         await this.walletService.creditPending(
           offer.office.accountId,
-          Number(payment.amount),
+          split.officeAmount,
           booking.id,
         );
       }
 
+      if (split.adminAmount > 0) {
+        await this.walletService.creditAdminPending(split.adminAmount, booking.id);
+      }
+
       this.logger.log(
-        `Booking ${booking.id} partially paid. Amount: ${payment.amount}`,
+        `Booking ${booking.id} partially paid. Charged=${payment.amount}, office=${split.officeAmount}, admin=${split.adminAmount}`,
       );
     } catch (error: any) {
       this.logger.error(
@@ -927,8 +992,15 @@ export class PaymentService {
         booking.changeStatus(BookingStatus.PARTIALLY_PAID);
       }
 
+      const split = await this.calculateWalletSplitForBookingPayment(
+        offer,
+        booking.id,
+        Number(payment.amount),
+        payment.cartId,
+      );
+
       // Update paid amount
-      booking.paidAmount = Number(booking.paidAmount || 0) + Number(payment.amount);
+      booking.paidAmount = Number(booking.paidAmount || 0) + split.officeAmount;
 
       // Transition to CONFIRMED
       if (booking.status === BookingStatus.PARTIALLY_PAID) {
@@ -938,22 +1010,154 @@ export class PaymentService {
       await this.bookingRepo.save(booking);
 
       // Credit office wallet with pending funds
-      if (offer.office?.accountId) {
+      if (offer.office?.accountId && split.officeAmount > 0) {
         await this.walletService.creditPending(
           offer.office.accountId,
-          Number(payment.amount),
+          split.officeAmount,
           booking.id,
         );
       }
 
+      if (split.adminAmount > 0) {
+        await this.walletService.creditAdminPending(split.adminAmount, booking.id);
+      }
+
       this.logger.log(
-        `Booking ${booking.id} fully paid and confirmed. Total paid: ${booking.paidAmount}`,
+        `Booking ${booking.id} fully paid and confirmed. Total paid to office: ${booking.paidAmount}, admin collected: ${split.adminAmount}`,
       );
     } catch (error: any) {
       this.logger.error(
         `Failed to update booking for full payment: ${error.message}`,
       );
     }
+  }
+
+  private async handlePaymentSuccessSideEffects(
+    payment: PaymentTransaction,
+  ): Promise<void> {
+    switch (payment.type) {
+      case PaymentType.SUBSCRIPTION:
+        await this.handleSubscriptionPaymentSuccess(payment);
+        break;
+      case PaymentType.BOOKING_PARTIAL:
+        await this.handleBookingPartialPaymentSuccess(payment);
+        break;
+      case PaymentType.BOOKING_FULL:
+        await this.handleBookingFullPaymentSuccess(payment);
+        break;
+    }
+  }
+
+  private async calculateWalletSplitForBookingPayment(
+    offer: Offer,
+    bookingId: bigint,
+    paymentAmount: number,
+    cartId: string,
+  ): Promise<{ officeAmount: number; adminAmount: number }> {
+    const roundedPaymentAmount = Math.round(Math.max(paymentAmount, 0) * 100) / 100;
+    if (!offer.office?.accountId || roundedPaymentAmount <= 0) {
+      return { officeAmount: 0, adminAmount: 0 };
+    }
+
+    // Saved-card booking payments currently charge offer amount only (no tax/commission surcharge).
+    if (cartId.startsWith('OF-SAVED-')) {
+      const alreadyCreditedOffice = await this.walletService.getTotalCreditedForBooking(
+        offer.office.accountId,
+        bookingId,
+      );
+      const officeRemaining =
+        Math.round(Math.max(Number(offer.price) - alreadyCreditedOffice, 0) * 100) /
+        100;
+      return {
+        officeAmount: Math.round(Math.min(roundedPaymentAmount, officeRemaining) * 100) / 100,
+        adminAmount: 0,
+      };
+    }
+
+    const settings = await this.getPaymentSettings();
+    const offerPrice = Number(offer.price || 0);
+    const appCommissionAmount =
+      Math.round(((offerPrice * Number(settings.appCommission || 0)) / 100) * 100) /
+      100;
+    const taxAmount =
+      Math.round(((offerPrice * Number(settings.taxValue || 0)) / 100) * 100) / 100;
+    const totalAdminTarget = Math.round((appCommissionAmount + taxAmount) * 100) / 100;
+
+    const alreadyCreditedOffice = await this.walletService.getTotalCreditedForBooking(
+      offer.office.accountId,
+      bookingId,
+    );
+    const officeRemaining =
+      Math.round(Math.max(offerPrice - alreadyCreditedOffice, 0) * 100) / 100;
+
+    const adminAccountId = await this.walletService.getPrimaryAdminAccountId();
+    const alreadyCreditedAdmin = adminAccountId
+      ? await this.walletService.getTotalCreditedForBooking(adminAccountId, bookingId)
+      : 0;
+    const adminRemaining =
+      Math.round(Math.max(totalAdminTarget - alreadyCreditedAdmin, 0) * 100) / 100;
+
+    let remainingPayment = roundedPaymentAmount;
+    const adminAmount =
+      Math.round(Math.min(adminRemaining, remainingPayment) * 100) / 100;
+    remainingPayment = Math.round((remainingPayment - adminAmount) * 100) / 100;
+
+    const officeAmount =
+      Math.round(Math.min(officeRemaining, remainingPayment) * 100) / 100;
+
+    return { officeAmount, adminAmount };
+  }
+
+  private resolveRedirectTransactionRef(transactionRef?: string): string | null {
+    if (!transactionRef) {
+      return null;
+    }
+
+    const normalized = transactionRef.trim();
+    return normalized.length > 0 ? normalized : null;
+  }
+
+  private async loadPaymentHtml(fileName: string): Promise<string> {
+    const filePath = join(process.cwd(), 'public', fileName);
+
+    try {
+      return await readFile(filePath, 'utf8');
+    } catch (error: any) {
+      this.logger.error(
+        `Failed to read payment html file ${filePath}: ${error.message}`,
+      );
+
+      const isSuccessPage = fileName.toLowerCase().includes('success');
+      return this.getFallbackPaymentHtml(isSuccessPage);
+    }
+  }
+
+  private getFallbackPaymentHtml(isSuccessPage: boolean): string {
+    const title = isSuccessPage ? 'Payment Successful' : 'Payment Failed';
+    const message = isSuccessPage
+      ? 'Your payment has been verified successfully.'
+      : 'We could not verify your payment.';
+
+    return `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>${title}</title>
+    <style>
+      body { font-family: Arial, Helvetica, sans-serif; display: grid; place-items: center; min-height: 100vh; margin: 0; background: #f8fafc; color: #0f172a; }
+      .card { width: min(520px, 92%); background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 28px; text-align: center; }
+      h1 { margin: 0 0 10px; font-size: 28px; }
+      p { margin: 0; color: #475569; }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h1>${title}</h1>
+      <p>${message}</p>
+    </div>
+  </body>
+</html>`;
   }
 
   private async createCharge(params: {

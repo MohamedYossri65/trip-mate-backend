@@ -27,6 +27,7 @@ import { Account } from '../account/entity/account.entity';
 import { OfficeChangeRequestData } from './entity/office.entity';
 import { OfficeChangeRequestEvent } from '../notification/events';
 import { AccountStatus } from 'src/common/enums/account-status.enum';
+import { UpsertOfficePaymentDetailsDto } from './dto/upsert-office-payment-details.dto';
 
 @Injectable()
 export class OfficeService {
@@ -196,12 +197,22 @@ export class OfficeService {
       throw new BadRequestException('Employee not found');
     }
     await this.accountService.softDelete(employeeAccountId);
-    await this.officeEmployeeRepository.softDelete({ accountId: employeeAccountId });
+    await this.officeEmployeeRepository.update(
+      { id: employee.id },
+      {
+        isActive: false,
+        accountId: null,
+      },
+    );
   }
 
   async findAllEmployeesByOfficeAccountId(
     officeAccountId: bigint,
   ): Promise<OfficeEmployee[]> {
+    const employeeMembership = await this.findEmployeeMembershipByAccountId(officeAccountId);
+    if (employeeMembership) {
+      officeAccountId = employeeMembership.office.accountId;
+    }
     return this.officeEmployeeRepository.find({
       where: {
         office: { accountId: officeAccountId },
@@ -488,6 +499,57 @@ export class OfficeService {
     };
   }
 
+  async upsertOfficePaymentDetails(
+    accountId: bigint,
+    dto: UpsertOfficePaymentDetailsDto,
+  ) {
+    const employeeMembership = await this.findEmployeeMembershipByAccountId(accountId);
+    const officeAccountId = employeeMembership ? employeeMembership.office.accountId : accountId;
+
+    const office = await this.officeProfileRepository.findOne({
+      where: { accountId: officeAccountId },
+    });
+
+    if (!office) {
+      throw new BadRequestException('Office profile not found');
+    }
+
+    await this.officeProfileRepository.update(
+      { accountId: officeAccountId },
+      {
+        bankName: dto.bankName,
+        bankAccountNumber: dto.bankAccountNumber,
+        ibanNumber: dto.ibanNumber,
+        ...(dto.ibanAttachment !== undefined
+          ? { ibanAttachment: dto.ibanAttachment.toString() }
+          : {}),
+      },
+    );
+
+    return this.getOfficePaymentDetails(accountId);
+  }
+
+  async getOfficePaymentDetails(accountId: bigint) {
+    const employeeMembership = await this.findEmployeeMembershipByAccountId(accountId);
+    const officeAccountId = employeeMembership ? employeeMembership.office.accountId : accountId;
+
+    const office = await this.officeProfileRepository.findOne({
+      where: { accountId: officeAccountId },
+    });
+
+    if (!office) {
+      throw new BadRequestException('Office profile not found');
+    }
+
+    return {
+      officeAccountId,
+      bankName: office.bankName,
+      bankAccountNumber: office.bankAccountNumber,
+      ibanNumber: office.ibanNumber,
+      ibanAttachment: office.ibanAttachment,
+    };
+  }
+
   async getOfficeData(accountId: bigint) {
     const employeeMembership = await this.findEmployeeMembershipByAccountId(accountId);
     const officeAccountId = employeeMembership ? employeeMembership.office.accountId : accountId;
@@ -503,6 +565,10 @@ export class OfficeService {
       commerceNumber: office?.commerceNumber,
       commerceCertificate: office?.taxCertificate,
       taxCertificate: office?.taxCertificate,
+      bankName: office?.bankName,
+      bankAccountNumber: office?.bankAccountNumber,
+      ibanNumber: office?.ibanNumber,
+      ibanAttachment: office?.ibanAttachment,
     };
   }
 }
