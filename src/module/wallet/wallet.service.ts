@@ -87,6 +87,35 @@ export class WalletService {
     return savedTx;
   }
 
+  async creditAvailable(
+    officeAccountId: bigint,
+    amount: number,
+    bookingId: bigint,
+  ): Promise<WalletTransaction> {
+    const wallet = await this.getOrCreateWallet(officeAccountId);
+
+    wallet.availableBalance = Number(wallet.availableBalance) + amount;
+    await this.walletRepo.save(wallet);
+
+    const now = new Date();
+    const tx = this.txRepo.create({
+      walletId: wallet.id,
+      type: WalletTransactionType.CREDIT_AVAILABLE,
+      status: WalletTransactionStatus.RELEASED,
+      amount,
+      bookingId,
+      releasedAt: now,
+    });
+
+    const savedTx = await this.txRepo.save(tx);
+
+    this.logger.log(
+      `Credited ${amount} SAR directly to available balance for office ${officeAccountId}, booking ${bookingId}`,
+    );
+
+    return savedTx;
+  }
+
   async getPrimaryAdminAccountId(): Promise<bigint | null> {
     const admin = await this.accountRepo.findOne({
       where: { role: RolesEnum.ADMIN },
@@ -119,6 +148,25 @@ export class WalletService {
     return this.creditPending(adminAccountId, amount, bookingId);
   }
 
+  async creditAdminAvailable(
+    amount: number,
+    bookingId: bigint,
+  ): Promise<WalletTransaction | null> {
+    if (amount <= 0) {
+      return null;
+    }
+
+    const adminAccountId = await this.getPrimaryAdminAccountId();
+    if (!adminAccountId) {
+      this.logger.warn(
+        `No admin account found while crediting admin available wallet for booking ${bookingId}`,
+      );
+      return null;
+    }
+
+    return this.creditAvailable(adminAccountId, amount, bookingId);
+  }
+
   async getTotalCreditedForBooking(
     accountId: bigint,
     bookingId: bigint,
@@ -129,7 +177,12 @@ export class WalletService {
       .createQueryBuilder('tx')
       .select('COALESCE(SUM(tx.amount), 0)', 'total')
       .where('tx.wallet_id = :walletId', { walletId: wallet.id })
-      .andWhere('tx.type = :type', { type: WalletTransactionType.CREDIT_PENDING })
+      .andWhere('tx.type IN (:...types)', {
+        types: [
+          WalletTransactionType.CREDIT_PENDING,
+          WalletTransactionType.CREDIT_AVAILABLE,
+        ],
+      })
       .andWhere('tx.booking_id = :bookingId', { bookingId })
       .getRawOne<{ total: string | number }>();
 

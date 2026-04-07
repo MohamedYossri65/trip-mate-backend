@@ -16,7 +16,6 @@ import { PaymentSetting } from './entity/payment-setting.entity';
 import { PaymentType } from './enum/payment-type.enum';
 import { PaymentStatus } from './enum/payment-status.enum';
 import { SubscriptionService } from '../subscription/subscription.service';
-import { OffersService } from '../offers/offers.service';
 import { Offer } from '../offers/entity/offer.entity';
 import { OfferStatus } from '../offers/enum/offer-status.enum';
 import { Booking } from '../bookings/domain/entity/booking.entity';
@@ -26,7 +25,6 @@ import { Account } from '../account/entity/account.entity';
 import { WalletService } from '../wallet/wallet.service';
 import { CouponService } from '../coupon/coupon.service';
 import { UpsertPaymentSettingDto } from './dto/upsert-payment-setting.dto';
-import { ApplyCouponDto } from './dto/apply-coupon.dto';
 
 @Injectable()
 export class PaymentService {
@@ -61,7 +59,6 @@ export class PaymentService {
     private readonly paymentSettingRepo: Repository<PaymentSetting>,
 
     private readonly subscriptionService: SubscriptionService,
-    private readonly offersService: OffersService,
     private readonly configService: ConfigService,
     private readonly walletService: WalletService,
     private readonly couponService: CouponService,
@@ -247,9 +244,9 @@ export class PaymentService {
   ): Promise<{ redirectUrl: string; transactionId: bigint; chargeId: string; discountAmount?: number }> {
     const { offer, booking, account } = await this.resolveOfferPaymentContext(accountId, offerId);
 
-    // if(offer.status === OfferStatus.ACCEPTED) {
-    //   throw new BadRequestException('Offer already accepted, cannot initiate partial payment');
-    // }
+    if(offer.status === OfferStatus.ACCEPTED) {
+      throw new BadRequestException('Offer already accepted, cannot initiate partial payment');
+    }
 
     const offerSummery = await this.getOfferPaymentSummary(accountId, BigInt(offerId), couponCode);
 
@@ -301,9 +298,9 @@ export class PaymentService {
   ): Promise<{ redirectUrl: string; transactionId: bigint; chargeId: string; discountAmount?: number }> {
     const { offer, booking, account } = await this.resolveOfferPaymentContext(accountId, offerId);
 
-    // if(booking.status === BookingStatus.COMPLETED) {
-    //   throw new BadRequestException('Booking already completed, cannot initiate full payment');
-    // }
+    if(booking.status === BookingStatus.COMPLETED) {
+      throw new BadRequestException('Booking already completed, cannot initiate full payment');
+    }
     const offerSummery = await this.getOfferPaymentSummary(accountId, BigInt(offerId), couponCode);
 
     const cartId = `OF-FULL-${offerId}-${Date.now()}`;
@@ -932,7 +929,7 @@ export class PaymentService {
       }
 
       if (split.adminAmount > 0) {
-        await this.walletService.creditAdminPending(split.adminAmount, booking.id);
+        await this.walletService.creditAdminAvailable(split.adminAmount, booking.id);
       }
 
       this.logger.log(
@@ -1019,7 +1016,7 @@ export class PaymentService {
       }
 
       if (split.adminAmount > 0) {
-        await this.walletService.creditAdminPending(split.adminAmount, booking.id);
+        await this.walletService.creditAdminAvailable(split.adminAmount, booking.id);
       }
 
       this.logger.log(
