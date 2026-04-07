@@ -366,4 +366,44 @@ export class BookingsService {
     });
     return new PaginatedResponseDto(mapped, total, dto.page, dto.limit);
   }
+
+  async cancelBooking(accountId: bigint, bookingId: bigint): Promise<BookingMapper> {
+    const bookingRepo = this.dataSource.getRepository(Booking);
+
+    const booking = await bookingRepo.findOne({
+      where: { id: bookingId },
+      relations: ['user'],
+    });
+
+    if (!booking) {
+      throw new NotFoundException('Booking not found');
+    }
+
+    if (booking.user.accountId.toString() !== accountId.toString()) {
+      throw new BadRequestException('This booking does not belong to your account');
+    }
+
+    if (booking.status === BookingStatus.COMPLETED) {
+      throw new BadRequestException('Completed booking cannot be cancelled');
+    }
+
+    if (booking.status === BookingStatus.CANCELLED) {
+      throw new BadRequestException('Booking is already cancelled');
+    }
+
+    booking.changeStatus(BookingStatus.CANCELLED);
+    const saved = await bookingRepo.save(booking);
+
+    this.eventEmitter.emit(
+      'booking.status_changed',
+      new BookingStatusChangedEvent(
+        accountId,
+        Number(saved.id),
+        saved.status,
+        saved.type,
+      ),
+    );
+
+    return BookingMapper.fromEntities(saved);
+  }
 }

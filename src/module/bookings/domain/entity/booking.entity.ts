@@ -54,7 +54,7 @@ export class Booking {
   //  Domain method (state protection)
   changeStatus(newStatus: BookingStatus) {
     const allowedTransitions: Record<BookingStatus, BookingStatus[]> = {
-      [BookingStatus.DRAFT]: [BookingStatus.WAITING_FOR_OFFERS],
+      [BookingStatus.DRAFT]: [BookingStatus.WAITING_FOR_OFFERS, BookingStatus.CANCELLED],
       [BookingStatus.WAITING_FOR_OFFERS]: [
         BookingStatus.UNDER_NEGOTIATION,
         BookingStatus.CANCELLED,
@@ -73,6 +73,7 @@ export class Booking {
       ],
       [BookingStatus.CONFIRMED]: [
         BookingStatus.COMPLETED,
+        BookingStatus.CANCELLED,
       ],
       [BookingStatus.COMPLETED]: [],
       [BookingStatus.CANCELLED]: [],

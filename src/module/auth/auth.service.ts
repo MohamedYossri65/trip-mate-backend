@@ -267,6 +267,16 @@ export class AuthService {
     await this.sessionService.revokeAllSessions(accountId);
   }
 
+  async deleteAccount(accountId: bigint) {
+    const account = await this.accountService.findById(accountId);
+    if (!account) {
+      throw new BadRequestException('Account not found');
+    }
+
+    await this.logoutAll(accountId);
+    await this.accountService.softDelete(accountId);
+  }
+
   private async generateTokens(account: Account) {
     const payload = {
       sub: account.id,

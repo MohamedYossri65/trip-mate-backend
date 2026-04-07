@@ -119,6 +119,7 @@ export class OffersService {
       new NewOfferReceivedEvent(
         carOfferResult.booking.user.accountId,
         Number(carOfferResult.booking.id),
+        Number(carOfferResult.offer.id),
         carOfferResult.booking.type,
         carOfferDetailsDto.price,
       ),
@@ -225,6 +226,7 @@ export class OffersService {
       new NewOfferReceivedEvent(
         offerResult.booking.user.accountId,
         Number(offerResult.booking.id),
+        Number(offerResult.offer.id),
         offerResult.booking.type,
         visaOfferDto.price,
       ),
@@ -331,6 +333,7 @@ export class OffersService {
       new NewOfferReceivedEvent(
         offerResult.booking.user.accountId,
         Number(offerResult.booking.id),
+        Number(offerResult.offer.id),
         offerResult.booking.type,
         flightOfferDto.price,
       ),
@@ -437,6 +440,7 @@ export class OffersService {
       new NewOfferReceivedEvent(
         offerResult.booking.user.accountId,
         Number(offerResult.booking.id),
+        Number(offerResult.offer.id),
         offerResult.booking.type,
         hotelOfferDto.price,
       ),
@@ -543,6 +547,7 @@ export class OffersService {
       new NewOfferReceivedEvent(
         offerResult.booking.user.accountId,
         Number(offerResult.booking.id),
+        Number(offerResult.offer.id),
         offerResult.booking.type,
         bundleOfferDto.price,
       ),

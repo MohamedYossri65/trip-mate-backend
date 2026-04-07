@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiQuery } from '@nestjs/swagger';
 import { BookingsService } from './bookings.service';
 import { CreateHotelBookingDto } from './services/hotel/dto/create-hotel-booking.dto';
@@ -149,6 +149,17 @@ export class BookingsController {
     @Query() dto: MyBookingFilterDto,
   ) {
     return this.bookingsService.findUserBookings(account.id, dto);
+  }
+
+  @Patch(':bookingId/cancel')
+  @Auth(RolesEnum.USER)
+  @ApiOperation({ summary: 'Cancel a booking if it is not completed' })
+  @SuccessResponse('Booking cancelled successfully')
+  async cancelBooking(
+    @Param('bookingId') bookingId: string,
+    @CurrentUser() account: Account,
+  ) {
+    return this.bookingsService.cancelBooking(account.id, BigInt(bookingId));
   }
 
   @Get('home-page')

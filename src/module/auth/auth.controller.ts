@@ -1,6 +1,6 @@
 import { ApiParam, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
-import { Body, Controller, Get, Param, ParseIntPipe, Post, Query, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseIntPipe, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { RegisterUserDto } from './dto/register-user.dto';
 import { RegisterUserResponse } from './mapper/register-user.mapper';
 import { RegisterOfficeResponse } from './mapper/register-office.mapper';
@@ -135,5 +135,12 @@ export class AuthController {
   @SuccessResponse('Logged out successfully')
   async logout(@Param('sessionId') sessionId: bigint) {
     await this.authService.logoutDevice(sessionId);
+  }
+
+  @Delete('delete-account')
+  @Auth()
+  @SuccessResponse('Account deleted successfully')
+  async deleteAccount(@CurrentUser() account: Account) {
+    await this.authService.deleteAccount(account.id);
   }
 }

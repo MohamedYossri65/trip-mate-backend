@@ -101,7 +101,9 @@ export class NotificationListener {
       'NEW_OFFER_RECEIVED',
       event.accountId,
       {
+        type: 'NEW_OFFER_RECEIVED',
         bookingId: event.bookingId,
+        offerId: event.offerId,
         bookingType: event.bookingType,
         offerPrice: event.offerPrice,
       },
