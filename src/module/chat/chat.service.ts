@@ -45,7 +45,7 @@ export class ChatService {
     private readonly officeProfileRepository: Repository<OfficeProfile>,
     private readonly officeService: OfficeService,
     private readonly onlineStatusService: OnlineStatusService,
-  ) {}
+  ) { }
 
   async createConversation(requesterId: bigint, dto: CreateConversationDto) {
     const bookingId = this.toBigInt(dto.bookingId, 'bookingId');
@@ -123,6 +123,7 @@ export class ChatService {
     const qb = this.conversationRepository
       .createQueryBuilder('conversation')
       .leftJoinAndSelect('conversation.participants', 'participants')
+      .leftJoinAndSelect('conversation.booking', 'booking')
       .where(
         new Brackets((scopeQb) => {
           scopeQb.where('conversation.user_account_id = :accountId', { accountId });
@@ -141,12 +142,15 @@ export class ChatService {
     );
 
     const endedStatuses = [BookingStatus.COMPLETED, BookingStatus.CANCELLED];
-    if (typeof query?.isEnded === 'boolean') {
-      qb.innerJoin('bookings', 'booking', 'booking.id = conversation.booking_id');
-      if (query.isEnded) {
+    
+    if (query?.isEnded) {
+      if (query.isEnded === 'true') {
         qb.andWhere('booking.status IN (:...endedStatuses)', { endedStatuses });
       } else {
-        qb.andWhere('booking.status NOT IN (:...endedStatuses)', { endedStatuses });
+        qb.andWhere(
+          '(booking.id IS NULL OR booking.status IS NULL OR booking.status NOT IN (:...endedStatuses))',
+          { endedStatuses },
+        );
       }
     }
 

@@ -9,11 +9,5 @@ export class GetConversationsQueryDto extends PaginationDto {
     description: 'Filter by conversation ended status (true for ended conversations, false for ongoing)',
   })
   @IsOptional()
-  @Transform(({ value }) => {
-    if (value === 'true') return true;
-    if (value === 'false') return false;
-    return value;
-  })
-  @IsBoolean()
-  isEnded?: boolean;
+  isEnded?: string;
 }

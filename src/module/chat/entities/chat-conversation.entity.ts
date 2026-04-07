@@ -10,6 +10,7 @@ import {
 import { ConversationType } from '../enums/chat.enums';
 import { ChatParticipant } from './chat-participant.entity';
 import { ChatMessage } from './chat-message.entity';
+import { Booking } from 'src/module/bookings/domain/entity/booking.entity';
 
 @Entity('chat_conversations')
 export class ChatConversation {
@@ -39,5 +40,9 @@ export class ChatConversation {
 
   @OneToMany(() => ChatMessage, (message) => message.conversation)
   messages: ChatMessage[];
+
+  @ManyToOne(() => Booking, { onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'booking_id' })
+  booking: Booking;
 }
 
