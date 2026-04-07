@@ -6,6 +6,7 @@ import { PushService } from './channels/push.service';
 import { TemplateService } from './services/template.service';
 import { NotificationStatus, NotificationChannel } from './enums';
 import { NotificationSource } from './enums/notification-source';
+import { MsegatSmsService } from 'src/common/services/msegat-sms.service';
 
 @Processor('notification-queue')
 export class NotificationProcessor {
@@ -15,6 +16,7 @@ export class NotificationProcessor {
     private readonly notificationService: NotificationService,
     private readonly pushService: PushService,
     private readonly templateService: TemplateService,
+    private readonly msegatSmsService: MsegatSmsService,
   ) {}
 
   @Process('send')
@@ -79,9 +81,22 @@ export class NotificationProcessor {
           break;
 
         case NotificationChannel.SMS:
-          // TODO: implement SMS channel
-          this.logger.warn('SMS channel not yet implemented');
-          success = false;
+          const accountPhone = await this.notificationService.getAccountPhone(
+            notification.accountId,
+          );
+
+          if (!accountPhone) {
+            this.logger.warn(
+              `No phone number found for account=${notification.accountId}, cannot send SMS`,
+            );
+            success = false;
+            break;
+          }
+
+          success = await this.msegatSmsService.sendSms({
+            numbers: [accountPhone],
+            msg: notification.body,
+          });
           break;
 
         default:
@@ -99,8 +114,9 @@ export class NotificationProcessor {
         `Notification id=${notificationId} processed, status=${newStatus}`,
       );
     } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
       this.logger.error(
-        `Failed to process notification id=${notificationId}: ${error.message}`,
+        `Failed to process notification id=${notificationId}: ${message}`,
       );
       await this.notificationService.updateStatus(
         notification.id,
@@ -193,6 +209,25 @@ export class NotificationProcessor {
             success = true;
             break;
 
+          case NotificationChannel.SMS:
+            const accountPhone = await this.notificationService.getAccountPhone(
+              accountId,
+            );
+
+            if (!accountPhone) {
+              this.logger.warn(
+                `No phone number found for account=${accountId}, cannot send SMS`,
+              );
+              success = false;
+              break;
+            }
+
+            success = await this.msegatSmsService.sendSms({
+              numbers: [accountPhone],
+              msg: rendered.body,
+            });
+            break;
+
           default:
             this.logger.warn(`Channel "${channel}" not yet implemented for bulk`);
             break;
@@ -205,8 +240,9 @@ export class NotificationProcessor {
 
         success ? successCount++ : failCount++;
       } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
         this.logger.error(
-          `Bulk send failed for account=${accountIdStr}: ${error.message}`,
+          `Bulk send failed for account=${accountIdStr}: ${message}`,
         );
         failCount++;
       }
@@ -292,6 +328,25 @@ export class NotificationProcessor {
             success = true;
             break;
 
+          case NotificationChannel.SMS:
+            const accountPhone = await this.notificationService.getAccountPhone(
+              accountId,
+            );
+
+            if (!accountPhone) {
+              this.logger.warn(
+                `No phone number found for account=${accountId}, cannot send SMS`,
+              );
+              success = false;
+              break;
+            }
+
+            success = await this.msegatSmsService.sendSms({
+              numbers: [accountPhone],
+              msg: body,
+            });
+            break;
+
           default:
             this.logger.warn(
               `Channel "${channel}" not yet implemented for direct bulk`,
@@ -306,8 +361,9 @@ export class NotificationProcessor {
 
         success ? successCount++ : failCount++;
       } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
         this.logger.error(
-          `Direct bulk send failed for account=${accountIdStr}: ${error.message}`,
+          `Direct bulk send failed for account=${accountIdStr}: ${message}`,
         );
         failCount++;
       }
@@ -361,8 +417,9 @@ export class NotificationProcessor {
         `Segment push "${segment}" ${success ? 'sent' : 'failed'}`,
       );
     } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
       this.logger.error(
-        `Segment push "${segment}" failed: ${error.message}`,
+        `Segment push "${segment}" failed: ${message}`,
       );
       throw error;
     }

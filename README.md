@@ -31,6 +31,21 @@
 $ npm install
 ```
 
+## SMS (MSEGAT) configuration
+
+Set these environment variables before starting the API:
+
+```bash
+MSEGAT_USERNAME=your_msegat_username
+MSEGAT_API_KEY=your_msegat_api_key
+MSEGAT_SENDER=your_approved_sender_name
+```
+
+Notes:
+- The sender must be active in your MSEGAT account.
+- Mobile numbers should be stored in international format.
+- OTP SMS uses `Verification Code: xxxxxx` message content.
+
 ## Compile and run the project
 
 ```bash

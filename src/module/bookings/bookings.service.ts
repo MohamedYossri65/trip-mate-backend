@@ -94,16 +94,6 @@ export class BookingsService {
       await manager.save(booking);
 
       this.eventEmitter.emit(
-        'booking.status_changed',
-        new BookingStatusChangedEvent(
-          userProfile.accountId,
-          Number(booking.id),
-          BookingStatus.WAITING_FOR_OFFERS,
-          BookingType.HOTEL,
-        ),
-      );
-
-      this.eventEmitter.emit(
         'new.booking',
         new NewBookingCreatedEvent(Number(booking.id), BookingType.HOTEL),
       );
@@ -149,15 +139,6 @@ export class BookingsService {
       booking.changeStatus(BookingStatus.WAITING_FOR_OFFERS);
       await manager.save(booking);
 
-      this.eventEmitter.emit(
-        'booking.status_changed',
-        new BookingStatusChangedEvent(
-          userProfile.accountId,
-          Number(booking.id),
-          BookingStatus.WAITING_FOR_OFFERS,
-          BookingType.CAR,
-        ),
-      );
 
       this.eventEmitter.emit(
         'new.booking',
@@ -206,16 +187,6 @@ export class BookingsService {
       await manager.save(booking);
 
       this.eventEmitter.emit(
-        'booking.status_changed',
-        new BookingStatusChangedEvent(
-          userProfile.accountId,
-          Number(booking.id),
-          BookingStatus.WAITING_FOR_OFFERS,
-          BookingType.FLIGHT,
-        ),
-      );
-
-      this.eventEmitter.emit(
         'new.booking',
         new NewBookingCreatedEvent(Number(booking.id), BookingType.FLIGHT),
       );
@@ -260,16 +231,6 @@ export class BookingsService {
       // 3️⃣ move status
       booking.changeStatus(BookingStatus.WAITING_FOR_OFFERS);
       await manager.save(booking);
-
-      this.eventEmitter.emit(
-        'booking.status_changed',
-        new BookingStatusChangedEvent(
-          userProfile.accountId,
-          Number(booking.id),
-          BookingStatus.WAITING_FOR_OFFERS,
-          BookingType.VISA,
-        ),
-      );
 
       this.eventEmitter.emit(
         'new.booking',

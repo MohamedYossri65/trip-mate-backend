@@ -58,14 +58,14 @@ export class AuthController {
   @Post('verify-otp')
   @SuccessResponse('Phone number verified successfully')
   async verifyOtp(@Body() body: VerifyOtpDto, @Req() req: Request) {
-    return await this.authService.verifyPhoneOtp(body.phoneNumber, body.otp, req);
+    return await this.authService.verifyPhoneOtp(body.emailOrPhone, body.otp, req);
   }
 
-  @Post('resend-otp/:accountId')
-  @ApiParam({ name: 'accountId', type: 'integer' })
+  @Post('resend-otp/:emailOrPhone')
+  @ApiParam({ name: 'emailOrPhone', type: 'string' })
   @SuccessResponse('OTP resent again successfully')
-  async resendOtp(@Param('accountId', ParseIntPipe) accountId: number) {
-    return await this.authService.resendPhoneVerificationOtp(accountId);
+  async resendOtp(@Param('emailOrPhone') emailOrPhone: string) {
+    return await this.authService.resendPhoneVerificationOtp(emailOrPhone);
   }
 
   @Post('forgot-password')

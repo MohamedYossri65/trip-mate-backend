@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, IsNull, Not, Repository } from 'typeorm';
+import { In, IsNull, MoreThan, Not, Repository } from 'typeorm';
 import { InjectQueue } from '@nestjs/bull';
 import { Queue } from 'bull';
 import { Notification } from './entity/notification.entity';
@@ -343,6 +343,15 @@ export class NotificationService {
     return devices.map((d) => d.deviceToken);
   }
 
+  async getAccountPhone(accountId: bigint): Promise<string | null> {
+    const account = await this.accountRepo.findOne({
+      where: { id: accountId },
+      select: ['phone'],
+    });
+
+    return account?.phone || null;
+  }
+
   // ─── Internal ──────────────────────────────────────────────
 
   async findNotificationById(id: number): Promise<Notification | null> {
@@ -414,6 +423,17 @@ export class NotificationService {
     if (result.affected === 0) {
       throw new NotFoundException('Notification not found or not owned by user');
     }
+  }
+
+  async deleteNotificationsByDay(date: string, accountId: bigint): Promise<void> {
+    const targetDate = new Date(date);
+    if (isNaN(targetDate.getTime())) {
+      throw new BadRequestException('Invalid date format. Use YYYY-MM-DD');
+    }
+    await this.notificationRepo.delete({
+      createdAt: MoreThan(targetDate),
+      accountId,
+    });
   }
 
   private async resolveSingleTargetAccountIds(

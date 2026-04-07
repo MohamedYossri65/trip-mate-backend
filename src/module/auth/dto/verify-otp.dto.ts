@@ -3,7 +3,7 @@ import { IsNotEmpty, IsNumber, IsString } from 'class-validator';
 export class VerifyOtpDto {
   @IsString()
   @IsNotEmpty()
-  phoneNumber: string;
+  emailOrPhone: string;
 
   @IsNotEmpty()
   otp: string;

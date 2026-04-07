@@ -54,13 +54,13 @@ export class AuthService {
   }
 
   async verifyPhoneOtp(
-    phoneNumber: string,
+    emailOrPhone: string,
     otp: string,
     req: Request,
   ): Promise<LoginResponse> {
-    await this.otpService.verify(phoneNumber, OtpPurpose.PHONE_VERIFICATION, otp);
+    await this.otpService.verify(emailOrPhone, OtpPurpose.PHONE_VERIFICATION, otp);
 
-    const account = await this.registrationService.markPhoneVerified(phoneNumber);
+    const account = await this.registrationService.markPhoneVerified(emailOrPhone);
     await this.registrationService.changeAccountStatusAfterVerification(account);
 
     const tokens = await this.generateTokens(account);
@@ -182,10 +182,13 @@ export class AuthService {
     await this.accountService.updatePassword(accountId, newPassword);
   }
 
-  async resendPhoneVerificationOtp(accountId: number) {
-    const accountIdBigInt = BigInt(accountId);
+  async resendPhoneVerificationOtp(emailOrPhone: string) {
+    const account = await this.accountService.findByIdentifier(emailOrPhone);
+    if (!account) {
+      throw new BadRequestException('Account not found');
+    }
     return await this.otpService.generate(
-      accountIdBigInt,
+      account.id,
       OtpPurpose.PHONE_VERIFICATION,
     );
   }
@@ -285,7 +288,7 @@ export class AuthService {
 
   private async validateAccount(account: Account ,methode: 'login' | 'verify' = 'login'){
     if (!account.isPhoneVerified && methode === "login") {
-      await this.resendPhoneVerificationOtp(Number(account.id));
+      await this.resendPhoneVerificationOtp(account.email);
       return 'OTP_SENT';
     }
 

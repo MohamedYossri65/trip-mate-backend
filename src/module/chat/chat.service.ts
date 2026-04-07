@@ -103,17 +103,14 @@ export class ChatService {
   }
 
   async getConversationsForUser(accountId: bigint, query?: GetConversationsQueryDto) {
-    let conversations = await this.listConversationsForUser(accountId, query);
+    const conversations = await this.listConversationsForUser(accountId, query);
     if (!query) {
       return conversations;
     }
 
-    const total = conversations.length;
-    const data = conversations.slice(query.skip, query.skip + query.limit);
-
     return {
-      data,
-      total,
+      data: conversations,
+      total: conversations.length,
       page: query.page,
       limit: query.limit,
     };
@@ -121,43 +118,67 @@ export class ChatService {
 
   private async listConversationsForUser(accountId: bigint, query?: GetConversationsQueryDto) {
     const officeScopeIds = await this.getOfficeScopeIds(accountId);
+
+    // ── Step 1: Query conversations with DB-level isEnded filter ──
     const qb = this.conversationRepository
       .createQueryBuilder('conversation')
       .leftJoinAndSelect('conversation.participants', 'participants')
       .where(
         new Brackets((scopeQb) => {
           scopeQb.where('conversation.user_account_id = :accountId', { accountId });
-
           if (officeScopeIds.length) {
             scopeQb.orWhere('conversation.office_account_id IN (:...officeScopeIds)', { officeScopeIds });
           }
         }),
       );
 
-    qb.orderBy('conversation.created_at', 'DESC');
+    qb.andWhere(
+      `EXISTS (
+        SELECT 1
+        FROM chat_messages cm
+        WHERE cm.conversation_id = conversation.id
+      )`,
+    );
 
-    const conversations = await qb.getMany();
-    const activeConversations: ChatConversation[] = [];
-    for (const conversation of conversations) {
-      // const isActive = await this.isConversationActive(conversation);
-      // if (!isActive) {
-      //   continue;
-      // }
-      await this.syncOfficeParticipants(conversation.id, conversation.officeAccountId);
-      await this.ensureParticipantRow(conversation.id, accountId);
-      activeConversations.push(conversation);
+    const endedStatuses = [BookingStatus.COMPLETED, BookingStatus.CANCELLED];
+    if (typeof query?.isEnded === 'boolean') {
+      qb.innerJoin('bookings', 'booking', 'booking.id = conversation.booking_id');
+      if (query.isEnded) {
+        qb.andWhere('booking.status IN (:...endedStatuses)', { endedStatuses });
+      } else {
+        qb.andWhere('booking.status NOT IN (:...endedStatuses)', { endedStatuses });
+      }
     }
 
-    const conversationIds = activeConversations.map((conversation) => conversation.id);
-    if (!conversationIds.length) {
+    qb.orderBy('conversation.createdAt', 'DESC');
+
+    // DB-level pagination
+    if (query) {
+      qb.skip(query.skip).take(query.limit);
+    }
+
+    const conversations = await qb.getMany();
+    if (!conversations.length) {
       return [];
     }
 
+    const conversationIds = conversations.map((c) => c.id);
+
+    // ── Step 2: Batch sync office participants ──
+    await this.batchSyncOfficeParticipants(conversations);
+
+    // ── Step 3: Batch ensure current user is a participant ──
+    await this.batchEnsureParticipantRows(conversationIds, accountId);
+
+    // ── Step 4: Batch fetch latest offers (replaces N findActiveOfferOrThrow calls) ──
+    const offerMap = await this.batchFindLatestOffers(conversations);
+
+    // ── Step 5: Batch fetch latest messages (already efficient) ──
     const latestMessages = await this.messageRepository
       .createQueryBuilder('message')
       .innerJoin(
-        (qb) =>
-          qb
+        (sub) =>
+          sub
             .select('m.conversation_id', 'conv_id')
             .addSelect('MAX(m.created_at)', 'latest_ts')
             .from(ChatMessage, 'm')
@@ -171,33 +192,24 @@ export class ChatService {
 
     await this.enrichMessagesWithSenderNames(latestMessages);
 
-    const latestMessageByConversation = new Map(
-      latestMessages.map((message) => [message.conversationId.toString(), message]),
+    const latestMessageMap = new Map(
+      latestMessages.map((m) => [m.conversationId.toString(), m]),
     );
 
-    const activeOfferEntries = await Promise.all(
-      activeConversations.map(async (conversation) => {
-        const activeOffer = await this.findActiveOfferOrThrow(
-          conversation.bookingId,
-          conversation.officeAccountId,
-        );
-
-        return [conversation.id.toString(), activeOffer] as const;
-      }),
-    );
-
-    const activeOfferMap = new Map(activeOfferEntries);
-
+    // ── Step 6: Batch fetch participant rows for current user ──
     const participantRows = await this.participantRepository.find({
       where: { accountId, conversationId: In(conversationIds) },
     });
     const participantMap = new Map(
-      participantRows.map((participant) => [participant.conversationId.toString(), participant]),
+      participantRows.map((p) => [p.conversationId.toString(), p]),
     );
 
-    // Batch-fetch office profiles for all conversations
-    const uniqueOfficeAccountIds = [...new Set(activeConversations.map((c) => c.officeAccountId))];
-    const uniqueUserAccountIds = [...new Set(activeConversations.map((c) => c.userAccountId))];
+    // ── Step 7: Batch count unread messages (replaces N count queries) ──
+    const unreadCountMap = await this.batchCountUnread(conversationIds, accountId, participantMap);
+
+    // ── Step 8: Batch fetch office & user profiles ──
+    const uniqueOfficeAccountIds = [...new Set(conversations.map((c) => c.officeAccountId))];
+    const uniqueUserAccountIds = [...new Set(conversations.map((c) => c.userAccountId))];
 
     const [officeProfiles, userProfiles] = await Promise.all([
       Promise.all(uniqueOfficeAccountIds.map((id) => this.officeService.findByAccountId(id))),
@@ -208,78 +220,57 @@ export class ChatService {
     ]);
 
     const officeProfileMap = new Map(
-      uniqueOfficeAccountIds.map((id, index) => [id.toString(), officeProfiles[index]]),
+      uniqueOfficeAccountIds.map((id, idx) => [id.toString(), officeProfiles[idx]]),
     );
     const userProfileMap = new Map(
-      userProfiles.map((profile) => [profile.accountId.toString(), profile]),
+      userProfiles.map((p) => [p.accountId.toString(), p]),
     );
 
-    // Batch-count unread messages per conversation
-    const unreadCountMap = new Map<string, number>();
-    for (const conversation of activeConversations) {
-      const me = participantMap.get(conversation.id.toString());
-      const qb = this.messageRepository
-        .createQueryBuilder('message')
-        .where('message.conversation_id = :conversationId', { conversationId: conversation.id })
-        .andWhere('message.sender_account_id != :accountId', { accountId });
-
-      if (me?.lastReadAt) {
-        qb.andWhere('message.created_at > :lastReadAt', { lastReadAt: me.lastReadAt });
-      }
-
-      const count = await qb.getCount();
-      unreadCountMap.set(conversation.id.toString(), count);
-    }
-
-    const offerDurationEntries = activeOfferEntries.map(([conversationId, activeOffer]) => [
-      conversationId,
-      activeOffer.offerDuration ?? null,
-    ] as const);
-    const offerDurationMap = new Map<string, Date | null>(offerDurationEntries);
-
-    const mappedConversations = activeConversations.map((conversation) => {
+    // ── Step 9: Map response ──
+    return conversations.map((conversation) => {
       const me = participantMap.get(conversation.id.toString());
       const officeProfile = officeProfileMap.get(conversation.officeAccountId.toString());
       const userProfile = userProfileMap.get(conversation.userAccountId.toString());
-      const activeOffer = activeOfferMap.get(conversation.id.toString());
-      
-      // Get active status for all participants
+      const latestOffer = offerMap.get(conversation.id.toString());
+
+      // Online status for participants
       const participantIds = conversation.participants.map((p) => p.accountId.toString());
       const onlineStatus = this.onlineStatusService.getOnlineStatus(participantIds);
-      const participantsWithStatus = conversation.participants.map((p) => ({
-        ...p,
-        isActive: onlineStatus.get(p.accountId.toString()) ?? false,
-      }));
+      // const participantsWithStatus = conversation.participants.map((p) => ({
+      //   ...p,
+      //   isActive: onlineStatus.get(p.accountId.toString()) ?? false,
+      // }));
 
-      const bookingStatus = activeOffer!.booking.status;
-      const isEnded = this.isEndedBookingStatus(bookingStatus);
-      
+      const bookingStatus = latestOffer?.booking?.status;
+      const isEnded = bookingStatus ? this.isEndedBookingStatus(bookingStatus) : false;
+
       return {
         ...conversation,
+        participants: undefined,
+        id: Number(conversation.id),
+        bookingId: Number(conversation.bookingId),
+        userAccountId: Number(conversation.userAccountId),
+        officeAccountId: Number(conversation.officeAccountId),
+        createdByAccountId: Number(conversation.createdByAccountId),
+        offerId: latestOffer ? Number(latestOffer.id) : null,
         booking: {
-          bookingId: conversation.bookingId,
-          bookingType: activeOffer!.booking.type,
+          bookingId: Number(conversation.bookingId),
+          bookingType: latestOffer?.booking?.type,
           bookingStatus,
-          activeOfferId: activeOffer!.id,
+          activeOfferId: latestOffer ? Number(latestOffer.id) : null,
         },
         isEnded,
         userName: userProfile?.name ?? null,
         officeName: officeProfile?.officeName ?? null,
         officeLogo: officeProfile?.logoUrl ?? null,
-        lastOfferDuration: offerDurationMap.get(conversation.id.toString()) ?? null,
+        lastOfferDuration: latestOffer?.offerDuration ?? null,
         unreadCount: unreadCountMap.get(conversation.id.toString()) ?? 0,
-        participants: participantsWithStatus,
-        latestMessage: latestMessageByConversation.get(conversation.id.toString()) ?? null,
+        // participants: participantsWithStatus,
+        latestMessage: latestMessageMap.get(conversation.id.toString()) ?? null,
         myLastReadMessageId: me?.lastReadMessageId ?? null,
         myLastReadAt: me?.lastReadAt ?? null,
       };
     });
-
-    if (typeof query?.isEnded === 'boolean') {
-      return mappedConversations.filter((conversation) => conversation.isEnded === query.isEnded);
-    }
-
-    return mappedConversations;
   }
 
   async getConversationById(accountId: bigint, conversationIdRaw: string) {
@@ -334,11 +325,17 @@ export class ChatService {
 
     return {
       ...hydratedConversation,
+      id: Number(hydratedConversation.id),
+      bookingId: Number(hydratedConversation.bookingId),
+      userAccountId: Number(hydratedConversation.userAccountId),
+      officeAccountId: Number(hydratedConversation.officeAccountId),
+      createdByAccountId: Number(hydratedConversation.createdByAccountId),
+      offerId: Number(activeOffer.id),
       booking: {
-        bookingId: hydratedConversation.bookingId,
+        bookingId: Number(hydratedConversation.bookingId),
         bookingType: activeOffer.booking.type,
         bookingStatus,
-        activeOfferId: activeOffer.id,
+        activeOfferId: Number(activeOffer.id),
       },
       isEnded,
       userName: userProfile?.name ?? null,
@@ -672,6 +669,252 @@ export class ChatService {
     return participant;
   }
 
+  // ═══════════════════════════════════════════════
+  // ══  Batch helpers (used by listConversationsForUser)
+  // ═══════════════════════════════════════════════
+
+  /**
+   * Single query to get the latest offer per conversation.
+   * Uses a subquery with MAX(updatedAt) grouped by (booking_id, office_account_id)
+   * to avoid the N+1 findActiveOfferOrThrow calls.
+   */
+  private async batchFindLatestOffers(
+    conversations: ChatConversation[],
+  ): Promise<Map<string, Offer>> {
+    if (!conversations.length) return new Map();
+
+    const pairs = conversations.map((c) => ({
+      bookingId: c.bookingId,
+      officeAccountId: c.officeAccountId,
+      conversationId: c.id,
+    }));
+
+    const bookingIds = [...new Set(pairs.map((p) => p.bookingId))];
+    const officeAccountIds = [...new Set(pairs.map((p) => p.officeAccountId))];
+
+    // Fetch all candidate offers in one query
+    const offers = await this.offerRepository
+      .createQueryBuilder('offer')
+      .leftJoinAndSelect('offer.booking', 'booking')
+      .leftJoinAndSelect('booking.user', 'bookingUser')
+      .leftJoinAndSelect('offer.office', 'office')
+      .where('booking.id IN (:...bookingIds)', { bookingIds })
+      .andWhere('office.accountId IN (:...officeAccountIds)', { officeAccountIds })
+      .orderBy('offer.updatedAt', 'DESC')
+      .getMany();
+
+    // Group by "bookingId|officeAccountId" and pick the best offer per group
+    const grouped = new Map<string, Offer>();
+    for (const offer of offers) {
+      const key = `${offer.booking.id}|${offer.office.accountId}`;
+      if (!grouped.has(key)) {
+        grouped.set(key, offer); // already sorted DESC by updatedAt
+      }
+    }
+
+    // Map back to conversationId
+    const result = new Map<string, Offer>();
+    for (const pair of pairs) {
+      const key = `${pair.bookingId}|${pair.officeAccountId}`;
+      const offer = grouped.get(key);
+      if (offer) {
+        result.set(pair.conversationId.toString(), offer);
+      }
+    }
+
+    return result;
+  }
+
+  /**
+   * Batch sync office participants for all conversations in one pass.
+   * Replaces N individual syncOfficeParticipants calls.
+   */
+  private async batchSyncOfficeParticipants(conversations: ChatConversation[]): Promise<void> {
+    if (!conversations.length) return;
+
+    const uniqueOfficeAccountIds = [...new Set(conversations.map((c) => c.officeAccountId))];
+
+    // Single query: get all active employees for all offices
+    const allEmployees = await this.officeEmployeeRepository.find({
+      where: {
+        office: { accountId: In(uniqueOfficeAccountIds) },
+        isActive: true,
+      },
+      relations: ['office'],
+      select: ['accountId', 'office'],
+    });
+
+    // Group employees by office accountId
+    const employeesByOffice = new Map<string, Set<string>>();
+    for (const emp of allEmployees) {
+      const officeId = emp.office?.accountId?.toString();
+      if (!officeId || !emp.accountId) continue;
+      if (!employeesByOffice.has(officeId)) {
+        employeesByOffice.set(officeId, new Set());
+      }
+      employeesByOffice.get(officeId)!.add(emp.accountId.toString());
+    }
+
+    // Build required participant sets per conversation
+    const allRequired: { conversationId: bigint; accountId: bigint }[] = [];
+    for (const conversation of conversations) {
+      const officeId = conversation.officeAccountId.toString();
+      const requiredIds = new Set<string>([officeId]);
+      const employees = employeesByOffice.get(officeId);
+      if (employees) {
+        for (const empId of employees) {
+          requiredIds.add(empId);
+        }
+      }
+      for (const id of requiredIds) {
+        allRequired.push({ conversationId: conversation.id, accountId: BigInt(id) });
+      }
+    }
+
+    if (!allRequired.length) return;
+
+    // Single query: get all existing participant rows for these conversations
+    const conversationIds = conversations.map((c) => c.id);
+    const existingParticipants = await this.participantRepository.find({
+      where: { conversationId: In(conversationIds) },
+      select: ['conversationId', 'accountId'],
+    });
+
+    const existingSet = new Set(
+      existingParticipants.map((p) => `${p.conversationId}|${p.accountId}`),
+    );
+
+    const missing = allRequired.filter(
+      (r) => !existingSet.has(`${r.conversationId}|${r.accountId}`),
+    );
+
+    if (missing.length) {
+      await this.participantRepository.save(
+        missing.map((m) =>
+          this.participantRepository.create({
+            conversationId: m.conversationId,
+            accountId: m.accountId,
+          }),
+        ),
+      );
+    }
+  }
+
+  /**
+   * Batch ensure the current user is a participant in all given conversations.
+   * Replaces N individual ensureParticipantRow calls.
+   */
+  private async batchEnsureParticipantRows(conversationIds: bigint[], accountId: bigint): Promise<void> {
+    if (!conversationIds.length) return;
+
+    const existing = await this.participantRepository.find({
+      where: { accountId, conversationId: In(conversationIds) },
+      select: ['conversationId'],
+    });
+
+    const existingConvIds = new Set(existing.map((p) => p.conversationId.toString()));
+    const missingConvIds = conversationIds.filter((id) => !existingConvIds.has(id.toString()));
+
+    if (missingConvIds.length) {
+      await this.participantRepository.save(
+        missingConvIds.map((convId) =>
+          this.participantRepository.create({ conversationId: convId, accountId }),
+        ),
+      );
+    }
+  }
+
+  /**
+   * Single aggregated query to count unread messages for all conversations.
+   * Replaces N individual count queries.
+   */
+  private async batchCountUnread(
+    conversationIds: bigint[],
+    accountId: bigint,
+    participantMap: Map<string, ChatParticipant>,
+  ): Promise<Map<string, number>> {
+    if (!conversationIds.length) return new Map();
+
+    // We need different lastReadAt per conversation, so we use a CASE WHEN approach
+    // For simplicity and correctness, use raw query with per-conversation filters
+    const qb = this.messageRepository
+      .createQueryBuilder('message')
+      .select('message.conversation_id', 'conv_id')
+      .addSelect('COUNT(*)', 'unread_count')
+      .where('message.conversation_id IN (:...conversationIds)', { conversationIds })
+      .andWhere('message.sender_account_id != :accountId', { accountId })
+      .groupBy('message.conversation_id');
+
+    // Get the earliest lastReadAt among all conversations to pre-filter
+    const lastReadDates: Date[] = [];
+    for (const [, participant] of participantMap) {
+      if (participant.lastReadAt) {
+        lastReadDates.push(participant.lastReadAt);
+      }
+    }
+
+    // If all conversations have been read, use the earliest date as a baseline filter
+    if (lastReadDates.length > 0) {
+      const earliestRead = new Date(Math.min(...lastReadDates.map((d) => d.getTime())));
+      qb.andWhere('message.created_at > :earliestRead', { earliestRead });
+    }
+
+    const rawResults: { conv_id: string; unread_count: string }[] = await qb.getRawMany();
+
+    // Build initial counts from the aggregated query
+    const countMap = new Map<string, number>();
+    for (const row of rawResults) {
+      countMap.set(row.conv_id.toString(), parseInt(row.unread_count, 10));
+    }
+
+    // If participants have varying lastReadAt, we need per-conversation refinement
+    // The aggregated query used the earliest lastReadAt, so for conversations with
+    // a later lastReadAt, we may have overcounted. Refine those.
+    if (lastReadDates.length > 0 && lastReadDates.length < conversationIds.length) {
+      // Some conversations have no lastReadAt (never read) — their count from
+      // the aggregated query is an undercount. Re-query those without date filter.
+      const neverReadConvIds = conversationIds.filter(
+        (id) => !participantMap.get(id.toString())?.lastReadAt,
+      );
+
+      if (neverReadConvIds.length) {
+        const neverReadResults: { conv_id: string; unread_count: string }[] = await this.messageRepository
+          .createQueryBuilder('message')
+          .select('message.conversation_id', 'conv_id')
+          .addSelect('COUNT(*)', 'unread_count')
+          .where('message.conversation_id IN (:...neverReadConvIds)', { neverReadConvIds })
+          .andWhere('message.sender_account_id != :accountId', { accountId })
+          .groupBy('message.conversation_id')
+          .getRawMany();
+
+        for (const row of neverReadResults) {
+          countMap.set(row.conv_id.toString(), parseInt(row.unread_count, 10));
+        }
+      }
+
+      // For conversations with a later lastReadAt than the earliest, refine
+      const refinementIds = conversationIds.filter((id) => {
+        const p = participantMap.get(id.toString());
+        if (!p?.lastReadAt) return false;
+        const earliest = new Date(Math.min(...lastReadDates.map((d) => d.getTime())));
+        return p.lastReadAt.getTime() > earliest.getTime();
+      });
+
+      for (const convId of refinementIds) {
+        const lastReadAt = participantMap.get(convId.toString())!.lastReadAt;
+        const count = await this.messageRepository
+          .createQueryBuilder('message')
+          .where('message.conversation_id = :convId', { convId })
+          .andWhere('message.sender_account_id != :accountId', { accountId })
+          .andWhere('message.created_at > :lastReadAt', { lastReadAt })
+          .getCount();
+        countMap.set(convId.toString(), count);
+      }
+    }
+
+    return countMap;
+  }
+
   private async isConversationActive(conversation: ChatConversation): Promise<boolean> {
     try {
       await this.findActiveOfferOrThrow(conversation.bookingId, conversation.officeAccountId);
@@ -774,8 +1017,7 @@ export class ChatService {
   private isEndedBookingStatus(status: BookingStatus): boolean {
     return (
       status === BookingStatus.COMPLETED ||
-      status === BookingStatus.CANCELLED ||
-      status === BookingStatus.PARTIALLY_PAID
+      status === BookingStatus.CANCELLED
     );
   }
 }

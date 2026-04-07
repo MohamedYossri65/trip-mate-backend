@@ -1,4 +1,4 @@
-import { MiddlewareConsumer, Module, RequestMethod } from '@nestjs/common';
+import { MiddlewareConsumer, Module, OnApplicationBootstrap, OnApplicationShutdown, Logger } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AcceptLanguageResolver, I18nModule } from 'nestjs-i18n';
@@ -29,6 +29,7 @@ import { ChatModule } from './module/chat/chat.module';
 import { PaymentModule } from './module/payment/payment.module';
 import { WalletModule } from './module/wallet/wallet.module';
 import { CouponModule } from './module/coupon/coupon.module';
+import Redis from 'ioredis';
 
 
 
@@ -89,8 +90,39 @@ import { CouponModule } from './module/coupon/coupon.module';
     },
   ],
 })
-export class AppModule {
-  private nodeEnv: string;
+export class AppModule implements OnApplicationBootstrap, OnApplicationShutdown {
+  private readonly logger = new Logger(AppModule.name);
+  private nodeEnv!: string;
+
+  constructor(private readonly configService: ConfigService) {}
+
+  async onApplicationBootstrap(): Promise<void> {
+    const redisHost = this.configService.get<string>('REDIS_HOST', 'redis');
+    const redisPort = this.configService.get<number>('REDIS_PORT', 6379);
+
+    const redis = new Redis({
+      host: redisHost,
+      port: redisPort,
+      maxRetriesPerRequest: 1,
+      lazyConnect: true,
+    });
+
+    try {
+      await redis.connect();
+      await redis.ping();
+      this.logger.log(`Redis connection successful: ${redisHost}:${redisPort}`);
+    } catch (error: any) {
+      this.logger.error(
+        `Redis connection failed: ${redisHost}:${redisPort} - ${error.message}`,
+      );
+    } finally {
+      redis.disconnect();
+    }
+  }
+
+  onApplicationShutdown(): void {
+    this.logger.log('Application shutdown complete');
+  }
 
   configure(consumer: MiddlewareConsumer) {
     this.nodeEnv = process.env.APP_ENV || 'development';

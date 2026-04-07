@@ -10,9 +10,12 @@ services:
       - redis_data:/data
     command: ["redis-server", "--appendonly", "yes"]
     restart: always
+    networks:
+      - trip-mate-network
 
 networks:
   trip-mate-network:
     external: true
+
 volumes:
   redis_data:

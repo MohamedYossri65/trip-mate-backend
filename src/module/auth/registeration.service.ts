@@ -80,8 +80,8 @@ export class RegisteriationService {
     return RegisterOfficeResponse.fromEntity(officeProfile);
   }
 
-  async markPhoneVerified(phoneNumber: string): Promise<Account> {
-    return this.accountService.verifyPhone(phoneNumber);
+  async markPhoneVerified(emailOrPhone: string): Promise<Account> {
+    return this.accountService.verifyPhone(emailOrPhone);
   }
 
   async changeAccountStatusAfterVerification(account: Account): Promise<void> {

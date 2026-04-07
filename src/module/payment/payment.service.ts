@@ -10,6 +10,7 @@ import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
 import { PaymentTransaction } from './entity/payment-transaction.entity';
 import { SavedCard } from './entity/saved-card.entity';
+import { PaymentSetting } from './entity/payment-setting.entity';
 import { PaymentType } from './enum/payment-type.enum';
 import { PaymentStatus } from './enum/payment-status.enum';
 import { SubscriptionService } from '../subscription/subscription.service';
@@ -22,8 +23,8 @@ import { SubscriptionPlan } from '../subscription/entity/subscription-plan.entit
 import { Account } from '../account/entity/account.entity';
 import { WalletService } from '../wallet/wallet.service';
 import { CouponService } from '../coupon/coupon.service';
-
-const PARTIAL_PAYMENT_PERCENTAGE = 0.25;
+import { UpsertPaymentSettingDto } from './dto/upsert-payment-setting.dto';
+import { ApplyCouponDto } from './dto/apply-coupon.dto';
 
 @Injectable()
 export class PaymentService {
@@ -54,6 +55,9 @@ export class PaymentService {
     @InjectRepository(SavedCard)
     private readonly savedCardRepo: Repository<SavedCard>,
 
+    @InjectRepository(PaymentSetting)
+    private readonly paymentSettingRepo: Repository<PaymentSetting>,
+
     private readonly subscriptionService: SubscriptionService,
     private readonly offersService: OffersService,
     private readonly configService: ConfigService,
@@ -64,6 +68,116 @@ export class PaymentService {
     this.currency = this.configService.get<string>('TAP_CURRENCY', 'SAR');
     this.webhookUrl = this.configService.get<string>('TAP_WEBHOOK_URL', '');
     this.redirectUrl = this.configService.get<string>('TAP_REDIRECT_URL', '');
+  }
+
+  async upsertPaymentSettings(
+    dto: UpsertPaymentSettingDto,
+  ): Promise<PaymentSetting> {
+    const settings = await this.paymentSettingRepo.findOne({
+      where: {},
+      order: { id: 'ASC' },
+    });
+
+    if (!settings) {
+      const created = this.paymentSettingRepo.create(dto);
+      return this.paymentSettingRepo.save(created);
+    }
+
+    Object.assign(settings, dto);
+    return this.paymentSettingRepo.save(settings);
+  }
+
+  async getPaymentSettings(): Promise<PaymentSetting> {
+    const settings = await this.paymentSettingRepo.findOne({
+      where: {},
+      order: { id: 'ASC' },
+    });
+
+    if (settings) {
+      return settings;
+    }
+
+    const defaultSettings = this.paymentSettingRepo.create({
+      appCommission: 0,
+      taxValue: 0,
+      enableNewContractAdvancePayment: false,
+      advancePercentage: 0,
+    });
+
+    return this.paymentSettingRepo.save(defaultSettings);
+  }
+
+  async getOfferPaymentSummary(
+    accountId: bigint,
+    offerId: bigint,
+    couponCode?: string,
+  ): Promise<{
+    offerId: number;
+    bookingId: number;
+    offerPrice: number;
+    appCommissionRate: number;
+    appCommissionAmount: number;
+    taxRate: number;
+    taxAmount: number;
+    advancePercentage: number;
+    advanceAmount: number;
+    amountBeforeCoupon: number;
+    couponCode: string | null;
+    discountAmount: number;
+    amountAfterCoupon: number;
+    currency: string;
+    partialPaymentEnabled: boolean;
+    officeId: number;
+  }> {
+    const { offer, booking } = await this.resolveOfferPaymentContext(
+      accountId,
+      Number(offerId),
+    );
+
+    const settings = await this.getPaymentSettings();
+    const offerPrice = Number(offer.price);
+    const appCommissionRate = Number(settings.appCommission || 0);
+    const taxRate = Number(settings.taxValue || 0);
+    const advancePercentage = Number(settings.advancePercentage || 0);
+
+    const appCommissionAmount = Math.round(((offerPrice * appCommissionRate) / 100) * 100) / 100;
+    const taxAmount = Math.round(((offerPrice * taxRate) / 100) * 100) / 100;
+    const advanceAmount = Math.round(((offerPrice * advancePercentage) / 100) * 100) / 100;
+
+    const amountBeforeCoupon = Math.round((offerPrice + advanceAmount + appCommissionAmount + taxAmount) * 100) / 100;
+
+    let discountAmount = 0;
+    let amountAfterCoupon = amountBeforeCoupon;
+
+    if (couponCode) {
+      const preview = await this.couponService.validate(
+        couponCode,
+        accountId,
+        BigInt(booking.id),
+        amountBeforeCoupon,
+      );
+      discountAmount = preview.discountAmount;
+      amountAfterCoupon = preview.finalAmount;
+    }
+
+    return {
+      offerId: Number(offerId),
+      bookingId: Number(booking.id),
+      offerPrice,
+      officeId: Number(offer.office.accountId),
+      appCommissionRate,
+      appCommissionAmount,
+      taxRate,
+      taxAmount,
+      advancePercentage,
+      advanceAmount,
+      amountBeforeCoupon,
+      couponCode: couponCode ?? null,
+      discountAmount,
+      amountAfterCoupon,
+      currency: this.currency,
+      partialPaymentEnabled: settings.enableNewContractAdvancePayment,
+    };
   }
 
   // ─── SUBSCRIPTION PAYMENT ──────────────────────────────────────────
@@ -122,7 +236,7 @@ export class PaymentService {
     };
   }
 
-  // ─── BOOKING PARTIAL PAYMENT (25%) ────────────────────────────────
+  // ─── BOOKING PARTIAL PAYMENT (settings %) ─────────────────────────
 
   async initiateOfferPartialPayment(
     accountId: bigint,
@@ -131,32 +245,7 @@ export class PaymentService {
   ): Promise<{ redirectUrl: string; transactionId: bigint; chargeId: string; discountAmount?: number }> {
     const { offer, booking, account } = await this.resolveOfferPaymentContext(accountId, offerId);
 
-    if (booking.status !== BookingStatus.OFFER_ACCEPTED) {
-      throw new BadRequestException(
-        'Booking must have an accepted offer before payment. Current status: ' +
-        booking.status,
-      );
-    }
-
-    const offerPrice = Number(offer.price);
-    let chargeAmount = Math.round(offerPrice * PARTIAL_PAYMENT_PERCENTAGE * 100) / 100;
-    let discountAmount: number | undefined;
-
-    // Apply coupon discount if provided
-    if (couponCode) {
-      const couponResult = await this.couponService.validateAndApply(
-        couponCode,
-        accountId,
-        BigInt(booking.id),
-        chargeAmount,
-      );
-      discountAmount = couponResult.discountAmount;
-      chargeAmount = couponResult.finalAmount;
-    }
-
-    if (chargeAmount <= 0) {
-      throw new BadRequestException('No remaining amount to pay');
-    }
+    const offerSummery = await this.getOfferPaymentSummary(accountId, BigInt(offerId), couponCode);
 
     const cartId = `OF-PARTIAL-${offerId}-${Date.now()}`;
 
@@ -164,18 +253,18 @@ export class PaymentService {
       cartId,
       type: PaymentType.BOOKING_PARTIAL,
       status: PaymentStatus.PENDING,
-      amount: chargeAmount,
+      amount: offerSummery.amountAfterCoupon,
       currency: this.currency,
       payerAccount: account,
       booking,
-      ...(couponCode ? { couponCode, discountAmount } : {}),
+      ...(couponCode ? { couponCode, discountAmount: offerSummery.discountAmount } : {}),
     });
     const savedPayment = await this.paymentRepo.save(payment);
 
     const tapResponse = await this.createCharge({
       cartId,
-      description: `Booking #${booking.id} - Partial Payment (Offer #${offerId}, 25%)`,
-      amount: chargeAmount,
+      description: `Booking #${booking.id} - Partial Payment (Offer #${offerId})`,
+      amount: offerSummery.amountAfterCoupon,
       customerName: account.email || account.phone || 'Customer',
       customerEmail: account.email || 'no-email@tripmate.com',
       customerPhone: account.phone || '0500000000',
@@ -186,14 +275,14 @@ export class PaymentService {
     await this.paymentRepo.save(savedPayment);
 
     this.logger.log(
-      `Offer partial payment initiated: cartId=${cartId}, amount=${chargeAmount}, discount=${discountAmount || 0}, chargeId=${tapResponse.id}`,
+      `Offer partial payment initiated: cartId=${cartId}, amount=${offerSummery.amountAfterCoupon}, discount=${offerSummery.discountAmount || 0}, chargeId=${tapResponse.id}`,
     );
 
     return {
       redirectUrl: tapResponse.transaction.url,
       transactionId: savedPayment.id,
       chargeId: tapResponse.id,
-      discountAmount,
+      discountAmount: offerSummery.discountAmount,
     };
   }
 
@@ -206,37 +295,7 @@ export class PaymentService {
   ): Promise<{ redirectUrl: string; transactionId: bigint; chargeId: string; discountAmount?: number }> {
     const { offer, booking, account } = await this.resolveOfferPaymentContext(accountId, offerId);
 
-    if (booking.status !== BookingStatus.PARTIALLY_PAID) {
-      throw new BadRequestException(
-        'Booking must be partially paid before full payment. Current status: ' +
-        booking.status,
-      );
-    }
-
-    const offerPrice = Number(offer.price);
-    const paidAmount = Number(booking.paidAmount || 0);
-    let chargeAmount = Math.round((offerPrice - paidAmount) * 100) / 100;
-    let discountAmount: number | undefined;
-
-    if (chargeAmount <= 0) {
-      throw new BadRequestException('No remaining amount to pay');
-    }
-
-    // Apply coupon discount if provided
-    if (couponCode) {
-      const couponResult = await this.couponService.validateAndApply(
-        couponCode,
-        accountId,
-        BigInt(booking.id),
-        chargeAmount,
-      );
-      discountAmount = couponResult.discountAmount;
-      chargeAmount = couponResult.finalAmount;
-    }
-
-    if (chargeAmount <= 0) {
-      throw new BadRequestException('No remaining amount to pay');
-    }
+    const offerSummery = await this.getOfferPaymentSummary(accountId, BigInt(offerId), couponCode);
 
     const cartId = `OF-FULL-${offerId}-${Date.now()}`;
 
@@ -244,18 +303,18 @@ export class PaymentService {
       cartId,
       type: PaymentType.BOOKING_FULL,
       status: PaymentStatus.PENDING,
-      amount: chargeAmount,
+      amount: offerSummery.amountAfterCoupon,
       currency: this.currency,
       payerAccount: account,
       booking,
-      ...(couponCode ? { couponCode, discountAmount } : {}),
+      ...(couponCode ? { couponCode, discountAmount: offerSummery.discountAmount } : {}),
     });
     const savedPayment = await this.paymentRepo.save(payment);
 
     const tapResponse = await this.createCharge({
       cartId,
       description: `Booking #${booking.id} - Full Payment (Offer #${offerId}, Remaining)`,
-      amount: chargeAmount,
+      amount: offerSummery.amountAfterCoupon,
       customerName: account.email || account.phone || 'Customer',
       customerEmail: account.email || 'no-email@tripmate.com',
       customerPhone: account.phone || '0500000000',
@@ -266,14 +325,14 @@ export class PaymentService {
     await this.paymentRepo.save(savedPayment);
 
     this.logger.log(
-      `Offer full payment initiated: cartId=${cartId}, amount=${chargeAmount}, discount=${discountAmount || 0}, chargeId=${tapResponse.id}`,
+      `Offer full payment initiated: cartId=${cartId}, amount=${offerSummery.amountAfterCoupon}, discount=${offerSummery.discountAmount || 0}, chargeId=${tapResponse.id}`,
     );
 
     return {
       redirectUrl: tapResponse.transaction.url,
       transactionId: savedPayment.id,
       chargeId: tapResponse.id,
-      discountAmount,
+      discountAmount: offerSummery.discountAmount,
     };
   }
 
@@ -580,9 +639,27 @@ export class PaymentService {
           'Booking must have an accepted offer before payment',
         );
       }
+
+      const settings = await this.getPaymentSettings();
+      if (!settings.enableNewContractAdvancePayment) {
+        throw new BadRequestException('Partial payment is currently disabled');
+      }
+
       const offerPrice = Number(offer.price);
-      chargeAmount = Math.round(offerPrice * PARTIAL_PAYMENT_PERCENTAGE * 100) / 100;
-      description = `Booking #${booking.id} - Partial Payment (Offer #${params.offerId}, 25%)`;
+      const advancePercentage = Number(settings.advancePercentage || 0);
+
+      if (advancePercentage <= 0 || advancePercentage > 100) {
+        throw new BadRequestException('Advance payment percentage must be greater than 0 and less than or equal to 100');
+      }
+
+      chargeAmount =
+        Math.round(((offerPrice * advancePercentage) / 100) * 100) / 100;
+
+      if (chargeAmount <= 0) {
+        throw new BadRequestException('Advance payment percentage results in invalid partial amount');
+      }
+
+      description = `Booking #${booking.id} - Partial Payment (Offer #${params.offerId})`;
       type = PaymentType.BOOKING_PARTIAL;
     } else {
       if (booking.status !== BookingStatus.PARTIALLY_PAID) {
@@ -734,33 +811,60 @@ export class PaymentService {
   private async handleBookingPartialPaymentSuccess(
     payment: PaymentTransaction,
   ): Promise<void> {
-    if (!payment.booking) {
-      this.logger.error('Booking partial payment missing booking data');
-      return;
-    }
-
     try {
+      const offerId = this.extractOfferIdFromCartId(payment.cartId);
+      if (!offerId) {
+        this.logger.error(`Cannot resolve offer id from cartId: ${payment.cartId}`);
+        return;
+      }
+
+      const offer = await this.offerRepo.findOne({
+        where: { id: offerId },
+        relations: ['booking', 'office'],
+      });
+
+      if (!offer?.booking) {
+        this.logger.error(`Offer ${offerId} not found for partial payment success`);
+        return;
+      }
+
       const booking = await this.bookingRepo.findOne({
-        where: { id: payment.booking.id },
+        where: { id: offer.booking.id },
         relations: ['selectedOffer', 'selectedOffer.office'],
       });
 
       if (!booking) {
-        this.logger.error(`Booking ${payment.booking.id} not found`);
+        this.logger.error(`Booking ${offer.booking.id} not found`);
         return;
+      }
+
+      if (offer.status !== OfferStatus.ACCEPTED) {
+        offer.status = OfferStatus.ACCEPTED;
+        await this.offerRepo.save(offer);
+      }
+
+      if (!booking.selectedOffer || booking.selectedOffer.id.toString() !== offer.id.toString()) {
+        booking.selectedOffer = offer;
+      }
+
+      if (booking.status === BookingStatus.UNDER_NEGOTIATION) {
+        booking.changeStatus(BookingStatus.OFFER_ACCEPTED);
       }
 
       // Update paid amount
       booking.paidAmount = Number(booking.paidAmount || 0) + Number(payment.amount);
 
       // Transition to PARTIALLY_PAID
-      booking.changeStatus(BookingStatus.PARTIALLY_PAID);
+      if (booking.status === BookingStatus.OFFER_ACCEPTED) {
+        booking.changeStatus(BookingStatus.PARTIALLY_PAID);
+      }
+
       await this.bookingRepo.save(booking);
 
       // Credit office wallet with pending funds
-      if (booking.selectedOffer?.office?.accountId) {
+      if (offer.office?.accountId) {
         await this.walletService.creditPending(
-          booking.selectedOffer.office.accountId,
+          offer.office.accountId,
           Number(payment.amount),
           booking.id,
         );
@@ -779,33 +883,64 @@ export class PaymentService {
   private async handleBookingFullPaymentSuccess(
     payment: PaymentTransaction,
   ): Promise<void> {
-    if (!payment.booking) {
-      this.logger.error('Booking full payment missing booking data');
-      return;
-    }
-
     try {
+      const offerId = this.extractOfferIdFromCartId(payment.cartId);
+      if (!offerId) {
+        this.logger.error(`Cannot resolve offer id from cartId: ${payment.cartId}`);
+        return;
+      }
+
+      const offer = await this.offerRepo.findOne({
+        where: { id: offerId },
+        relations: ['booking', 'office'],
+      });
+
+      if (!offer?.booking) {
+        this.logger.error(`Offer ${offerId} not found for full payment success`);
+        return;
+      }
+
       const booking = await this.bookingRepo.findOne({
-        where: { id: payment.booking.id },
+        where: { id: offer.booking.id },
         relations: ['selectedOffer', 'selectedOffer.office'],
       });
 
       if (!booking) {
-        this.logger.error(`Booking ${payment.booking.id} not found`);
+        this.logger.error(`Booking ${offer.booking.id} not found`);
         return;
+      }
+
+      if (offer.status !== OfferStatus.ACCEPTED) {
+        offer.status = OfferStatus.ACCEPTED;
+        await this.offerRepo.save(offer);
+      }
+
+      if (!booking.selectedOffer || booking.selectedOffer.id.toString() !== offer.id.toString()) {
+        booking.selectedOffer = offer;
+      }
+
+      if (booking.status === BookingStatus.UNDER_NEGOTIATION) {
+        booking.changeStatus(BookingStatus.OFFER_ACCEPTED);
+      }
+
+      if (booking.status === BookingStatus.OFFER_ACCEPTED) {
+        booking.changeStatus(BookingStatus.PARTIALLY_PAID);
       }
 
       // Update paid amount
       booking.paidAmount = Number(booking.paidAmount || 0) + Number(payment.amount);
 
       // Transition to CONFIRMED
-      booking.changeStatus(BookingStatus.CONFIRMED);
+      if (booking.status === BookingStatus.PARTIALLY_PAID) {
+        booking.changeStatus(BookingStatus.CONFIRMED);
+      }
+
       await this.bookingRepo.save(booking);
 
       // Credit office wallet with pending funds
-      if (booking.selectedOffer?.office?.accountId) {
+      if (offer.office?.accountId) {
         await this.walletService.creditPending(
-          booking.selectedOffer.office.accountId,
+          offer.office.accountId,
           Number(payment.amount),
           booking.id,
         );
@@ -1005,13 +1140,26 @@ export class PaymentService {
     }
   }
 
+  private extractOfferIdFromCartId(cartId: string): bigint | null {
+    const matched = cartId.match(/^OF-(?:PARTIAL|FULL|SAVED)-(\d+)-/);
+    if (!matched?.[1]) {
+      return null;
+    }
+
+    try {
+      return BigInt(matched[1]);
+    } catch {
+      return null;
+    }
+  }
+
   private async resolveOfferPaymentContext(
     accountId: bigint,
     offerId: number,
   ): Promise<{ offer: Offer; booking: Booking; account: Account }> {
     const offer = await this.offerRepo.findOne({
       where: { id: BigInt(offerId) },
-      relations: ['booking', 'booking.user', 'booking.user.account', 'booking.selectedOffer'],
+      relations: ['booking', 'booking.user', 'booking.user.account', 'booking.selectedOffer' ,'office'],
     });
 
     if (!offer) throw new NotFoundException('Offer not found');
@@ -1020,13 +1168,6 @@ export class PaymentService {
       throw new BadRequestException('This offer does not belong to your booking');
     }
 
-    if (offer.status !== OfferStatus.ACCEPTED) {
-      throw new BadRequestException('Offer must be accepted before payment');
-    }
-
-    if (!offer.booking.selectedOffer || offer.booking.selectedOffer.id.toString() !== offer.id.toString()) {
-      throw new BadRequestException('This offer is not the accepted offer for this booking');
-    }
 
     const account = await this.accountRepo.findOne({
       where: { id: accountId },

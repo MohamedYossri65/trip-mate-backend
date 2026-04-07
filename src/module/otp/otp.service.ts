@@ -5,66 +5,99 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { OtpPurpose } from './enum/otp-purpose.enum';
 import { OtpStatus } from './enum/otp-status.enum';
 import * as bcrypt from 'bcrypt';
+import { Account } from '../account/entity/account.entity';
+import { MsegatSmsService } from 'src/common/services/msegat-sms.service';
 
 @Injectable()
 export class OtpService {
   constructor(
     @InjectRepository(Otp)
     private readonly otpRepository: Repository<Otp>,
-  ) {}
+    @InjectRepository(Account)
+    private readonly accountRepository: Repository<Account>,
+    private readonly msegatSmsService: MsegatSmsService,
+  ) { }
 
-async generate(accountId: bigint, purpose: OtpPurpose): Promise<boolean> {
-  const oneMinuteAgo = new Date(Date.now() - 60 * 1000);
+  async generate(accountId: bigint, purpose: OtpPurpose): Promise<boolean> {
+    const account = await this.accountRepository.findOne({
+      where: { id: accountId },
+      select: ['id', 'phone'],
+    });
 
-  const lastOtp = await this.otpRepository.findOne({
-    where: {
-      accountId,
-      purpose,
-      createdAt: MoreThan(oneMinuteAgo),
-      status: OtpStatus.PENDING, 
-    },
-    order: { createdAt: 'DESC' },
-  });
+    if (!account) {
+      throw new BadRequestException('Account not found');
+    }
 
-  if (lastOtp) {
-    throw new BadRequestException('Wait at least 1 minute before requesting a new OTP');
-  }
+    if (!account.phone) {
+      throw new BadRequestException('Account phone number is missing');
+    }
 
-  await this.otpRepository.update(
-    { accountId, purpose, status: OtpStatus.PENDING },
-    { status: OtpStatus.EXPIRED },
-  );
+    const oneMinuteAgo = new Date(Date.now() - 60 * 1000);
 
-  // const code = Math.floor(100000 + Math.random() * 900000).toString();
-  const code = '123456'; // for testing
-
-  const codeHash = await bcrypt.hash(code, 10);
-  const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 mins
-
-  const otp = this.otpRepository.create({
-    accountId,
-    purpose,
-    codeHash,
-    expiresAt,
-    status: OtpStatus.PENDING,
-    attempts: 0,
-    maxAttempts: 5,
-  });
-
-  await this.otpRepository.save(otp);
-
-  //  send SMS/email etc.
-
-  return true;
-}
-
-  async verify(phoneNumber: string, purpose: OtpPurpose, inputCode: string) {
-    const otp = await this.otpRepository.findOne({
+    const lastOtp = await this.otpRepository.findOne({
       where: {
-        account: { phone: phoneNumber },
+        accountId,
         purpose,
+        createdAt: MoreThan(oneMinuteAgo),
         status: OtpStatus.PENDING,
       },
+      order: { createdAt: 'DESC' },
+    });
+
+    if (lastOtp) {
+      throw new BadRequestException('Wait at least 1 minute before requesting a new OTP');
+    }
+
+    await this.otpRepository.update(
+      { accountId, purpose, status: OtpStatus.PENDING },
+      { status: OtpStatus.EXPIRED },
+    );
+
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+
+    const codeHash = await bcrypt.hash(code, 10);
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 mins
+
+    const otp = this.otpRepository.create({
+      accountId,
+      purpose,
+      codeHash,
+      expiresAt,
+      status: OtpStatus.PENDING,
+      attempts: 0,
+      maxAttempts: 5,
+    });
+
+    await this.otpRepository.save(otp);
+
+    const smsSent = await this.msegatSmsService.sendSms({
+      numbers: [account.phone],
+      msg: `Verification Code: ${code}`,
+      reqFilter: false,
+    });
+
+    if (!smsSent) {
+      await this.otpRepository.update({ id: otp.id }, { status: OtpStatus.EXPIRED });
+      throw new BadRequestException('Failed to send OTP SMS');
+    }
+
+    return true;
+  }
+
+  async verify(phoneOrEmail: string, purpose: OtpPurpose, inputCode: string) {
+    const otp = await this.otpRepository.findOne({
+      where: [
+        {
+          account: { phone: phoneOrEmail },
+          purpose,
+          status: OtpStatus.PENDING,
+        },
+        {
+          account: { email: phoneOrEmail },
+          purpose,
+          status: OtpStatus.PENDING,
+        },
+      ],
       order: { createdAt: 'DESC' },
     });
 

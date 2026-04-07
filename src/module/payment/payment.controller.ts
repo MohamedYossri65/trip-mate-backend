@@ -7,8 +7,9 @@ import {
   Patch,
   Post,
   Req,
+  Query,
 } from '@nestjs/common';
-import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBody, ApiOperation, ApiParam, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { PaymentService } from './payment.service';
 import {
   InitiateSubscriptionPaymentDto,
@@ -19,6 +20,8 @@ import {
   PayWithSavedOfferCardDto,
   PaySubscriptionWithSavedCardDto,
 } from './dto/payment-with-saved-card.dto';
+import { UpsertPaymentSettingDto } from './dto/upsert-payment-setting.dto';
+import { ApplyCouponDto } from './dto/apply-coupon.dto';
 import { Auth } from 'src/common/guards/decorators/auth.decorator';
 import { CurrentUser } from 'src/common/guards/decorators/user.decorator';
 import { Account } from '../account/entity/account.entity';
@@ -30,6 +33,40 @@ import { Public } from 'src/common/guards/decorators/public.decorator';
 @Controller({ path: 'payments', version: '1' })
 export class PaymentController {
   constructor(private readonly paymentService: PaymentService) {}
+
+  // ─── PAYMENT SETTINGS ────────────────────────────────────────────
+
+  @Post('settings')
+  @Auth(RolesEnum.ADMIN)
+  @ApiOperation({ summary: 'Create or update payment settings (Admin only)' })
+  @SuccessResponse('Payment settings saved successfully')
+  async upsertPaymentSettings(@Body() dto: UpsertPaymentSettingDto) {
+    return this.paymentService.upsertPaymentSettings(dto);
+  }
+
+  @Get('settings')
+  @ApiOperation({ summary: 'Get payment settings' })
+  @SuccessResponse('Payment settings retrieved successfully')
+  async getPaymentSettings() {
+    return this.paymentService.getPaymentSettings();
+  }
+
+  @Get('offer-summary/:offerId')
+  @Auth()
+  @ApiQuery({ name: 'couponCode', required: false, type: 'string' })
+  @ApiOperation({ summary: 'Get offer payment summary' })
+  @SuccessResponse('Offer payment summary retrieved successfully')
+  async getOfferPaymentSummary(
+    @Param('offerId') offerId: string,
+    @Query('couponCode') couponCode: string | undefined,
+    @CurrentUser() account: Account,
+  ) {
+    return this.paymentService.getOfferPaymentSummary(
+      account.id,
+      BigInt(offerId),
+      couponCode,
+    );
+  }
 
   // ─── Subscription Payment ─────────────────────────────────────────
 
@@ -48,12 +85,12 @@ export class PaymentController {
     );
   }
 
-  // ─── Booking Partial Payment (25%) ────────────────────────────────
+  // ─── Booking Partial Payment (settings %) ─────────────────────────
 
   @Post('offer/partial')
   @Auth(RolesEnum.USER)
   @ApiOperation({
-    summary: 'Initiate partial offer payment (25%) via Tap',
+    summary: 'Initiate partial offer payment via Tap (percentage from payment settings)',
   })
   @SuccessResponse('Payment page created successfully')
   async initiateOfferPartialPayment(

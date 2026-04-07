@@ -70,6 +70,28 @@ export class NotificationController {
     await this.notificationService.markAllAsRead(accountId);
   }
 
+    // ─── Device Management ─────────────────────────────────────
+
+  @Post('devices')
+  @ApiOperation({ summary: 'Register a device for push notifications' })
+  async registerDevice(
+    @CurrentUser() user: Account,
+    @Body() dto: RegisterDeviceDto,
+  ) {
+    return this.notificationService.registerDevice(user.id, dto);
+  }
+
+  @Delete('devices')
+  @ApiOperation({ summary: 'Remove a device from push notifications' })
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async removeDevice(
+    @CurrentUser() user: Account,
+    @Body() dto: RemoveDeviceDto,
+  ) {
+    const accountId = user.id;
+    await this.notificationService.removeDevice(accountId, dto);
+  }
+
   @Delete(':id')
   @ApiOperation({ summary: 'Delete a notification' })
   async deleteNotification(
@@ -77,6 +99,16 @@ export class NotificationController {
     @CurrentUser() user: Account,
   ) {
     return this.notificationService.deleteNotification(id, user.id);
+  }
+
+  @Delete('day/:date')
+  @ApiOperation({ summary: 'Delete all notifications for a specific day' })
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async deleteNotificationsByDay(
+    @Param('date') date: string,
+    @CurrentUser() user: Account,
+  ) {
+    await this.notificationService.deleteNotificationsByDay(date, user.id);
   }
 
 
@@ -100,25 +132,5 @@ export class NotificationController {
     return this.notificationService.sendDirectBulk(dto);
   }
 
-  // ─── Device Management ─────────────────────────────────────
 
-  @Post('devices')
-  @ApiOperation({ summary: 'Register a device for push notifications' })
-  async registerDevice(
-    @CurrentUser() user: Account,
-    @Body() dto: RegisterDeviceDto,
-  ) {
-    return this.notificationService.registerDevice(user.id, dto);
-  }
-
-  @Delete('devices')
-  @ApiOperation({ summary: 'Remove a device from push notifications' })
-  @HttpCode(HttpStatus.NO_CONTENT)
-  async removeDevice(
-    @CurrentUser() user: Account,
-    @Body() dto: RemoveDeviceDto,
-  ) {
-    const accountId = user.id;
-    await this.notificationService.removeDevice(accountId, dto);
-  }
 }

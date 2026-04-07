@@ -94,19 +94,14 @@ export class AccountService {
     await this.accountRepository.update({ id: accountId }, { status });
   }
 
-  async verifyPhone(phoneNumber: string): Promise<Account> {
-    await this.accountRepository.update(
-      { phone: phoneNumber },
-      { isPhoneVerified: true },
-    );
-    const updatedAccount = await this.accountRepository.findOne({
-      where: { phone: phoneNumber },
-    });
-    if (!updatedAccount) {
-      throw new BadRequestException('Account not found after phone verification');
+  async verifyPhone(emailOrPhone: string) {
+    const account = await this.findByIdentifier(emailOrPhone);
+    if (!account) {
+      throw new BadRequestException('Account not found');
     }
-
-    return updatedAccount;
+    account.isPhoneVerified = true;
+    await this.accountRepository.save(account);
+    return account;
   }
 
   async updateProfile(accountId: bigint, email: string): Promise<void> {
