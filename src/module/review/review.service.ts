@@ -16,6 +16,8 @@ import { PaginatedResponseDto } from 'src/common/dto/paginated-response.dto';
 import { Booking } from '../bookings/domain/entity/booking.entity';
 import { BookingStatus } from '../bookings/domain/enum/booking-status.enum';
 import { OfficeProfile } from '../office/entity/office.entity';
+import { Account } from '../account/entity/account.entity';
+import { RolesEnum } from 'src/common/enums/roles.enum';
 
 @Injectable()
 export class ReviewService {
@@ -117,7 +119,8 @@ export class ReviewService {
       .createQueryBuilder('review')
       .leftJoinAndSelect('review.userProfile', 'userProfile')
       .leftJoinAndSelect('review.office', 'office')
-      .where('review.officeId = :officeId', { officeId });
+      .where('review.officeId = :officeId', { officeId })
+      .andWhere('review.hiden = :isHidden', { isHidden: false });
 
     if (dto.rating) {
       queryBuilder.andWhere('review.rating = :rating', { rating: dto.rating });
@@ -146,6 +149,7 @@ export class ReviewService {
       .select('AVG(review.rating)', 'averageRating')
       .addSelect('COUNT(review.id)', 'totalReviews')
       .where('review.officeId = :officeId', { officeId })
+      .andWhere('review.hiden = :isHidden', { isHidden: false })
       .getRawOne();
 
     const ratingCounts = await this.reviewRepository
@@ -153,6 +157,7 @@ export class ReviewService {
       .select('review.rating', 'rating')
       .addSelect('COUNT(review.id)', 'count')
       .where('review.officeId = :officeId', { officeId })
+      .andWhere('review.hiden = :isHidden', { isHidden: false })
       .groupBy('review.rating')
       .getRawMany();
 
@@ -171,7 +176,8 @@ export class ReviewService {
       .createQueryBuilder('review')
       .leftJoinAndSelect('review.userProfile', 'userProfile')
       .leftJoinAndSelect('review.office', 'office')
-      .where('review.accountId = :accountId', { accountId });
+      .where('review.accountId = :accountId', { accountId })
+      .andWhere('review.hiden = :isHidden', { isHidden: false });
 
     if (dto.officeId) {
       queryBuilder.andWhere('review.officeId = :officeId', {
@@ -212,12 +218,68 @@ export class ReviewService {
 
   async getReviewById(reviewId: bigint): Promise<ReviewResponseDto> {
     const review = await this.reviewRepository.findOne({
+      where: { id: reviewId, hiden: false },
+      relations: ['userProfile', 'office'],
+    });
+
+    if (!review) {
+      throw new NotFoundException('Review not found');
+    }
+
+    return ReviewMapper.toResponseDto(review);
+  }
+
+  async getOfficeReviewsForManagement(
+    account: Account,
+    officeId: bigint,
+    dto: ReviewFilterDto,
+  ): Promise<PaginatedResponseDto<ReviewResponseDto>> {
+    if (account.role === RolesEnum.OFFICE && account.id !== officeId) {
+      throw new ForbiddenException('You can only view your office reviews');
+    }
+
+    const queryBuilder = this.reviewRepository
+      .createQueryBuilder('review')
+      .leftJoinAndSelect('review.userProfile', 'userProfile')
+      .leftJoinAndSelect('review.office', 'office')
+      .where('review.officeId = :officeId', { officeId });
+
+    if (dto.rating) {
+      queryBuilder.andWhere('review.rating = :rating', { rating: dto.rating });
+    }
+
+    if (dto.minRating) {
+      queryBuilder.andWhere('review.rating >= :minRating', {
+        minRating: dto.minRating,
+      });
+    }
+
+    queryBuilder
+      .orderBy('review.createdAt', 'DESC')
+      .skip((dto.page - 1) * dto.limit)
+      .take(dto.limit);
+
+    const [reviews, total] = await queryBuilder.getManyAndCount();
+
+    const data = reviews.map((review) => ReviewMapper.toResponseDto(review));
+    return new PaginatedResponseDto(data, total, dto.page, dto.limit);
+  }
+
+  async getReviewByIdForManagement(
+    reviewId: bigint,
+    account: Account,
+  ): Promise<ReviewResponseDto> {
+    const review = await this.reviewRepository.findOne({
       where: { id: reviewId },
       relations: ['userProfile', 'office'],
     });
 
     if (!review) {
       throw new NotFoundException('Review not found');
+    }
+
+    if (account.role === RolesEnum.OFFICE && review.officeId !== account.id) {
+      throw new ForbiddenException('You can only view reviews for your office');
     }
 
     return ReviewMapper.toResponseDto(review);
@@ -231,5 +293,18 @@ export class ReviewService {
       .andWhere('booking.status = :status', { status: BookingStatus.COMPLETED })
       .getOne();
     return !!hasCompletedBooking;
+  }
+
+
+  async toggleHideReview(reviewId: bigint): Promise<void> {
+    const review = await this.reviewRepository.findOne({
+      where: { id: reviewId },
+      relations: ['office'],
+    });
+    if(!review) {
+      throw new NotFoundException('Review not found');
+    }
+    review.hiden = !review.hiden;
+    await this.reviewRepository.save(review);
   }
 }

@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { DataSource, Repository, SelectQueryBuilder } from 'typeorm';
 import { HotelBooking } from '../entity/hotel-booking.entity';
 import { HotelFilterDto } from '../dto/hotel-filter.dto';
+import { BookingStatus } from '../../../domain/enum/booking-status.enum';
 
 @Injectable()
 export class HotelBookingRepository extends Repository<HotelBooking> {
@@ -11,6 +12,7 @@ export class HotelBookingRepository extends Repository<HotelBooking> {
 
   async findWithFilters(
     dto: HotelFilterDto,
+    hideCancelled = false,
   ): Promise<[HotelBooking[], number]> {
     const qb = this.createQueryBuilder('hotel')
       .leftJoinAndSelect('hotel.booking', 'booking')
@@ -18,6 +20,11 @@ export class HotelBookingRepository extends Repository<HotelBooking> {
       .leftJoinAndSelect('user.account', 'account')
 
     this.applyFilters(qb, dto);
+    if (hideCancelled) {
+      qb.andWhere('booking.status != :cancelledStatus', {
+        cancelledStatus: BookingStatus.CANCELLED,
+      });
+    }
     this.applySort(qb, dto);
     this.applyPagination(qb, dto);
 

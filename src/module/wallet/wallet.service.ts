@@ -16,6 +16,7 @@ import { Account } from '../account/entity/account.entity';
 import { RolesEnum } from 'src/common/enums/roles.enum';
 import { WithdrawRequestsQueryDto } from './dto/withdraw-requests-query.dto';
 import { PaginatedResponseDto } from 'src/common/dto/paginated-response.dto';
+import { PaginationDto } from 'src/common/dto/pagination.dto';
 
 const HOLD_PERIOD_DAYS = 7;
 
@@ -266,6 +267,57 @@ export class WalletService {
     };
   }
 
+  async getOfficeTransactions(
+    officeAccountId: bigint,
+    pagination: PaginationDto,
+  ): Promise<
+    PaginatedResponseDto<{
+      transactionId: bigint;
+      amount: number;
+      type: WalletTransactionType;
+      status: WalletTransactionStatus;
+      bookingId: bigint | null;
+      createdAt: Date;
+      releasableAt: Date | null;
+      releasedAt: Date | null;
+      reason: string;
+      notes: string | null;
+      rejectionReason: string | null;
+    }>
+  > {
+    const qb = this.txRepo
+      .createQueryBuilder('tx')
+      .leftJoin('tx.wallet', 'wallet')
+      .where('wallet.office_account_id = :officeAccountId', { officeAccountId });
+
+    const [transactions, total] = await qb
+      .orderBy('tx.id', 'DESC')
+      .skip(pagination.skip)
+      .take(pagination.limit)
+      .getManyAndCount();
+
+    const data = transactions.map((transaction) => ({
+      transactionId: transaction.id,
+      amount: Number(transaction.amount),
+      type: transaction.type,
+      status: transaction.status,
+      bookingId: transaction.bookingId ?? null,
+      createdAt: transaction.createdAt,
+      releasableAt: transaction.releasableAt ?? null,
+      releasedAt: transaction.releasedAt ?? null,
+      reason: this.getWalletTransactionReason(transaction.type),
+      notes: transaction.notes ?? null,
+      rejectionReason: transaction.rejectionReason ?? null,
+    }));
+
+    return new PaginatedResponseDto(
+      data,
+      total,
+      pagination.page,
+      pagination.limit,
+    );
+  }
+
   // ─── WITHDRAWAL ───────────────────────────────────────────────────
 
   async requestWithdrawal(officeAccountId: bigint, dto: WithdrawDto) {
@@ -504,6 +556,21 @@ export class WalletService {
       return BigInt(value);
     } catch {
       throw new BadRequestException(`${fieldName} must be a valid bigint`);
+    }
+  }
+
+  private getWalletTransactionReason(type: WalletTransactionType): string {
+    switch (type) {
+      case WalletTransactionType.CREDIT_PENDING:
+        return 'Booking payment credited to pending balance';
+      case WalletTransactionType.CREDIT_AVAILABLE:
+        return 'Amount credited directly to available balance';
+      case WalletTransactionType.RELEASE:
+        return 'Pending amount released to available balance';
+      case WalletTransactionType.WITHDRAWAL:
+        return 'Withdrawal request';
+      default:
+        return 'Wallet transaction';
     }
   }
 }

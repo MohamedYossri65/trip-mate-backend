@@ -6,6 +6,7 @@ import { HotelBundle } from '../entity/bundle-hotel.entity';
 import { CarBundle } from '../entity/bundle-car.entity';
 import { FlightBundle } from '../entity/bundle-flight.entity';
 import { VisaBundle } from '../entity/bundle-visa.entity';
+import { BookingStatus } from '../../domain/enum/booking-status.enum';
 
 @Injectable()
 export class BundleRepository extends Repository<BundleBase> {
@@ -15,6 +16,7 @@ export class BundleRepository extends Repository<BundleBase> {
 
     async findWithFilters(
         dto: BundleFilterDto,
+        hideCancelled = false,
     ): Promise<[BundleBase[], number]> {
         const qb = this.createQueryBuilder('baseBundle')
             .leftJoinAndSelect('baseBundle.booking', 'booking')
@@ -23,6 +25,12 @@ export class BundleRepository extends Repository<BundleBase> {
 
         if (dto.status) {
             qb.andWhere('booking.status = :status', { status: dto.status });
+        }
+
+        if (hideCancelled) {
+            qb.andWhere('booking.status != :cancelledStatus', {
+                cancelledStatus: BookingStatus.CANCELLED,
+            });
         }
 
         if (dto.arrivalCountry) {

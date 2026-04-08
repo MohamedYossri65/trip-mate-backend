@@ -10,8 +10,14 @@ export class HotelService {
     private readonly hotelBookingRepository: HotelBookingRepository,
   ) { }
 
-  async findAll(dto: HotelFilterDto): Promise<PaginatedResponseDto<HotelBookingMapper>> {
-    const [entities, total] = await this.hotelBookingRepository.findWithFilters(dto);
+  async findAll(
+    dto: HotelFilterDto,
+    hideCancelled = false,
+  ): Promise<PaginatedResponseDto<HotelBookingMapper>> {
+    const [entities, total] = await this.hotelBookingRepository.findWithFilters(
+      dto,
+      hideCancelled,
+    );
 
     const mapped = entities.map(HotelBookingMapper.fromEntities);
 

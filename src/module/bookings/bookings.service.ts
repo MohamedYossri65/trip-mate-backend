@@ -41,6 +41,7 @@ import { OffersService } from '../offers/offers.service';
 import { MyBookingFilterDto } from './domain/dto/my-booking-filter.dto';
 import { ReviewService } from '../review/review.service';
 import { BookingStatusChangedEvent, NewBookingCreatedEvent } from '../notification/events';
+import { AdminBookingsFilterDto } from './domain/dto/admin-bookings-filter.dto';
 
 
 @Injectable()
@@ -253,24 +254,29 @@ export class BookingsService {
 
   // Getters for bookings for officers would go here
 
-  async findAllBundles(dto: BundleFilterDto) {
-    return this.bundleService.findAll(dto);
+  async findAllBundles(dto: BundleFilterDto, account?: Account) {
+    const hideCancelled = account?.role === RolesEnum.OFFICE;
+    return this.bundleService.findAll(dto, hideCancelled);
   }
 
-  async findAllHotels(dto: HotelFilterDto) {
-    return this.hotelService.findAll(dto);
+  async findAllHotels(dto: HotelFilterDto, account?: Account) {
+    const hideCancelled = account?.role === RolesEnum.OFFICE;
+    return this.hotelService.findAll(dto, hideCancelled);
   }
 
-  async findAllFlights(dto: FlightFilterDto) {
-    return this.flightService.findAll(dto);
+  async findAllFlights(dto: FlightFilterDto, account?: Account) {
+    const hideCancelled = account?.role === RolesEnum.OFFICE;
+    return this.flightService.findAll(dto, hideCancelled);
   }
 
-  async findAllCars(dto: CarFilterDto) {
-    return this.carService.findAll(dto);
+  async findAllCars(dto: CarFilterDto, account?: Account) {
+    const hideCancelled = account?.role === RolesEnum.OFFICE;
+    return this.carService.findAll(dto, hideCancelled);
   }
 
-  async findAllVisas(dto: VisaFilterDto) {
-    return this.visaService.findAll(dto);
+  async findAllVisas(dto: VisaFilterDto, account?: Account) {
+    const hideCancelled = account?.role === RolesEnum.OFFICE;
+    return this.visaService.findAll(dto, hideCancelled);
   }
 
   async findOneBundle(bundleId: bigint, account: Account): Promise<BundleMapper> {
@@ -357,6 +363,7 @@ export class BookingsService {
     const [bookings, total] = await this.bookingRepository.findUserBookings(accountId, dto);
     const mapped = bookings.map((booking) => {
       const bookingMapper = BookingMapper.fromEntities(booking);
+      
       if (booking.status !== BookingStatus.COMPLETED) {
         bookingMapper.status = 'PENDING';
       } else {
@@ -367,7 +374,75 @@ export class BookingsService {
     return new PaginatedResponseDto(mapped, total, dto.page, dto.limit);
   }
 
-  async cancelBooking(accountId: bigint, bookingId: bigint): Promise<BookingMapper> {
+  async findAdminBookings(
+    dto: AdminBookingsFilterDto,
+  ): Promise<
+    PaginatedResponseDto<{
+      bookingId: number;
+      bookingType: BookingType;
+      createdAt: Date;
+      bookingStatus: BookingStatus;
+      userName: string | null;
+    }>
+  > {
+    const bookingRepo = this.dataSource.getRepository(Booking);
+    const qb = bookingRepo
+      .createQueryBuilder('booking')
+      .leftJoinAndSelect('booking.user', 'user')
+      .orderBy('booking.createdAt', 'DESC')
+      .skip(dto.skip)
+      .take(dto.limit);
+
+    if (dto.status) {
+      qb.andWhere('booking.status = :status', { status: dto.status });
+    }
+
+    if (dto.fromDate) {
+      qb.andWhere('booking.createdAt >= :fromDate', {
+        fromDate: new Date(dto.fromDate),
+      });
+    }
+
+    if (dto.toDate) {
+      qb.andWhere('booking.createdAt <= :toDate', {
+        toDate: new Date(dto.toDate),
+      });
+    }
+
+    const [bookings, total] = await qb.getManyAndCount();
+
+    const data = bookings.map((booking) => ({
+      bookingId: Number(booking.id),
+      createdAt: booking.createdAt,
+      bookingStatus: booking.status,
+      bookingType: booking.type,
+      userName: booking.user?.name ?? null,
+    }));
+
+    return new PaginatedResponseDto(data, total, dto.page, dto.limit);
+  }
+
+  async deleteBooking(bookingId: bigint) {
+    const bookingRepo = this.dataSource.getRepository(Booking);
+
+    const booking = await bookingRepo.findOne({
+      where: { id: bookingId },
+      relations: ['user'],
+      withDeleted: true,
+    });
+
+    if (!booking) {
+      throw new NotFoundException('Booking not found');
+    }
+
+    if (booking.deletedAt) {
+      throw new BadRequestException('Booking is already deleted');
+    }
+
+    await bookingRepo.softDelete(bookingId.toString());
+  }
+
+  async cancelBooking(accountId: bigint, bookingId: bigint) {
     const bookingRepo = this.dataSource.getRepository(Booking);
 
     const booking = await bookingRepo.findOne({
@@ -393,17 +468,5 @@ export class BookingsService {
 
     booking.changeStatus(BookingStatus.CANCELLED);
     const saved = await bookingRepo.save(booking);
-
-    this.eventEmitter.emit(
-      'booking.status_changed',
-      new BookingStatusChangedEvent(
-        accountId,
-        Number(saved.id),
-        saved.status,
-        saved.type,
-      ),
-    );
-
-    return BookingMapper.fromEntities(saved);
   }
 }

@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { DataSource, Repository, SelectQueryBuilder } from 'typeorm';
 import { CarBooking } from '../entity/car-booking.entity';
 import { CarFilterDto } from '../dto/car-filter.dto';
+import { BookingStatus } from '../../../domain/enum/booking-status.enum';
 
 @Injectable()
 export class CarBookingRepository extends Repository<CarBooking> {
@@ -11,6 +12,7 @@ export class CarBookingRepository extends Repository<CarBooking> {
 
   async findWithFilters(
     dto: CarFilterDto,
+    hideCancelled = false,
   ): Promise<[CarBooking[], number]> {
     const qb = this.createQueryBuilder('car')
       .leftJoinAndSelect('car.booking', 'booking')
@@ -18,6 +20,11 @@ export class CarBookingRepository extends Repository<CarBooking> {
       .leftJoinAndSelect('user.account', 'account')
 
     this.applyFilters(qb, dto);
+    if (hideCancelled) {
+      qb.andWhere('booking.status != :cancelledStatus', {
+        cancelledStatus: BookingStatus.CANCELLED,
+      });
+    }
     this.applySort(qb, dto);
     this.applyPagination(qb, dto);
 

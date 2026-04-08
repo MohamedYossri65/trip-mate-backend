@@ -49,6 +49,9 @@ export class Review {
     @Column()
     rating: number;
 
+    @Column({ default: false })
+    hiden: boolean;
+
     @Column({ nullable: true })
     comment: string;
 

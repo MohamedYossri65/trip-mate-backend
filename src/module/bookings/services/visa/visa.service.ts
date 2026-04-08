@@ -10,8 +10,14 @@ export class VisaService {
     private readonly visaBookingRepository: VisaBookingRepository,
   ) {}
 
-  async findAll(dto: VisaFilterDto): Promise<PaginatedResponseDto<VisaBookingMapper>> {
-    const [entities, total] = await this.visaBookingRepository.findWithFilters(dto);
+  async findAll(
+    dto: VisaFilterDto,
+    hideCancelled = false,
+  ): Promise<PaginatedResponseDto<VisaBookingMapper>> {
+    const [entities, total] = await this.visaBookingRepository.findWithFilters(
+      dto,
+      hideCancelled,
+    );
 
     const mapped = entities.map(VisaBookingMapper.fromEntities);
 

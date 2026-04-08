@@ -3,6 +3,13 @@ import { IsDateString, IsOptional } from 'class-validator';
 
 export class OfficeReportQueryDto {
   @ApiPropertyOptional({
+    description: 'Filter by account ID (optional, for admin use)',
+    example: 123,
+  })  
+  @IsOptional()
+  accountId?: number;
+  
+  @ApiPropertyOptional({
     description: 'Start date for report range (ISO 8601)',
     example: '2026-03-01T00:00:00.000Z',
   })

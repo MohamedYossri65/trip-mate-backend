@@ -8,9 +8,10 @@ import {
   Body,
   Get,
   Delete,
+  Query,
 } from '@nestjs/common';
 import { FileFieldsInterceptor, FileInterceptor } from '@nestjs/platform-express';
-import { ApiConsumes, ApiBody, ApiOperation } from '@nestjs/swagger';
+import { ApiConsumes, ApiBody, ApiOperation, ApiQuery } from '@nestjs/swagger';
 import { OfficeService } from './office.service';
 import { CommerceDetailsDto } from './dto/commerce-details.dto';
 import { SuccessResponse } from 'src/common/interceptors/success-response.interceptor';
@@ -19,7 +20,6 @@ import { CurrentUser } from 'src/common/guards/decorators/user.decorator';
 import { Account } from '../account/entity/account.entity';
 import { RolesEnum } from 'src/common/enums/roles.enum';
 import { UploadLogoDto } from './dto/upload-logo.dto';
-import { AddEmployeeDto } from './dto/add-employee.dto';
 import { AddOfficeEmployeesDto } from './dto/add-office-employees.dto';
 import { InviteOfficeEmployeeDto } from './dto/add-office-employee-account.dto';
 import { FileUploadService } from '../fileUpload/file-upload.service';
@@ -27,6 +27,7 @@ import { Public } from 'src/common/guards/decorators/public.decorator';
 import { ChangeOfficeDataRequestDto } from './dto/chnge-office-data-request.dto';
 import { RejectOfficeChangeRequestDto } from './dto/reject-office-change-request.dto';
 import { UpsertOfficePaymentDetailsDto } from './dto/upsert-office-payment-details.dto';
+import { AdminOfficesFilterDto } from './dto/admin-offices-filter.dto';
 
 @Controller('offices')
 export class OfficeController {
@@ -57,6 +58,14 @@ export class OfficeController {
   ) {
     await this.officeService.rejectOfficeRegistration(officeAccountId, dto.reason);
     return;
+  }
+
+  @Get('admin/all')
+  @Auth(RolesEnum.ADMIN)
+  @ApiOperation({ summary: 'Get all offices with pagination and service type filter (Admin)' })
+  @SuccessResponse('Offices retrieved successfully')
+  async getAllOfficesForAdmin(@Query() query: AdminOfficesFilterDto) {
+    return this.officeService.getAllOfficesForAdmin(query);
   }
 
   @Post('commerce-details')
@@ -150,11 +159,16 @@ export class OfficeController {
   }
 
   @Get('office-main-data')
-  @Auth(RolesEnum.OFFICE)
+  @Auth(RolesEnum.OFFICE ,RolesEnum.ADMIN)
   @ApiOperation({ summary: 'Get office main data' })
+  @ApiQuery({ name: 'accountId', required: false, description: 'Office account ID (Admin can specify to get any office data, Office role will ignore this and get their own data)' })
   @SuccessResponse('Office main data retrieved successfully')
-  async getOfficeData(@CurrentUser() account: Account) {
-    const office = await this.officeService.getOfficeData(account.id);
+  async getOfficeData(
+    @CurrentUser() account: Account,
+    @Query('accountId') accountId?: string,
+  ) {
+    const officeAcountId = account.role === RolesEnum.ADMIN && accountId ? BigInt(accountId) : account.id;
+    const office = await this.officeService.getOfficeData(officeAcountId);
     return office;
   }
 

@@ -104,8 +104,14 @@ export class BundleService {
     }
 
 
-    async findAll(dto: BundleFilterDto): Promise<PaginatedResponseDto<findAllBundlesMapper>> {
-        const [bundles, total] = await this.bundleRepository.findWithFilters(dto);
+    async findAll(
+        dto: BundleFilterDto,
+        hideCancelled = false,
+    ): Promise<PaginatedResponseDto<findAllBundlesMapper>> {
+        const [bundles, total] = await this.bundleRepository.findWithFilters(
+            dto,
+            hideCancelled,
+        );
         const bundleIds = bundles.map((bundle) => bundle.bookingId);
 
         const visas = bundleIds.length

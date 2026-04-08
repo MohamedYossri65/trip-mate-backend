@@ -82,6 +82,7 @@ export class BookingRepository extends Repository<Booking> {
       .leftJoinAndSelect('booking.user', 'user')
       .leftJoinAndSelect('user.account', 'account')
       .where('user.account_id = :accountId', { accountId })
+      .where('booking.status != :cancelledStatus', { cancelledStatus: BookingStatus.CANCELLED });
     this.applyPagination(qb, dto);
     this.applyFilters(qb, dto);
     this.applySort(qb, dto);

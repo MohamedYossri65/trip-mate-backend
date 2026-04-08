@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Body } from '@nestjs/common';
+import { Controller, Post, Get, Body, Param } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { SubscriptionService } from './subscription.service';
 import { CreatePlanDto } from './dto/create-plan.dto';
@@ -13,7 +13,7 @@ import { Public } from 'src/common/guards/decorators/public.decorator';
 @ApiTags('Subscriptions')
 @Controller('subscriptions')
 export class SubscriptionController {
-  constructor(private readonly subscriptionService: SubscriptionService) {}
+  constructor(private readonly subscriptionService: SubscriptionService) { }
 
   @Post('plans')
   @Auth(RolesEnum.ADMIN)
@@ -61,5 +61,16 @@ export class SubscriptionController {
   @SuccessResponse('Subscription retrieved successfully')
   async getMySubscription(@CurrentUser() account: Account) {
     return this.subscriptionService.getActiveSubscription(account.id);
+  }
+
+  @Get('office-subscription/:accountId')
+  @Public()
+  @Auth(RolesEnum.ADMIN)
+  @ApiOperation({ summary: 'Get current office subscription' })
+  @SuccessResponse('Subscription retrieved successfully')
+  async getOfficeSubscription(
+    @Param('accountId') accountId: string
+  ) {
+    return this.subscriptionService.getActiveSubscription(BigInt(accountId));
   }
 }

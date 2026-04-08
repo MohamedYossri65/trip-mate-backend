@@ -9,6 +9,7 @@ import { Auth } from 'src/common/guards/decorators/auth.decorator';
 import { RolesEnum } from 'src/common/enums/roles.enum';
 import { WithdrawRequestsQueryDto } from './dto/withdraw-requests-query.dto';
 import { RejectWithdrawalDto } from './dto/reject-withdrawal.dto';
+import { PaginationDto } from 'src/common/dto/pagination.dto';
 
 @ApiTags('wallet')
 @ApiBearerAuth()
@@ -22,6 +23,16 @@ export class WalletController {
   @ApiOperation({ summary: 'Get wallet summary (available + pending balances and recent transactions)' })
   async getWalletSummary(@CurrentUser() account: Account) {
     return this.walletService.getWalletSummary(account.id);
+  }
+
+  @Get('transactions/:officeAccountId')
+  @Auth(RolesEnum.ADMIN)
+  @ApiOperation({ summary: 'Get paginated transactions for current office wallet' })
+  async getOfficeTransactions(
+    @Param('officeAccountId') officeAccountId: bigint,
+    @Query() pagination: PaginationDto,
+  ) {
+    return this.walletService.getOfficeTransactions(officeAccountId, pagination);
   }
 
   @Post('withdraw')

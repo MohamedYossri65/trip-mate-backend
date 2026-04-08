@@ -8,6 +8,7 @@ import {
   JoinColumn,
   CreateDateColumn,
   UpdateDateColumn,
+  DeleteDateColumn,
 } from 'typeorm';
 import { BookingType } from '../enum/booking-type.enum';
 import { BookingStatus } from '../enum/booking-status.enum';
@@ -18,24 +19,24 @@ import { Review } from 'src/module/review/entity/review.entity';
 @Entity('bookings')
 export class Booking {
   @PrimaryGeneratedColumn('identity')
-  id: bigint;
+  id!: bigint;
 
   @ManyToOne(() => UserProfile, { nullable: false , eager : true})
   @JoinColumn({ name: 'userAccountId' })
-  user: UserProfile;
+  user!: UserProfile;
 
   @Column({ type: 'enum', enum: BookingType })
-  type: BookingType;
+  type!: BookingType;
 
   @Column({
     type: 'enum',
     enum: BookingStatus,
     default: BookingStatus.DRAFT,
   })
-  status: BookingStatus;
+  status!: BookingStatus;
 
   @Column({ type: 'decimal', precision: 12, scale: 2, default: 0 })
-  paidAmount: number;
+  paidAmount!: number;
 
   @OneToOne(() => Offer, { nullable: true })
   @JoinColumn({ name: 'selected_offer_id' })
@@ -46,10 +47,13 @@ export class Booking {
   review?: Review;
 
   @CreateDateColumn()
-  createdAt: Date;
+  createdAt!: Date;
 
   @UpdateDateColumn()
-  updatedAt: Date;
+  updatedAt!: Date;
+
+  @DeleteDateColumn({ nullable: true })
+  deletedAt?: Date;
 
   //  Domain method (state protection)
   changeStatus(newStatus: BookingStatus) {
@@ -69,6 +73,7 @@ export class Booking {
       ],
       [BookingStatus.PARTIALLY_PAID]: [
         BookingStatus.CONFIRMED,
+        BookingStatus.COMPLETED,
         BookingStatus.CANCELLED,
       ],
       [BookingStatus.CONFIRMED]: [

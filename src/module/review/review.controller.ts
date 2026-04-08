@@ -48,6 +48,24 @@ export class ReviewController {
     return await this.reviewService.getOfficeReviews(BigInt(officeId), dto);
   }
 
+  @Get('office/:officeId/management')
+  @Auth(RolesEnum.OFFICE, RolesEnum.ADMIN)
+  @ApiOperation({ summary: 'Get all reviews for a specific office including hidden (Office/Admin)' })
+  @ApiParam({ name: 'officeId', description: 'Office ID' })
+  @SuccessResponse('Office reviews retrieved successfully')
+  async getOfficeReviewsForManagement(
+    @Param('officeId') officeId: string,
+    @Query() dto: ReviewFilterDto,
+    @CurrentUser() account: Account,
+  ) {
+    return await this.reviewService.getOfficeReviewsForManagement(
+      account,
+      BigInt(officeId),
+      dto,
+    );
+  }
+
+
   @Get('office/:officeId/stats')
   @Public()
   @ApiOperation({ summary: 'Get review statistics for a specific office' })
@@ -68,6 +86,18 @@ export class ReviewController {
     return await this.reviewService.getMyReviews(account.id, dto);
   }
 
+  @Post('toggle-hide/:reviewId')
+  @Auth(RolesEnum.OFFICE, RolesEnum.ADMIN)
+  @ApiOperation({ summary: 'Toggle hide status of a specific review (Office/Admin)' })
+  @ApiParam({ name: 'reviewId', description: 'Review ID' })
+  @SuccessResponse('Review hide status toggled successfully')
+  async toggleHideReview(
+    @Param('reviewId') reviewId: string,
+  ) {
+    await this.reviewService.toggleHideReview(BigInt(reviewId));
+    return;
+  }
+
   @Get(':reviewId')
   @Public()
   @ApiOperation({ summary: 'Get a specific review by ID' })
@@ -75,6 +105,22 @@ export class ReviewController {
   @SuccessResponse('Review retrieved successfully')
   async getReviewById(@Param('reviewId') reviewId: string) {
     return await this.reviewService.getReviewById(BigInt(reviewId));
+  }
+
+
+  @Get(':reviewId/management')
+  @Auth(RolesEnum.OFFICE, RolesEnum.ADMIN)
+  @ApiOperation({ summary: 'Get specific review by ID including hidden (Office/Admin)' })
+  @ApiParam({ name: 'reviewId', description: 'Review ID' })
+  @SuccessResponse('Review retrieved successfully')
+  async getReviewByIdForManagement(
+    @Param('reviewId') reviewId: string,
+    @CurrentUser() account: Account,
+  ) {
+    return await this.reviewService.getReviewByIdForManagement(
+      BigInt(reviewId),
+      account,
+    );
   }
 
 

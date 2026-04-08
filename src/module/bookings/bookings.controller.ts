@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiQuery } from '@nestjs/swagger';
 import { BookingsService } from './bookings.service';
 import { CreateHotelBookingDto } from './services/hotel/dto/create-hotel-booking.dto';
@@ -18,6 +18,7 @@ import { BundleFilterDto } from './bundle/dto/bundle-filter.dto';
 import { CreateAllBookingsDto } from './domain/dto/create-all-bookings.dto';
 import { BookingFilterDto } from './domain/dto/booking-filter.dto';
 import { MyBookingFilterDto } from './domain/dto/my-booking-filter.dto';
+import { AdminBookingsFilterDto } from './domain/dto/admin-bookings-filter.dto';
 
 @ApiTags('bookings')
 @Controller({ path: 'bookings', version: '1' })
@@ -95,8 +96,11 @@ export class BookingsController {
   @Auth()
   @ApiOperation({ summary: 'List hotel bookings with filter, search & pagination' })
   @SuccessResponse('Hotel bookings retrieved successfully')
-  async findAllHotels(@Query() dto: HotelFilterDto) {
-    return this.bookingsService.findAllHotels(dto);
+  async findAllHotels(
+    @Query() dto: HotelFilterDto,
+    @CurrentUser() account: Account,
+  ) {
+    return this.bookingsService.findAllHotels(dto, account);
   }
 
 
@@ -104,32 +108,44 @@ export class BookingsController {
   @Auth()
   @ApiOperation({ summary: 'List flight bookings with filter, search & pagination' })
   @SuccessResponse('Flight bookings retrieved successfully')
-  async findAllFlights(@Query() dto: FlightFilterDto) {
-    return this.bookingsService.findAllFlights(dto);
+  async findAllFlights(
+    @Query() dto: FlightFilterDto,
+    @CurrentUser() account: Account,
+  ) {
+    return this.bookingsService.findAllFlights(dto, account);
   }
 
   @Get('cars')
   @Auth()
   @ApiOperation({ summary: 'List car bookings with filter, search & pagination' })
   @SuccessResponse('Car bookings retrieved successfully')
-  async findAllCars(@Query() dto: CarFilterDto) {
-    return this.bookingsService.findAllCars(dto);
+  async findAllCars(
+    @Query() dto: CarFilterDto,
+    @CurrentUser() account: Account,
+  ) {
+    return this.bookingsService.findAllCars(dto, account);
   }
 
   @Get('visas')
   @Auth()
   @ApiOperation({ summary: 'List visa bookings with filter, search & pagination' })
   @SuccessResponse('Visa bookings retrieved successfully')
-  async findAllVisas(@Query() dto: VisaFilterDto) {
-    return this.bookingsService.findAllVisas(dto);
+  async findAllVisas(
+    @Query() dto: VisaFilterDto,
+    @CurrentUser() account: Account,
+  ) {
+    return this.bookingsService.findAllVisas(dto, account);
   }
 
   @Get('bundles')
   @Auth()
   @ApiOperation({ summary: 'List bundle (comprehensive trip) bookings with pagination' })
   @SuccessResponse('Bundle bookings retrieved successfully')
-  async findAllBundles(@Query() dto: BundleFilterDto) {
-    return this.bookingsService.findAllBundles(dto);
+  async findAllBundles(
+    @Query() dto: BundleFilterDto,
+    @CurrentUser() account: Account,
+  ) {
+    return this.bookingsService.findAllBundles(dto, account);
   }
 
   @Get('bundle/:id')
@@ -149,6 +165,25 @@ export class BookingsController {
     @Query() dto: MyBookingFilterDto,
   ) {
     return this.bookingsService.findUserBookings(account.id, dto);
+  }
+
+  @Get('admin/all')
+  @Auth(RolesEnum.ADMIN)
+  @ApiOperation({
+    summary: 'Get all bookings for admin with pagination and optional filters',
+  })
+  @SuccessResponse('Admin bookings retrieved successfully')
+  async findAdminBookings(@Query() dto: AdminBookingsFilterDto) {
+    return this.bookingsService.findAdminBookings(dto);
+  }
+
+  @Delete('admin/:bookingId')
+  @Auth(RolesEnum.ADMIN)
+  @ApiOperation({ summary: 'delete a booking (Admin only)' })
+  @SuccessResponse('Booking deleted successfully')
+  async deleteBooking(@Param('bookingId') bookingId: string) {
+    await this.bookingsService.deleteBooking(BigInt(bookingId));
+    return { message: 'Booking deleted successfully' };
   }
 
   @Patch(':bookingId/cancel')

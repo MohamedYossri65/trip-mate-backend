@@ -29,6 +29,7 @@ import { Account } from '../account/entity/account.entity';
 import { RolesEnum } from 'src/common/enums/roles.enum';
 import { SuccessResponse } from 'src/common/interceptors/success-response.interceptor';
 import { Public } from 'src/common/guards/decorators/public.decorator';
+import { PaginationDto } from 'src/common/dto/pagination.dto';
 
 @ApiTags('payments')
 @Controller({ path: 'payments', version: '1' })
@@ -165,8 +166,8 @@ export class PaymentController {
   @Auth()
   @ApiOperation({ summary: 'Get all payments for current user' })
   @SuccessResponse('Payments retrieved successfully')
-  async getMyPayments(@CurrentUser() account: Account) {
-    return this.paymentService.getPaymentsByAccount(account.id);
+  async getMyPayments(@Query() pagination: PaginationDto, @CurrentUser() account: Account) {
+    return this.paymentService.getPaymentsByAccountPaginated(account.id, pagination);
   }
 
   // ─── SAVED CARD ENDPOINTS ─────────────────────────────────────────

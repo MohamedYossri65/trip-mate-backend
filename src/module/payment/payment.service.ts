@@ -25,6 +25,8 @@ import { Account } from '../account/entity/account.entity';
 import { WalletService } from '../wallet/wallet.service';
 import { CouponService } from '../coupon/coupon.service';
 import { UpsertPaymentSettingDto } from './dto/upsert-payment-setting.dto';
+import { PaginationDto } from 'src/common/dto/pagination.dto';
+import { PaginatedResponseDto } from 'src/common/dto/paginated-response.dto';
 
 @Injectable()
 export class PaymentService {
@@ -504,12 +506,51 @@ export class PaymentService {
     return payment;
   }
 
-  async getPaymentsByAccount(accountId: bigint): Promise<PaymentTransaction[]> {
-    return this.paymentRepo.find({
-      where: { payerAccount: { id: accountId } },
-      relations: ['booking', 'subscriptionPlan'],
-      order: { createdAt: 'DESC' },
+
+  async getPaymentsByAccountPaginated(
+    accountId: bigint,
+    dto: PaginationDto,
+  ): Promise<
+    PaginatedResponseDto<{
+      offerId: number | null;
+      bookingId: number | null;
+      bookingType: string | null;
+      createdAt: Date;
+      totalPaidByUser: number;
+      bookingStatus: string | null;
+    }>
+  > {
+    const [payments, total] = await this.paymentRepo
+      .createQueryBuilder('payment')
+      .leftJoinAndSelect('payment.booking', 'booking')
+      .leftJoinAndSelect('booking.selectedOffer', 'selectedOffer')
+      .where('payment.payer_account_id = :accountId', { accountId })
+      .andWhere('payment.booking_id IS NOT NULL')
+      .orderBy('payment.createdAt', 'DESC')
+      .skip(dto.skip)
+      .take(dto.limit)
+      .getManyAndCount();
+
+    const data = payments.map((payment) => {
+      const offerIdFromBooking = payment.booking?.selectedOffer?.id
+        ? Number(payment.booking.selectedOffer.id)
+        : null;
+
+      const offerIdFromCart = this.extractOfferIdFromCartId(payment.cartId);
+
+      return {
+        offerId:
+          offerIdFromBooking ??
+          (offerIdFromCart !== null ? Number(offerIdFromCart) : null),
+        bookingId: payment.booking?.id ? Number(payment.booking.id) : null,
+        bookingType: payment.booking?.type ?? null,
+        createdAt: payment.createdAt,
+        totalPaidByUser: this.toNumber(payment.amount),
+        bookingStatus: payment.booking?.status ?? null,
+      };
     });
+
+    return new PaginatedResponseDto(data, total, dto.page, dto.limit);
   }
 
   // ─── SAVED CARD MANAGEMENT ────────────────────────────────────────
@@ -999,9 +1040,9 @@ export class PaymentService {
       // Update paid amount
       booking.paidAmount = Number(booking.paidAmount || 0) + split.officeAmount;
 
-      // Transition to CONFIRMED
+      // Transition to COMPLETED
       if (booking.status === BookingStatus.PARTIALLY_PAID) {
-        booking.changeStatus(BookingStatus.CONFIRMED);
+        booking.changeStatus(BookingStatus.COMPLETED);
       }
 
       await this.bookingRepo.save(booking);
@@ -1020,7 +1061,7 @@ export class PaymentService {
       }
 
       this.logger.log(
-        `Booking ${booking.id} fully paid and confirmed. Total paid to office: ${booking.paidAmount}, admin collected: ${split.adminAmount}`,
+        `Booking ${booking.id} fully paid and completed. Total paid to office: ${booking.paidAmount}, admin collected: ${split.adminAmount}`,
       );
     } catch (error: any) {
       this.logger.error(
@@ -1352,6 +1393,19 @@ export class PaymentService {
     } catch {
       return null;
     }
+  }
+
+  private toNumber(value: unknown): number {
+    if (typeof value === 'number') {
+      return value;
+    }
+
+    if (typeof value === 'string') {
+      const parsed = Number(value);
+      return Number.isFinite(parsed) ? parsed : 0;
+    }
+
+    return 0;
   }
 
   private async resolveOfferPaymentContext(

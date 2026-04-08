@@ -10,8 +10,14 @@ export class FlightService {
     private readonly flightBookingRepository: FlightBookingRepository,
   ) { }
 
-  async findAll(dto: FlightFilterDto): Promise<PaginatedResponseDto<FlightBookingMapper>> {
-    const [entities, total] = await this.flightBookingRepository.findWithFilters(dto);
+  async findAll(
+    dto: FlightFilterDto,
+    hideCancelled = false,
+  ): Promise<PaginatedResponseDto<FlightBookingMapper>> {
+    const [entities, total] = await this.flightBookingRepository.findWithFilters(
+      dto,
+      hideCancelled,
+    );
 
     const mapped = entities.map(FlightBookingMapper.fromEntities);
 

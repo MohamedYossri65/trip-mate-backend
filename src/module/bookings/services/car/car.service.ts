@@ -10,8 +10,14 @@ export class CarService {
     private readonly carBookingRepository: CarBookingRepository,
   ) {}
 
-  async findAll(dto: CarFilterDto): Promise<PaginatedResponseDto<CarBookingMapper>> {
-    const [entities, total] = await this.carBookingRepository.findWithFilters(dto);
+  async findAll(
+    dto: CarFilterDto,
+    hideCancelled = false,
+  ): Promise<PaginatedResponseDto<CarBookingMapper>> {
+    const [entities, total] = await this.carBookingRepository.findWithFilters(
+      dto,
+      hideCancelled,
+    );
 
     const mapped = entities.map(CarBookingMapper.fromEntities);
 

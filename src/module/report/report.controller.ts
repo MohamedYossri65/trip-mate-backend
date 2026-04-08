@@ -15,7 +15,7 @@ export class ReportController {
   constructor(private readonly reportService: ReportService) {}
 
   @Get('office/performance')
-  @Auth(RolesEnum.OFFICE)
+  @Auth()
   @ApiOperation({
     summary: 'Get office performance KPIs and chart data (accepted, rejected, interactions, and trends)',
   })
@@ -24,8 +24,9 @@ export class ReportController {
     @CurrentUser() account: Account,
     @Query() query: OfficeReportQueryDto,
   ) {
+    const accountId = query.accountId ? BigInt(query.accountId) : account.id;
     return this.reportService.getOfficePerformance(
-      account.id,
+      accountId,
       query.fromDate,
       query.toDate,
     );
@@ -46,5 +47,25 @@ export class ReportController {
       query.month,
       query.year,
     );
+  }
+
+  @Get('admin/home-summary')
+  @Auth(RolesEnum.ADMIN)
+  @ApiOperation({
+    summary: 'Get admin home summary KPIs for the dashboard cards',
+  })
+  @SuccessResponse('Admin home summary report retrieved successfully')
+  async getAdminHomeSummary() {
+    return this.reportService.adminHomeSummaryReport();
+  }
+
+  @Get('admin/office-performance')
+  @Auth(RolesEnum.ADMIN)
+  @ApiOperation({
+    summary: 'Get admin office performance KPIs for the dashboard cards',
+  })
+  @SuccessResponse('Admin office performance report retrieved successfully')
+  async getAdminOfficePerformance() {
+    return this.reportService.topOffices();
   }
 }

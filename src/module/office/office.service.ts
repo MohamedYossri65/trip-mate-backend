@@ -28,6 +28,10 @@ import { OfficeChangeRequestData } from './entity/office.entity';
 import { OfficeChangeRequestEvent } from '../notification/events';
 import { AccountStatus } from 'src/common/enums/account-status.enum';
 import { UpsertOfficePaymentDetailsDto } from './dto/upsert-office-payment-details.dto';
+import { AdminOfficesFilterDto } from './dto/admin-offices-filter.dto';
+import { PaginatedResponseDto } from 'src/common/dto/paginated-response.dto';
+import { BookingType } from '../bookings/domain/enum/booking-type.enum';
+import { Booking } from '../bookings/domain/entity/booking.entity';
 
 @Injectable()
 export class OfficeService {
@@ -565,10 +569,71 @@ export class OfficeService {
       commerceNumber: office?.commerceNumber,
       commerceCertificate: office?.taxCertificate,
       taxCertificate: office?.taxCertificate,
-      bankName: office?.bankName,
-      bankAccountNumber: office?.bankAccountNumber,
-      ibanNumber: office?.ibanNumber,
-      ibanAttachment: office?.ibanAttachment,
+      officeStatus: office?.account.status,
     };
+  }
+
+  async getAllOfficesForAdmin(dto: AdminOfficesFilterDto): Promise<
+    PaginatedResponseDto<{
+      officeName: string;
+      officeLogo: string | null;
+      location: string | null;
+      rate: number;
+      officeServices: BookingType[];
+      allServicesTypesOnApplication: BookingType[];
+    }>
+  > {
+    const officeQb = this.officeProfileRepository
+      .createQueryBuilder('office')
+      .leftJoinAndSelect('office.account', 'account')
+      .orderBy('office.accountId', 'DESC')
+      .skip(dto.skip)
+      .take(dto.limit)
+      .distinct(true);
+
+    if (dto.serviceType) {
+      officeQb
+        .innerJoin(Offer, 'offer', 'offer.office_id = office.account_id')
+        .innerJoin(
+          Booking,
+          'booking',
+          'booking.id = offer.booking_id AND booking.type = :serviceType',
+          { serviceType: dto.serviceType },
+        );
+    }
+
+    const [offices, total] = await officeQb.getManyAndCount();
+    const allServicesTypesOnApplication = Object.values(BookingType);
+
+    const data = await Promise.all(
+      offices.map(async (office) => {
+        const [rate, officeServicesRaw] = await Promise.all([
+          this.getOfficeReviewStatus(office.accountId),
+          this.dataSource
+            .getRepository(Offer)
+            .createQueryBuilder('offer')
+            .leftJoin('offer.booking', 'booking')
+            .select('DISTINCT booking.type', 'serviceType')
+            .where('offer.office_id = :officeId', { officeId: office.accountId })
+            .andWhere('booking.deletedAt IS NULL')
+            .getRawMany(),
+        ]);
+
+        const officeServices = officeServicesRaw
+          .map((row) => row.serviceType as BookingType)
+          .filter((serviceType) => !!serviceType);
+
+        return {
+          officeName: office.officeName,
+          officeLogo: office.logoUrl || null,
+          location: office.location || null,
+          rate,
+          officeServices,
+          allServicesTypesOnApplication,
+        };
+      }),
+    );
+
+    return new PaginatedResponseDto(data, total, dto.page, dto.limit);
   }
 }
