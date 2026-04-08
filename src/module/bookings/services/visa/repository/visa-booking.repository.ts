@@ -15,9 +15,9 @@ export class VisaBookingRepository extends Repository<VisaBooking> {
     hideCancelled = false,
   ): Promise<[VisaBooking[], number]> {
     const qb = this.createQueryBuilder('visa')
-      .leftJoinAndSelect('visa.booking', 'booking')
-      .leftJoinAndSelect('booking.user', 'user')
-      .leftJoinAndSelect('user.account', 'account')
+      .innerJoinAndSelect('visa.booking', 'booking')
+      .innerJoinAndSelect('booking.user', 'user')
+      .innerJoinAndSelect('user.account', 'account');
 
     this.applyFilters(qb, dto);
     if (hideCancelled) {

@@ -63,7 +63,7 @@ export class PaymentController {
     @Query('couponCode') couponCode: string | undefined,
     @CurrentUser() account: Account,
   ) {
-    return this.paymentService.getOfferPaymentSummary(
+    return this.paymentService.getOfferPartialPaymentSummary(
       account.id,
       BigInt(offerId),
       couponCode,

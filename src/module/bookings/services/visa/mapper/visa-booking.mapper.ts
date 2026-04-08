@@ -35,7 +35,7 @@ export class VisaBookingMapper {
         return {
             bookingId: visaBooking.bookingId,
             booking: {
-                id: visaBooking.booking.id,
+                id: visaBooking.bookingId,
                 user: {
                     accountId: visaBooking.booking.user.accountId,
                     name: visaBooking.booking.user.name,

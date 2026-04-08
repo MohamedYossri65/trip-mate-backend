@@ -37,6 +37,9 @@ export class PaymentTransaction {
   @Column({ type: 'decimal', precision: 12, scale: 2 })
   amount: number;
 
+  @Column({ type: 'decimal', precision: 12, scale: 2 , nullable: true})
+  advanceAmount: number;
+
   @Column({ default: 'SAR' })
   currency: string;
 

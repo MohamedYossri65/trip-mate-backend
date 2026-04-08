@@ -16,9 +16,9 @@ export class FlightBookingRepository extends Repository<FlightBooking> {
     hideCancelled = false,
   ): Promise<[FlightBooking[], number]> {
     const qb = this.createQueryBuilder('hotel')
-      .leftJoinAndSelect('hotel.booking', 'booking')
-      .leftJoinAndSelect('booking.user', 'user')
-      .leftJoinAndSelect('user.account', 'account')
+      .innerJoinAndSelect('hotel.booking', 'booking')
+      .innerJoinAndSelect('booking.user', 'user')
+      .innerJoinAndSelect('user.account', 'account')
 
     this.applyFilters(qb, dto);
     if (hideCancelled) {

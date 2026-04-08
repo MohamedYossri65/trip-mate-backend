@@ -108,7 +108,7 @@ export class PaymentService {
     return this.paymentSettingRepo.save(defaultSettings);
   }
 
-  async getOfferPaymentSummary(
+  async getOfferPartialPaymentSummary(
     accountId: bigint,
     offerId: bigint,
     couponCode?: string,
@@ -141,11 +141,11 @@ export class PaymentService {
     const taxRate = Number(settings.taxValue || 0);
     const advancePercentage = Number(settings.advancePercentage || 0);
 
+    const advanceAmount = Math.round(((offerPrice * advancePercentage) / 100) * 100) / 100;
     const appCommissionAmount = Math.round(((offerPrice * appCommissionRate) / 100) * 100) / 100;
     const taxAmount = Math.round(((offerPrice * taxRate) / 100) * 100) / 100;
-    const advanceAmount = Math.round(((offerPrice * advancePercentage) / 100) * 100) / 100;
 
-    const amountBeforeCoupon = Math.round((offerPrice + advanceAmount + appCommissionAmount + taxAmount) * 100) / 100;
+    const amountBeforeCoupon = Math.round((advanceAmount + appCommissionAmount + taxAmount) * 100) / 100;
 
     let discountAmount = 0;
     let amountAfterCoupon = amountBeforeCoupon;
@@ -180,6 +180,7 @@ export class PaymentService {
       partialPaymentEnabled: settings.enableNewContractAdvancePayment,
     };
   }
+  
 
   // ─── SUBSCRIPTION PAYMENT ──────────────────────────────────────────
 
@@ -250,7 +251,7 @@ export class PaymentService {
       throw new BadRequestException('Offer already accepted, cannot initiate partial payment');
     }
 
-    const offerSummery = await this.getOfferPaymentSummary(accountId, BigInt(offerId), couponCode);
+    const offerPartialSummary = await this.getOfferPartialPaymentSummary(accountId, BigInt(offerId), couponCode);
 
     const cartId = `OF-PARTIAL-${offerId}-${Date.now()}`;
 
@@ -258,18 +259,19 @@ export class PaymentService {
       cartId,
       type: PaymentType.BOOKING_PARTIAL,
       status: PaymentStatus.PENDING,
-      amount: offerSummery.amountAfterCoupon,
+      amount: offerPartialSummary.amountAfterCoupon,
+      advanceAmount: offerPartialSummary.advanceAmount,
       currency: this.currency,
       payerAccount: account,
       booking,
-      ...(couponCode ? { couponCode, discountAmount: offerSummery.discountAmount } : {}),
+      ...(couponCode ? { couponCode, discountAmount: offerPartialSummary.discountAmount } : {}),
     });
     const savedPayment = await this.paymentRepo.save(payment);
 
     const tapResponse = await this.createCharge({
       cartId,
       description: `Booking #${booking.id} - Partial Payment (Offer #${offerId})`,
-      amount: offerSummery.amountAfterCoupon,
+      amount: offerPartialSummary.amountAfterCoupon,
       customerName: account.email || account.phone || 'Customer',
       customerEmail: account.email || 'no-email@tripmate.com',
       customerPhone: account.phone || '0500000000',
@@ -280,14 +282,14 @@ export class PaymentService {
     await this.paymentRepo.save(savedPayment);
 
     this.logger.log(
-      `Offer partial payment initiated: cartId=${cartId}, amount=${offerSummery.amountAfterCoupon}, discount=${offerSummery.discountAmount || 0}, chargeId=${tapResponse.id}`,
+      `Offer partial payment initiated: cartId=${cartId}, amount=${offerPartialSummary.amountAfterCoupon}, discount=${offerPartialSummary.discountAmount || 0}, chargeId=${tapResponse.id}`,
     );
 
     return {
       redirectUrl: tapResponse.transaction.url,
       transactionId: savedPayment.id,
       chargeId: tapResponse.id,
-      discountAmount: offerSummery.discountAmount,
+      discountAmount: offerPartialSummary.discountAmount,
     };
   }
 
@@ -303,7 +305,15 @@ export class PaymentService {
     if(booking.status === BookingStatus.COMPLETED) {
       throw new BadRequestException('Booking already completed, cannot initiate full payment');
     }
-    const offerSummery = await this.getOfferPaymentSummary(accountId, BigInt(offerId), couponCode);
+    const partialPayment = await this.paymentRepo.findOne({
+      where: { booking: { id: booking.id }, type: PaymentType.BOOKING_PARTIAL },
+    });
+    if (!partialPayment) {
+      throw new BadRequestException('Partial payment not found, cannot initiate full payment');
+    }
+
+    const amount = partialPayment.advanceAmount ? offer.price - Number(partialPayment.advanceAmount) : Number(partialPayment.amount);
+
 
     const cartId = `OF-FULL-${offerId}-${Date.now()}`;
 
@@ -311,18 +321,17 @@ export class PaymentService {
       cartId,
       type: PaymentType.BOOKING_FULL,
       status: PaymentStatus.PENDING,
-      amount: offerSummery.amountAfterCoupon,
+      amount,
       currency: this.currency,
       payerAccount: account,
       booking,
-      ...(couponCode ? { couponCode, discountAmount: offerSummery.discountAmount } : {}),
     });
     const savedPayment = await this.paymentRepo.save(payment);
 
     const tapResponse = await this.createCharge({
       cartId,
       description: `Booking #${booking.id} - Full Payment (Offer #${offerId}, Remaining)`,
-      amount: offerSummery.amountAfterCoupon,
+      amount,
       customerName: account.email || account.phone || 'Customer',
       customerEmail: account.email || 'no-email@tripmate.com',
       customerPhone: account.phone || '0500000000',
@@ -333,14 +342,14 @@ export class PaymentService {
     await this.paymentRepo.save(savedPayment);
 
     this.logger.log(
-      `Offer full payment initiated: cartId=${cartId}, amount=${offerSummery.amountAfterCoupon}, discount=${offerSummery.discountAmount || 0}, chargeId=${tapResponse.id}`,
+      `Offer full payment initiated: cartId=${cartId}, amount=${amount}, discount=${partialPayment.discountAmount || 0}, chargeId=${tapResponse.id}`,
     );
 
     return {
       redirectUrl: tapResponse.transaction.url,
       transactionId: savedPayment.id,
       chargeId: tapResponse.id,
-      discountAmount: offerSummery.discountAmount,
+      discountAmount: partialPayment.discountAmount,
     };
   }
 
@@ -526,6 +535,22 @@ export class PaymentService {
       .leftJoinAndSelect('booking.selectedOffer', 'selectedOffer')
       .where('payment.payer_account_id = :accountId', { accountId })
       .andWhere('payment.booking_id IS NOT NULL')
+      .andWhere('payment.status =:status' , {status: PaymentStatus.SUCCESS})
+      .andWhere(
+        `(payment.type != :partialType OR NOT EXISTS (
+          SELECT 1
+          FROM payment_transactions full_payment
+          WHERE full_payment.booking_id = payment.booking_id
+            AND full_payment.payer_account_id = payment.payer_account_id
+            AND full_payment.type = :fullType
+            AND full_payment.status = :status 
+        ))`,
+        {
+          partialType: PaymentType.BOOKING_PARTIAL,
+          fullType: PaymentType.BOOKING_FULL,
+          status : PaymentStatus.SUCCESS
+        },
+      )
       .orderBy('payment.createdAt', 'DESC')
       .skip(dto.skip)
       .take(dto.limit)

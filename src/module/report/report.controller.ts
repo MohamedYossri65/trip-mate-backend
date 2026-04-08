@@ -8,6 +8,7 @@ import { Account } from '../account/entity/account.entity';
 import { ReportService } from './report.service';
 import { OfficeReportQueryDto } from './dto/office-report-query.dto';
 import { OfficeDailyProfitQueryDto } from './dto/office-daily-profit-query.dto';
+import { AcceptedUsersQueryDto } from './dto/accepted-users-query.dto';
 
 @ApiTags('reports')
 @Controller({ path: 'reports', version: '1' })
