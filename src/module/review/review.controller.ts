@@ -23,7 +23,7 @@ import { Public } from 'src/common/guards/decorators/public.decorator';
 @ApiTags('reviews')
 @Controller({ path: 'reviews', version: '1' })
 export class ReviewController {
-  constructor(private readonly reviewService: ReviewService) {}
+  constructor(private readonly reviewService: ReviewService) { }
 
   @Post()
   @Auth(RolesEnum.USER)
@@ -35,6 +35,31 @@ export class ReviewController {
   ) {
     return await this.reviewService.createReview(account.id, dto);
   }
+
+  @Patch(':reviewId')
+  @Auth(RolesEnum.USER, RolesEnum.ADMIN)
+  @ApiOperation({ summary: 'Edit a review (owner or admin)' })
+  @ApiParam({ name: 'reviewId', description: 'Review ID' })
+  @SuccessResponse('Review updated successfully')
+  async updateReview(
+    @Param('reviewId') reviewId: string,
+    @Body() dto: UpdateReviewDto,
+    @CurrentUser() account: Account,
+  ) {
+    return await this.reviewService.updateReview(BigInt(reviewId), account, dto);
+  }
+
+  @Get()
+  @Auth(RolesEnum.ADMIN)
+  @ApiOperation({ summary: 'Get all reviews for a specific office' })
+  @SuccessResponse('Office reviews retrieved successfully')
+  async getAllReviews(
+    @Query() dto: ReviewFilterDto,
+  ) {
+    return await this.reviewService.getAllReviews(dto);
+  }
+
+
 
   @Get('office/:officeId')
   @Public()
@@ -125,7 +150,7 @@ export class ReviewController {
 
 
   @Delete(':reviewId')
-  @Auth(RolesEnum.USER)
+  @Auth(RolesEnum.USER ,RolesEnum.ADMIN)
   @ApiOperation({ summary: 'Delete your own review' })
   @ApiParam({ name: 'reviewId', description: 'Review ID' })
   @SuccessResponse('Review deleted successfully')

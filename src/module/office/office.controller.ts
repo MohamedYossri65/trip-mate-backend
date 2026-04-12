@@ -1,6 +1,7 @@
 import {
   Controller,
   Post,
+  Patch,
   Param,
   UploadedFile,
   UploadedFiles,
@@ -28,6 +29,9 @@ import { ChangeOfficeDataRequestDto } from './dto/chnge-office-data-request.dto'
 import { RejectOfficeChangeRequestDto } from './dto/reject-office-change-request.dto';
 import { UpsertOfficePaymentDetailsDto } from './dto/upsert-office-payment-details.dto';
 import { AdminOfficesFilterDto } from './dto/admin-offices-filter.dto';
+import { UpdateOfficeByAdminDto } from './dto/update-office-by-admin.dto';
+import { CreateSupportMessageDto } from './dto/create-support-message.dto';
+import { SupportMessageFilterDto } from './dto/support-message-filter.dto';
 
 @Controller('offices')
 export class OfficeController {
@@ -66,6 +70,20 @@ export class OfficeController {
   @SuccessResponse('Offices retrieved successfully')
   async getAllOfficesForAdmin(@Query() query: AdminOfficesFilterDto) {
     return this.officeService.getAllOfficesForAdmin(query);
+  }
+
+  @Patch('admin/:officeAccountId')
+  @Auth(RolesEnum.ADMIN)
+  @ApiOperation({
+    summary:
+      'Update office data by admin (logo, office name, location, commerce number, account status)',
+  })
+  @SuccessResponse('Office data updated successfully')
+  async updateOfficeByAdmin(
+    @Param('officeAccountId') officeAccountId: bigint,
+    @Body() dto: UpdateOfficeByAdminDto,
+  ) {
+    return this.officeService.updateOfficeByAdmin(officeAccountId, dto);
   }
 
   @Post('commerce-details')
@@ -128,7 +146,7 @@ export class OfficeController {
   }
 
   @Delete('employees/accounts/:employeeAccountId')
-  @Auth(RolesEnum.OFFICE)
+  @Auth(RolesEnum.OFFICE ,RolesEnum.ADMIN)
   @SuccessResponse('Employee account removed successfully')
   async deleteEmployeeAccount(
     @Param('employeeAccountId') employeeAccountId: bigint,
@@ -140,7 +158,7 @@ export class OfficeController {
 
   @Post('upload-logo')
   @Public()
-  @Auth(RolesEnum.OFFICE)
+  @Auth(RolesEnum.OFFICE ,RolesEnum.ADMIN)
   @ApiBody({ type: UploadLogoDto })
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(FileInterceptor('logo'))
@@ -302,5 +320,33 @@ export class OfficeController {
       officeAccountId,
       dto.reason,
     );
+  }
+
+  @Post('support-messages')
+  @Auth(RolesEnum.OFFICE)
+  @ApiOperation({ summary: 'Create a support message from office to super admin' })
+  @SuccessResponse('Support message created successfully')
+  async createSupportMessage(
+    @Body() dto: CreateSupportMessageDto,
+    @CurrentUser() account: Account,
+  ) {
+    return await this.officeService.createSupportMessage(account.id, dto);
+  }
+
+  @Get('admin/support-messages')
+  @Auth(RolesEnum.ADMIN)
+  @ApiOperation({ summary: 'Get all support messages with pagination (Admin)' })
+  @SuccessResponse('Support messages retrieved successfully')
+  async getAllSupportMessages(@Query() query: SupportMessageFilterDto) {
+    return await this.officeService.getAllSupportMessages(query);
+  }
+
+  @Delete('admin/support-messages/:id')
+  @Auth(RolesEnum.ADMIN)
+  @ApiOperation({ summary: 'Delete a support message (Admin)' })
+  @SuccessResponse('Support message deleted successfully')
+  async deleteSupportMessage(@Param('id') id: bigint) {
+    await this.officeService.deleteSupportMessage(id);
+    return;
   }
 }

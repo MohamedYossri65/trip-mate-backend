@@ -22,7 +22,6 @@ import {
   PaySubscriptionWithSavedCardDto,
 } from './dto/payment-with-saved-card.dto';
 import { UpsertPaymentSettingDto } from './dto/upsert-payment-setting.dto';
-import { ApplyCouponDto } from './dto/apply-coupon.dto';
 import { Auth } from 'src/common/guards/decorators/auth.decorator';
 import { CurrentUser } from 'src/common/guards/decorators/user.decorator';
 import { Account } from '../account/entity/account.entity';
@@ -170,96 +169,20 @@ export class PaymentController {
     return this.paymentService.getPaymentsByAccountPaginated(account.id, pagination);
   }
 
-  // ─── SAVED CARD ENDPOINTS ─────────────────────────────────────────
-
-  @Post('cards/verify')
+  @Get('payment-history/:accountId')
   @Auth()
-  @ApiOperation({ summary: 'Verify and save a new card' })
-  @SuccessResponse('Card verification initiated')
-  async verifyAndSaveCard(
-    @Body() dto: VerifyAndSaveCardDto,
-    @CurrentUser() account: Account,
+  @ApiQuery({ name: 'paymentId', required: false, type: 'string' })
+  @ApiOperation({ summary: 'Get payment history for a specific account' })
+  @SuccessResponse('Payment history retrieved successfully')
+  async getPaymentHistory(
+    @Param('accountId') accountId: string,
+    @Query('paymentId') paymentId: string | undefined,
+    @Query() pagination: PaginationDto
   ) {
-    return this.paymentService.verifyAndSaveCard(
-      account.id,
-      dto.setAsDefault,
-    );
-  }
-
-  @Get('cards')
-  @Auth()
-  @ApiOperation({ summary: 'Get all saved cards' })
-  @SuccessResponse('Saved cards retrieved successfully')
-  async getSavedCards(@CurrentUser() account: Account) {
-    return this.paymentService.getSavedCards(account.id);
-  }
-
-  @Get('cards/:cardId')
-  @Auth()
-  @ApiOperation({ summary: 'Get a specific saved card' })
-  @SuccessResponse('Saved card retrieved successfully')
-  async getSavedCard(
-    @Param('cardId') cardId: number,
-    @CurrentUser() account: Account,
-  ) {
-    return this.paymentService.getSavedCard(account.id, cardId);
-  }
-
-  @Patch('cards/:cardId')
-  @Auth()
-  @ApiOperation({ summary: 'Update saved card (set default, activate/deactivate)' })
-  @SuccessResponse('Saved card updated successfully')
-  async updateSavedCard(
-    @Param('cardId') cardId: number,
-    @Body() dto: UpdateSavedCardDto,
-    @CurrentUser() account: Account,
-  ) {
-    return this.paymentService.updateSavedCard(account.id, cardId, dto);
-  }
-
-  @Delete('cards/:cardId')
-  @Auth()
-  @ApiOperation({ summary: 'Delete a saved card' })
-  @SuccessResponse('Saved card deleted successfully')
-  async deleteSavedCard(
-    @Param('cardId') cardId: number,
-    @CurrentUser() account: Account,
-  ) {
-    await this.paymentService.deleteSavedCard(account.id, cardId);
-    return { message: 'Card deleted successfully' };
-  }
-
-  // ─── PAY WITH SAVED CARD ──────────────────────────────────────────
-
-  @Post('offer/saved-card')
-  @Auth(RolesEnum.USER)
-  @ApiOperation({ summary: 'Pay for offer using saved card' })
-  @SuccessResponse('Payment processed successfully')
-  async payOfferWithSavedCard(
-    @Body() dto: PayWithSavedOfferCardDto,
-    @CurrentUser() account: Account,
-  ) {
-    return this.paymentService.payWithSavedOfferCard({
-      accountId: account.id,
-      cardId: dto.cardId,
-      offerId: dto.offerId,
-      paymentType: dto.paymentType,
-      couponCode: dto.couponCode,
-    });
-  }
-
-  @Post('subscription/saved-card')
-  @Auth(RolesEnum.OFFICE)
-  @ApiOperation({ summary: 'Pay for subscription using saved card' })
-  @SuccessResponse('Payment processed successfully')
-  async paySubscriptionWithSavedCard(
-    @Body() dto: PaySubscriptionWithSavedCardDto,
-    @CurrentUser() account: Account,
-  ) {
-    return this.paymentService.paySubscriptionWithSavedCard(
-      account.id,
-      dto.cardId,
-      dto.planId,
+    return this.paymentService.getUserPaymentHistory(
+      BigInt(accountId),
+      paymentId ? BigInt(paymentId) : undefined,
+      pagination
     );
   }
 }

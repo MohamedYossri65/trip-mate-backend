@@ -403,11 +403,6 @@ export class PaymentService {
 
     this.logger.log(`Payment successful: chargeId=${chargeId}, type=${payment.type}`);
 
-    // Save card if card data is present and save_card was true
-    if (verificationResult.card?.id && verificationResult.save_card) {
-      await this.saveCardFromWebhook(chargeId, verificationResult);
-    }
-
     // Handle side effects based on payment type (skip for card verification)
     if (!isCardVerification) {
       switch (payment.type) {
@@ -578,327 +573,6 @@ export class PaymentService {
     return new PaginatedResponseDto(data, total, dto.page, dto.limit);
   }
 
-  // ─── SAVED CARD MANAGEMENT ────────────────────────────────────────
-
-  async verifyAndSaveCard(
-    accountId: bigint,
-    setAsDefault = false,
-  ): Promise<{ redirectUrl: string; chargeId: string }> {
-    const account = await this.accountRepo.findOne({
-      where: { id: accountId },
-    });
-    if (!account) throw new NotFoundException('Account not found');
-
-    const cartId = `VERIFY-CARD-${accountId}-${Date.now()}`;
-
-    // Create verification charge (0.01 SAR or minimum amount)
-    const tapResponse = await this.createVerifyCharge({
-      cartId,
-      customerName: account.email || account.phone || 'Customer',
-      customerEmail: account.email || 'no-email@tripmate.com',
-      customerPhone: account.phone || '0500000000',
-    });
-
-    // Store temporary reference to link webhook callback
-    const payment = this.paymentRepo.create({
-      cartId,
-      type: PaymentType.SUBSCRIPTION, // Use existing enum or create CARD_VERIFICATION
-      status: PaymentStatus.PENDING,
-      amount: 0.01,
-      currency: this.currency,
-      payerAccount: account,
-      gatewayResponse: tapResponse,
-      transactionReference: tapResponse.id,
-    });
-    await this.paymentRepo.save(payment);
-
-    this.logger.log(
-      `Card verification initiated: accountId=${accountId}, chargeId=${tapResponse.id}`,
-    );
-
-    return {
-      redirectUrl: tapResponse.transaction.url,
-      chargeId: tapResponse.id,
-    };
-  }
-
-  async saveCardFromWebhook(
-    chargeId: string,
-    payload: Record<string, any>,
-  ): Promise<SavedCard | null> {
-    const cardData = payload.card;
-    if (!cardData?.id) {
-      this.logger.warn('No card data in webhook payload');
-      return null;
-    }
-
-    // Find the payment transaction to get account
-    const payment = await this.paymentRepo.findOne({
-      where: { transactionReference: chargeId },
-      relations: ['payerAccount'],
-    });
-
-    if (!payment?.payerAccount) {
-      this.logger.error('Payment or account not found for card save');
-      return null;
-    }
-
-    // Check if card already exists
-    const existingCard = await this.savedCardRepo.findOne({
-      where: { tapCardId: cardData.id },
-    });
-
-    if (existingCard) {
-      this.logger.log(`Card already saved: ${cardData.id}`);
-      return existingCard;
-    }
-
-    // Create new saved card
-    const savedCard = this.savedCardRepo.create({
-      account: payment.payerAccount,
-      tapCardId: cardData.id,
-      tapCustomerId: payload.customer?.id,
-      cardBrand: cardData.brand || 'UNKNOWN',
-      lastFour: cardData.last_four || '0000',
-      firstSix: cardData.first_six,
-      expiryMonth: cardData.exp_month?.toString(),
-      expiryYear: cardData.exp_year?.toString(),
-      cardholderName: cardData.name,
-      isDefault: false,
-      isActive: true,
-    });
-
-    const saved = await this.savedCardRepo.save(savedCard);
-    this.logger.log(
-      `Card saved: id=${saved.id}, tapCardId=${cardData.id}, accountId=${payment.payerAccount.id}`,
-    );
-
-    return saved;
-  }
-
-  async getSavedCards(accountId: bigint): Promise<SavedCard[]> {
-    return this.savedCardRepo.find({
-      where: { account: { id: accountId }, isActive: true },
-      order: { isDefault: 'DESC', createdAt: 'DESC' },
-    });
-  }
-
-  async getSavedCard(accountId: bigint, cardId: number): Promise<SavedCard> {
-    const card = await this.savedCardRepo.findOne({
-      where: { id: BigInt(cardId), account: { id: accountId } },
-    });
-
-    if (!card) {
-      throw new NotFoundException('Saved card not found');
-    }
-
-    return card;
-  }
-
-  async updateSavedCard(
-    accountId: bigint,
-    cardId: number,
-    updates: { isDefault?: boolean; isActive?: boolean },
-  ): Promise<SavedCard> {
-    const card = await this.getSavedCard(accountId, cardId);
-
-    // If setting as default, unset other cards
-    if (updates.isDefault === true) {
-      await this.savedCardRepo.update(
-        { account: { id: accountId } },
-        { isDefault: false },
-      );
-    }
-
-    Object.assign(card, updates);
-    const updated = await this.savedCardRepo.save(card);
-
-    this.logger.log(
-      `Card updated: id=${cardId}, accountId=${accountId}, updates=${JSON.stringify(updates)}`,
-    );
-
-    return updated;
-  }
-
-  async deleteSavedCard(accountId: bigint, cardId: number): Promise<void> {
-    const card = await this.getSavedCard(accountId, cardId);
-
-    await this.savedCardRepo.remove(card);
-
-    this.logger.log(`Card deleted: id=${cardId}, accountId=${accountId}`);
-  }
-
-  // ─── PAYMENT WITH SAVED CARD ──────────────────────────────────────
-
-  async payWithSavedOfferCard(params: {
-    accountId: bigint;
-    cardId: number;
-    offerId: number;
-    paymentType: 'PARTIAL' | 'FULL';
-    couponCode?: string;
-  }): Promise<{ transactionId: bigint; chargeId: string }> {
-    const card = await this.getSavedCard(params.accountId, params.cardId);
-
-    if (!card.isActive) {
-      throw new BadRequestException('This card is inactive');
-    }
-
-    const { offer, booking, account } = await this.resolveOfferPaymentContext(params.accountId, params.offerId);
-
-    // Calculate amount based on payment type
-    let chargeAmount: number;
-    let description: string;
-    let type: PaymentType;
-
-    if (params.paymentType === 'PARTIAL') {
-      if (booking.status !== BookingStatus.OFFER_ACCEPTED) {
-        throw new BadRequestException(
-          'Booking must have an accepted offer before payment',
-        );
-      }
-
-      const settings = await this.getPaymentSettings();
-      if (!settings.enableNewContractAdvancePayment) {
-        throw new BadRequestException('Partial payment is currently disabled');
-      }
-
-      const offerPrice = Number(offer.price);
-      const advancePercentage = Number(settings.advancePercentage || 0);
-
-      if (advancePercentage <= 0 || advancePercentage > 100) {
-        throw new BadRequestException('Advance payment percentage must be greater than 0 and less than or equal to 100');
-      }
-
-      chargeAmount =
-        Math.round(((offerPrice * advancePercentage) / 100) * 100) / 100;
-
-      if (chargeAmount <= 0) {
-        throw new BadRequestException('Advance payment percentage results in invalid partial amount');
-      }
-
-      description = `Booking #${booking.id} - Partial Payment (Offer #${params.offerId})`;
-      type = PaymentType.BOOKING_PARTIAL;
-    } else {
-      if (booking.status !== BookingStatus.PARTIALLY_PAID) {
-        throw new BadRequestException('Booking must be partially paid first');
-      }
-      const offerPrice = Number(offer.price);
-      const paidAmount = Number(booking.paidAmount || 0);
-      chargeAmount = Math.round((offerPrice - paidAmount) * 100) / 100;
-      description = `Booking #${booking.id} - Full Payment (Offer #${params.offerId}, Remaining)`;
-      type = PaymentType.BOOKING_FULL;
-    }
-
-    // Apply coupon if provided
-    let discountAmount: number | undefined;
-    if (params.couponCode) {
-      const couponResult = await this.couponService.validateAndApply(
-        params.couponCode,
-        params.accountId,
-        BigInt(booking.id),
-        chargeAmount,
-      );
-      discountAmount = couponResult.discountAmount;
-      chargeAmount = couponResult.finalAmount;
-    }
-
-    if (chargeAmount <= 0) {
-      throw new BadRequestException('No remaining amount to pay');
-    }
-
-    const cartId = `OF-SAVED-${params.offerId}-${Date.now()}`;
-
-    // Create payment record
-    const payment = this.paymentRepo.create({
-      cartId,
-      type,
-      status: PaymentStatus.PENDING,
-      amount: chargeAmount,
-      currency: this.currency,
-      payerAccount: account,
-      booking,
-      ...(params.couponCode ? { couponCode: params.couponCode, discountAmount } : {}),
-    });
-    const savedPayment = await this.paymentRepo.save(payment);
-
-    // Charge using saved card
-    const tapResponse = await this.createChargeWithSavedCard({
-      cardId: card.tapCardId,
-      customerId: card.tapCustomerId,
-      cartId,
-      description,
-      amount: chargeAmount,
-    });
-
-    savedPayment.transactionReference = tapResponse.id;
-    savedPayment.gatewayResponse = tapResponse;
-    await this.paymentRepo.save(savedPayment);
-
-    this.logger.log(
-      `Payment with saved card: cardId=${params.cardId}, offerId=${params.offerId}, chargeId=${tapResponse.id}`,
-    );
-
-    return {
-      transactionId: savedPayment.id,
-      chargeId: tapResponse.id,
-    };
-  }
-
-  async paySubscriptionWithSavedCard(
-    accountId: bigint,
-    cardId: number,
-    planId: number,
-  ): Promise<{ transactionId: bigint; chargeId: string }> {
-    const card = await this.getSavedCard(accountId, cardId);
-
-    if (!card.isActive) {
-      throw new BadRequestException('This card is inactive');
-    }
-
-    const plan = await this.planRepo.findOne({
-      where: { id: BigInt(planId) },
-    });
-    if (!plan) throw new NotFoundException('Subscription plan not found');
-
-    const account = await this.accountRepo.findOne({
-      where: { id: accountId },
-    });
-    if (!account) throw new NotFoundException('Account not found');
-
-    const cartId = `SUB-SAVED-${accountId}-${planId}-${Date.now()}`;
-
-    const payment = this.paymentRepo.create({
-      cartId,
-      type: PaymentType.SUBSCRIPTION,
-      status: PaymentStatus.PENDING,
-      amount: plan.price,
-      currency: this.currency,
-      payerAccount: account,
-      subscriptionPlan: plan,
-    });
-    const savedPayment = await this.paymentRepo.save(payment);
-
-    const tapResponse = await this.createChargeWithSavedCard({
-      cardId: card.tapCardId,
-      customerId: card.tapCustomerId,
-      cartId,
-      description: `Subscription: ${plan.name}`,
-      amount: plan.price,
-    });
-
-    savedPayment.transactionReference = tapResponse.id;
-    savedPayment.gatewayResponse = tapResponse;
-    await this.paymentRepo.save(savedPayment);
-
-    this.logger.log(
-      `Subscription payment with saved card: cardId=${cardId}, planId=${planId}, chargeId=${tapResponse.id}`,
-    );
-
-    return {
-      transactionId: savedPayment.id,
-      chargeId: tapResponse.id,
-    };
-  }
 
   // ─── PRIVATE HELPERS ──────────────────────────────────────────────
 
@@ -1455,5 +1129,41 @@ export class PaymentService {
     if (!account) throw new NotFoundException('Account not found');
 
     return { offer, booking: offer.booking, account };
+  }
+
+  async getUserPaymentHistory(
+    accountId: bigint,
+    paymentId: bigint | undefined,
+    dto: PaginationDto,
+  ): Promise<PaginatedResponseDto<Record<string, unknown>>> {
+    const where: any = {
+      payerAccount: { id: accountId },
+      status: PaymentStatus.SUCCESS,
+    };
+
+    if (paymentId) {
+      where.id = paymentId;
+    }
+
+    const [payments, total] = await this.paymentRepo.findAndCount({
+      where,
+      order: { createdAt: 'DESC' },
+      skip: dto.skip,
+      take: dto.limit,
+      relations: ['booking', 'subscriptionPlan', 'payerAccount'],
+    });
+
+    const formattedPayments = payments.map((payment) => {
+      return {
+        id: payment.id,
+        type: payment.type,
+        amount: this.toNumber(payment.amount),
+        currency: payment.currency,
+        status: payment.status,
+        createdAt: payment.createdAt,
+      }
+    });
+
+    return new PaginatedResponseDto(formattedPayments, total, dto.page, dto.limit);
   }
 }

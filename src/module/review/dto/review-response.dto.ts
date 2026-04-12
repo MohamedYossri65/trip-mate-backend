@@ -35,6 +35,12 @@ export class ReviewResponseDto {
     @ApiProperty({ example: 'Great service!', required: false })
     comment?: string;
 
+    @ApiProperty({ example: false })
+    isHidden: boolean;
+
+    @ApiProperty({ type: ReviewOfficeDto })
+    office: ReviewOfficeDto;
+
     @ApiProperty({ example: '2026-03-11T10:00:00.000Z' })
     createdAt: Date;
 }

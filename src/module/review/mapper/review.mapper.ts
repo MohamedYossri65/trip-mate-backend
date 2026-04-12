@@ -15,6 +15,13 @@ export class ReviewMapper {
       rating: review.rating,
       comment: review.comment,
       createdAt: review.createdAt,
+      isHidden: review.hiden,
+      office: {
+        id: review.office.accountId,
+        name: review.office.officeName,
+        logo: review.office.logoUrl,
+      },
+
     };
   }
 

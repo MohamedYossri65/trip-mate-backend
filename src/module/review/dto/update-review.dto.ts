@@ -23,4 +23,12 @@ export class UpdateReviewDto {
   @IsOptional()
   @IsString()
   comment?: string;
+
+
+  @ApiProperty({
+    description: 'Whether the review is hidden (admin only)',
+    example: false,
+    required: false,  })
+  @IsOptional()
+  isHiden?: boolean;
 }

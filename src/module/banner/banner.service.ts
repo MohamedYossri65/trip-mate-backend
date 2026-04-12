@@ -71,7 +71,7 @@ export class BannerService {
 
   async remove(id: number): Promise<void> {
     await this.findOne(id);
-    await this.bannerRepository.softDelete(id);
+    await this.bannerRepository.delete(id);
   }
 
   async toggleActiveStatus(id: number): Promise<BannerMapper> {

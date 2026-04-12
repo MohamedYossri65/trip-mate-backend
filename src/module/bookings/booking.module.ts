@@ -11,20 +11,23 @@ import { BundleModule } from './bundle/bundle.module';
 import { BookingRepository } from './domain/repository/booking.repository';
 import { OffersModule } from '../offers/offers.module';
 import { ReviewModule } from '../review/review.module';
+import { BookingSetting } from './settings/entity/booking-setting.entity';
+import { BookingSettingsService } from './settings/booking-settings.service';
+import { BookingSettingsController } from './settings/booking-settings.controller';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Booking]),
+    TypeOrmModule.forFeature([Booking, BookingSetting]),
     HotelModule,
     FlightModule,
     CarModule,
     VisaModule,
     BundleModule,
     OffersModule,
-    ReviewModule
+    ReviewModule,
   ],
-  controllers: [BookingsController],
-  providers: [BookingsService, BookingRepository],
-  exports: [BookingsService],
+  controllers: [BookingsController, BookingSettingsController],
+  providers: [BookingsService, BookingRepository, BookingSettingsService],
+  exports: [BookingsService, BookingSettingsService],
 })
-export class BookingsModule { }
+export class BookingsModule {}

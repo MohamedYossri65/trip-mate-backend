@@ -21,8 +21,8 @@ import {
   RemoveDeviceDto,
   AdminSendSingleNotificationDto,
   AdminSendBulkNotificationDto,
+  AdminSendAllNotificationDto,
 } from './dto';
-import { SendBulkNotificationDto } from './dto/bulk-notification.dto';
 import { JwtAuthGuard } from 'src/common/guards/auth.guard';
 import { Auth } from 'src/common/guards/decorators/auth.decorator';
 import { RolesEnum } from 'src/common/enums/roles.enum';
@@ -43,6 +43,13 @@ export class NotificationController {
     @CurrentUser() user: Account,
   ) {
     return this.notificationService.getUserNotifications(user.id, query);
+  }
+
+  @Get('admin/all')
+  @Auth(RolesEnum.ADMIN)
+  @ApiOperation({ summary: 'Get admin-sent notifications with pagination and USER/OFFICE filter (admin only)' })
+  async getAllNotifications(@Query() query: NotificationQueryDto) {
+    return this.notificationService.getAllAdminNotifications(query);
   }
 
   @Get('unread-count')
@@ -130,6 +137,15 @@ export class NotificationController {
     @Body() dto: AdminSendBulkNotificationDto,
   ) {
     return this.notificationService.sendDirectBulk(dto);
+  }
+
+  @Post('admin/send-all')
+  @Auth(RolesEnum.ADMIN)
+  @ApiOperation({ summary: 'Send direct notification to all users and offices (admin only)' })
+  async sendDirectNotificationToAll(
+    @Body() dto: AdminSendAllNotificationDto,
+  ) {
+    return this.notificationService.sendDirectToAll(dto);
   }
 
 

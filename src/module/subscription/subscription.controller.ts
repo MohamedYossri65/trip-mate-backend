@@ -1,8 +1,9 @@
-import { Controller, Post, Get, Body, Param } from '@nestjs/common';
+import { Controller, Post, Get, Body, Param, Patch } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { SubscriptionService } from './subscription.service';
 import { CreatePlanDto } from './dto/create-plan.dto';
 import { SubscribeOfficeDto } from './dto/subscribe-office.dto';
+import { UpdatePlanDto } from './dto/update-plan.dto';
 import { CurrentUser } from 'src/common/guards/decorators/user.decorator';
 import { Account } from '../account/entity/account.entity';
 import { RolesEnum } from 'src/common/enums/roles.enum';
@@ -21,6 +22,17 @@ export class SubscriptionController {
   @SuccessResponse('Subscription plan created successfully')
   async createPlan(@Body() dto: CreatePlanDto) {
     return this.subscriptionService.createPlan(dto);
+  }
+
+  @Patch('plans/:planId')
+  @Auth(RolesEnum.ADMIN)
+  @ApiOperation({ summary: 'Update an existing subscription plan (Admin only)' })
+  @SuccessResponse('Subscription plan updated successfully')
+  async updatePlan(
+    @Param('planId') planId: string,
+    @Body() dto: UpdatePlanDto,
+  ) {
+    return this.subscriptionService.updatePlan(BigInt(planId), dto);
   }
 
   @Get('plans')

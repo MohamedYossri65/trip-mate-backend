@@ -25,8 +25,9 @@ export class BundleMapper {
             accountId: bigint;
             name: string;
             account: {
-                email: string;
-                phone: string; status: string;
+                email: string ;
+                phone: string ;
+                status: string ;
             };
         };
         type: string;
@@ -38,9 +39,9 @@ export class BundleMapper {
     accountId: bigint;
     name: string;
     account: {
-      email: string;
-      phone: string;
-      status: string;
+      email: string ;
+      phone: string ;
+      status: string ;
     };
   };
   baseBundle: {
@@ -67,32 +68,36 @@ export class BundleMapper {
       visas: VisaBundle[];
     },
   ): BundleMapper {
+    const booking = baseBundle.booking;
+    const user = booking?.user;
+    const account = user?.account;
+
     return {
       id: baseBundle.bookingId,
       type: BookingType.BUNDLE,
       booking: {
-        id: baseBundle.booking.id,
+        id: booking?.id,
         user: {
-          accountId: baseBundle.booking.user.accountId,
-          name: baseBundle.booking.user.name,
+          accountId: user?.accountId,
+          name: user?.name ?? '',
           account: {
-            email: baseBundle.booking.user.account.email,
-            phone: baseBundle.booking.user.account.phone,
-            status: baseBundle.booking.user.account.status,
+            email: account?.email ?? '',
+            phone: account?.phone ?? '',
+            status: account?.status ?? '',
           },
         },
-        type: baseBundle.booking.type,
-        status: baseBundle.booking.status,
-        createdAt: baseBundle.booking.createdAt,
-        updatedAt: baseBundle.booking.updatedAt,
+        type: booking?.type,
+        status: booking?.status,
+        createdAt: booking?.createdAt,
+        updatedAt: booking?.updatedAt,
       },
       user: {
-        accountId: baseBundle.booking.user.accountId,
-        name: baseBundle.booking.user.name,
+        accountId: user?.accountId,
+        name: user?.name ?? '',
         account: {
-          email: baseBundle.booking.user.account.email,
-          phone: baseBundle.booking.user.account.phone,
-          status: baseBundle.booking.user.account.status,
+          email: account?.email ?? '',
+          phone: account?.phone ?? '',
+          status: account?.status ?? '',
         },
       },
       baseBundle: {

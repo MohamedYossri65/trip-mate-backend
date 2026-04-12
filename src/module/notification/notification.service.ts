@@ -21,6 +21,7 @@ import {
   SingleNotificationTargetType,
   BulkNotificationTargetType,
 } from './dto';
+import { AdminSendAllNotificationDto } from './dto/admin-send-all-notification.dto';
 import { RolesEnum } from 'src/common/enums/roles.enum';
 import { PaginatedResponseDto } from 'src/common/dto/paginated-response.dto';
 import { OfficeProfile } from 'src/module/office/entity/office.entity';
@@ -223,6 +224,18 @@ export class NotificationService {
     );
   }
 
+  async sendDirectToAll(
+    dto: AdminSendAllNotificationDto,
+  ): Promise<{ totalRecipients: number; batchesQueued: number }> {
+    return this.sendDirectBulk({
+      targetType: BulkNotificationTargetType.ALL,
+      title: dto.title,
+      body: dto.body,
+      channel: dto.channel,
+      data: dto.data,
+    });
+  }
+
   // ─── User Notifications ────────────────────────────────────
 
   async getUserNotifications(
@@ -408,6 +421,78 @@ export class NotificationService {
 
     return Array.from(uniqueIds, (id) => BigInt(id));
   }
+
+  async getAllAdminNotifications(
+    query: NotificationQueryDto,
+  ): Promise<
+    PaginatedResponseDto<{
+      id: number;
+      date: Date;
+      title: string;
+      message: string;
+    }>
+  > {
+    let qb = this.notificationRepo
+      .createQueryBuilder('notification')
+      .innerJoin('notification.account', 'account')
+      .where('notification.source = :source', { source: NotificationSource.ADMIN });
+
+    if (query.targetRole) {
+      if (query.targetRole !== RolesEnum.USER && query.targetRole !== RolesEnum.OFFICE) {
+        throw new BadRequestException('targetRole must be USER or OFFICE');
+      }
+
+      qb = qb.andWhere('account.role = :targetRole', {
+        targetRole: query.targetRole,
+      });
+    }
+
+    if (query.fromDate) {
+      qb = qb.andWhere('notification.createdAt >= :fromDate', {
+        fromDate: query.fromDate,
+      });
+    }
+
+    if (query.toDate) {
+      qb = qb.andWhere('notification.createdAt <= :toDate', {
+        toDate: query.toDate,
+      });
+    }
+
+    if (query.search) {
+      qb = qb.andWhere(
+        '(notification.title ILIKE :search OR notification.body ILIKE :search)',
+        { search: `%${query.search}%` },
+      );
+    }
+
+    // Return unique admin messages by day/title/body to avoid repeated rows per recipient.
+    const groupedQb = qb
+      .select('MAX(notification.createdAt)', 'date')
+      .addSelect('notification.title', 'title')
+      .addSelect('notification.body', 'message')
+      .groupBy('notification.title')
+      .addGroupBy('notification.body')
+      .addGroupBy('DATE(notification.createdAt)');
+
+    const total = (await groupedQb.getRawMany()).length;
+
+    const rows = await groupedQb
+      .orderBy('MAX(notification.createdAt)', 'DESC')
+      .skip(query.skip)
+      .take(query.limit)
+      .getRawMany<{ id: number; date: Date; title: string; message: string }>();
+
+    const data = rows.map((row) => ({
+      id: row.id,
+      date: row.date,
+      title: row.title,
+      message: row.message,
+    }));
+
+    return new PaginatedResponseDto(data, total, query.page, query.limit);
+  }
+
 
   async getAdminAccountIds(): Promise<bigint[]> {
     const admins = await this.accountRepo.find({

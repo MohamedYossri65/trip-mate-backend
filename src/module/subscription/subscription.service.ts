@@ -21,6 +21,7 @@ import { OfficeSubscriptionMapper } from './mapper/office-subscription.mapper';
 import { AccountService } from '../account/account.service';
 import { AccountStatus } from 'src/common/enums/account-status.enum';
 import { OfficeService } from '../office/office.service';
+import { UpdatePlanDto } from './dto/update-plan.dto';
 
 @Injectable()
 export class SubscriptionService {
@@ -97,6 +98,67 @@ export class SubscriptionService {
     });
 
     return SubscriptionPlanMapper.fromEntity(finalPlan);
+  }
+
+  async updatePlan(
+    planId: bigint,
+    dto: UpdatePlanDto,
+  ): Promise<SubscriptionPlanMapper> {
+    const plan = await this.planRepository.findOne({
+      where: { id: planId },
+      relations: ['planFeatures', 'planFeatures.feature'],
+    });
+
+    if (!plan) {
+      throw new NotFoundException('Subscription plan not found');
+    }
+
+    plan.name = dto.name ?? plan.name;
+    plan.price = dto.price ?? plan.price;
+    plan.durationInDays = dto.durationInDays ?? plan.durationInDays;
+    await this.planRepository.save(plan);
+
+    if (dto.features !== undefined) {
+      await this.planFeatureRepository
+        .createQueryBuilder()
+        .delete()
+        .where('plan_id = :planId', { planId: plan.id })
+        .execute();
+
+      for (const featureDto of dto.features) {
+        let feature = await this.featureRepository.findOne({
+          where: { code: featureDto.featureCode },
+        });
+
+        if (!feature) {
+          feature = await this.featureRepository.save(
+            this.featureRepository.create({
+              code: featureDto.featureCode,
+              name: featureDto.name,
+            }),
+          );
+        } else if (featureDto.name) {
+          feature.name = featureDto.name;
+          await this.featureRepository.save(feature);
+        }
+
+        const planFeature = this.planFeatureRepository.create({
+          plan,
+          feature,
+          enabled: featureDto.enabled,
+          limitValue: featureDto.limitValue ?? null,
+        });
+
+        await this.planFeatureRepository.save(planFeature);
+      }
+    }
+
+    const updatedPlan = await this.planRepository.findOneOrFail({
+      where: { id: plan.id },
+      relations: ['planFeatures', 'planFeatures.feature'],
+    });
+
+    return SubscriptionPlanMapper.fromEntity(updatedPlan);
   }
 
   // ─── List all plans ───────────────────────────────────────────

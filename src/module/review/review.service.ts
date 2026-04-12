@@ -111,7 +111,38 @@ export class ReviewService {
     return ReviewMapper.toResponseDto(fullReview);
   }
 
-  async getOfficeReviews(
+  async getAllReviews(
+    dto: ReviewFilterDto,
+  ): Promise<PaginatedResponseDto<ReviewResponseDto>> {
+    const queryBuilder = this.reviewRepository
+      .createQueryBuilder('review')
+      .leftJoinAndSelect('review.userProfile', 'userProfile')
+      .leftJoinAndSelect('review.office', 'office')
+      .where('1=1'); 
+
+    if (dto.rating) {
+      queryBuilder.andWhere('review.rating = :rating', { rating: dto.rating });
+    }
+
+    if (dto.minRating) {
+      queryBuilder.andWhere('review.rating >= :minRating', {
+        minRating: dto.minRating,
+      });
+    }
+
+    queryBuilder
+      .orderBy('review.createdAt', 'DESC')
+      .skip((dto.page - 1) * dto.limit)
+      .take(dto.limit);
+
+    const [reviews, total] = await queryBuilder.getManyAndCount();
+
+    const data = reviews.map((review) => ReviewMapper.toResponseDto(review));
+    return new PaginatedResponseDto(data, total, dto.page, dto.limit);
+  }
+
+
+    async getOfficeReviews(
     officeId: bigint,
     dto: ReviewFilterDto,
   ): Promise<PaginatedResponseDto<ReviewResponseDto>> {
@@ -209,11 +240,45 @@ export class ReviewService {
       throw new NotFoundException('Review not found');
     }
 
-    if (review.accountId !== accountId) {
-      throw new ForbiddenException('You can only delete your own reviews');
+    await this.reviewRepository.remove(review);
+  }
+
+  async updateReview(
+    reviewId: bigint,
+    account: Account,
+    dto: UpdateReviewDto,
+  ): Promise<ReviewResponseDto> {
+    const review = await this.reviewRepository.findOne({
+      where: { id: reviewId },
+      relations: ['userProfile', 'office'],
+    });
+
+    if (!review) {
+      throw new NotFoundException('Review not found');
     }
 
-    await this.reviewRepository.remove(review);
+    if (account.role !== RolesEnum.ADMIN && review.accountId !== account.id) {
+      throw new ForbiddenException('You can only edit your own review');
+    }
+
+    if (dto.rating === undefined && dto.comment === undefined) {
+      throw new BadRequestException('At least one field is required to update');
+    }
+
+    if (dto.rating !== undefined) {
+      review.rating = dto.rating;
+    }
+
+    if (dto.comment !== undefined) {
+      review.comment = dto.comment;
+    }
+
+    if (dto.isHiden !== undefined) {
+      review.hiden = dto.isHiden;
+    }
+
+    const updatedReview = await this.reviewRepository.save(review);
+    return ReviewMapper.toResponseDto(updatedReview);
   }
 
   async getReviewById(reviewId: bigint): Promise<ReviewResponseDto> {

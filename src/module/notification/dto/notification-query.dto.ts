@@ -3,6 +3,7 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
 import { NotificationSource } from '../enums/notification-source';
+import { RolesEnum } from 'src/common/enums/roles.enum';
 
 export class NotificationQueryDto extends PaginationDto {
   @ApiPropertyOptional({ description: 'Search in title and body' })
@@ -24,4 +25,12 @@ export class NotificationQueryDto extends PaginationDto {
   @IsOptional()
   @Type(() => Date)
   toDate?: Date;
+
+  @ApiPropertyOptional({
+    description: 'Admin list filter by recipient role',
+    enum: [RolesEnum.USER, RolesEnum.OFFICE],
+  })
+  @IsOptional()
+  @IsEnum(RolesEnum)
+  targetRole?: RolesEnum;
 }

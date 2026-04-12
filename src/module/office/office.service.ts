@@ -7,6 +7,7 @@ import { Cache } from 'cache-manager';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { ReviewOfficeStatus } from './enum/review-office-status.enum';
 import { OfficeProfile } from './entity/office.entity';
+import { SupportMessage } from './entity/support-message.entity';
 import { CreateOfficeDto } from './dto/create-office.dto';
 import { CommerceDetailsDto } from './dto/commerce-details.dto';
 import { AddEmployeeDto } from './dto/add-employee.dto';
@@ -32,6 +33,9 @@ import { AdminOfficesFilterDto } from './dto/admin-offices-filter.dto';
 import { PaginatedResponseDto } from 'src/common/dto/paginated-response.dto';
 import { BookingType } from '../bookings/domain/enum/booking-type.enum';
 import { Booking } from '../bookings/domain/entity/booking.entity';
+import { UpdateOfficeByAdminDto } from './dto/update-office-by-admin.dto';
+import { CreateSupportMessageDto } from './dto/create-support-message.dto';
+import { SupportMessageFilterDto } from './dto/support-message-filter.dto';
 
 @Injectable()
 export class OfficeService {
@@ -41,6 +45,9 @@ export class OfficeService {
 
     @InjectRepository(OfficeEmployee)
     private readonly officeEmployeeRepository: Repository<OfficeEmployee>,
+
+    @InjectRepository(SupportMessage)
+    private readonly supportMessageRepository: Repository<SupportMessage>,
 
     private readonly dataSource: DataSource,
 
@@ -256,6 +263,69 @@ export class OfficeService {
 
   async rejectOfficeRegistration(accountId: bigint, reason: string) {
     await this.accountService.updateStatus(accountId, AccountStatus.REJECTED);
+  }
+
+  async updateOfficeByAdmin(
+    officeAccountId: bigint,
+    dto: UpdateOfficeByAdminDto,
+  ): Promise<OfficeProfile> {
+    const office = await this.officeProfileRepository.findOne({
+      where: { accountId: officeAccountId },
+      relations: ['account'],
+    });
+
+    if (!office) {
+      throw new BadRequestException('Office profile not found');
+    }
+
+    if (
+      dto.logoUrl === undefined &&
+      dto.officeName === undefined &&
+      dto.location === undefined &&
+      dto.commerceNumber === undefined &&
+      dto.accountStatus === undefined
+    ) {
+      throw new BadRequestException('No fields provided for update');
+    }
+
+    await this.dataSource.transaction(async (manager) => {
+      const officeRepo = manager.getRepository(OfficeProfile);
+      const accountRepo = manager.getRepository(Account);
+
+      const officeUpdates: Partial<OfficeProfile> = {};
+
+      if (dto.logoUrl !== undefined) {
+        officeUpdates.logoUrl = dto.logoUrl;
+      }
+      if (dto.officeName !== undefined) {
+        officeUpdates.officeName = dto.officeName;
+      }
+      if (dto.location !== undefined) {
+        officeUpdates.location = dto.location;
+      }
+      if (dto.commerceNumber !== undefined) {
+        officeUpdates.commerceNumber = dto.commerceNumber;
+      }
+
+      if (Object.keys(officeUpdates).length > 0) {
+        await officeRepo.update({ accountId: officeAccountId }, officeUpdates);
+      }
+
+      if (dto.accountStatus !== undefined) {
+        await accountRepo.update({ id: officeAccountId }, { status: dto.accountStatus });
+      }
+    });
+
+    const updatedOffice = await this.officeProfileRepository.findOne({
+      where: { accountId: officeAccountId },
+      relations: ['account', 'employees'],
+    });
+
+    if (!updatedOffice) {
+      throw new BadRequestException('Failed to load updated office profile');
+    }
+
+    return updatedOffice;
   }
 
   async getOfficeDetails(officeId: bigint): Promise<OfficeDetailsMapper> {
@@ -624,6 +694,7 @@ export class OfficeService {
           .filter((serviceType) => !!serviceType);
 
         return {
+          officeId: office.accountId,
           officeName: office.officeName,
           officeLogo: office.logoUrl || null,
           location: office.location || null,
@@ -635,5 +706,54 @@ export class OfficeService {
     );
 
     return new PaginatedResponseDto(data, total, dto.page, dto.limit);
+  }
+
+  async createSupportMessage(
+    officeAccountId: bigint,
+    dto: CreateSupportMessageDto,
+  ): Promise<SupportMessage> {
+    const supportMessage = this.supportMessageRepository.create({
+      officeAccountId,
+      name: dto.name,
+      email: dto.email,
+      phone: dto.phone,
+      message: dto.message,
+    });
+
+    return await this.supportMessageRepository.save(supportMessage);
+  }
+
+  async getAllSupportMessages(
+    dto: SupportMessageFilterDto,
+  ): Promise<PaginatedResponseDto<SupportMessage>> {
+    const query = this.supportMessageRepository.createQueryBuilder('sm');
+
+    if (dto.search) {
+      query.andWhere(
+        '(sm.name LIKE :search OR sm.email LIKE :search)',
+        { search: `%${dto.search}%` },
+      );
+    }
+
+    const total = await query.getCount();
+
+    const data = await query
+      .orderBy(
+        `sm.${dto.sortBy || 'createdAt'}`,
+        dto.sortOrder || 'DESC',
+      )
+      .skip(dto.skip)
+      .take(dto.limit)
+      .getMany();
+
+    return new PaginatedResponseDto(data, total, dto.page, dto.limit);
+  }
+
+  async deleteSupportMessage(messageId: bigint): Promise<void> {
+    const result = await this.supportMessageRepository.delete({ id: messageId });
+
+    if (result.affected === 0) {
+      throw new BadRequestException('Support message not found');
+    }
   }
 }

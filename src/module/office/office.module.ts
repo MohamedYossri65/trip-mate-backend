@@ -5,6 +5,7 @@ import { OfficeService } from './office.service';
 import { OfficeProfile } from './entity/office.entity';
 import { OfficeController } from './office.controller';
 import { OfficeEmployee } from './entity/employee.entity';
+import { SupportMessage } from './entity/support-message.entity';
 import { FileUploadModule } from '../fileUpload/file-upload.module';
 import { SubscriptionModule } from '../subscription/subscription.module';
 import { ReviewModule } from '../review/review.module';
@@ -13,7 +14,7 @@ import { OtpModule } from '../otp/otp.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([OfficeProfile, OfficeEmployee]),
+    TypeOrmModule.forFeature([OfficeProfile, OfficeEmployee, SupportMessage]),
     CacheModule.register({
       ttl: 10800000, // 3 hours in milliseconds
     }),

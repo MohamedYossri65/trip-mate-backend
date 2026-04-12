@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiQuery } from '@nestjs/swagger';
 import { BookingsService } from './bookings.service';
 import { CreateHotelBookingDto } from './services/hotel/dto/create-hotel-booking.dto';
@@ -19,6 +19,7 @@ import { CreateAllBookingsDto } from './domain/dto/create-all-bookings.dto';
 import { BookingFilterDto } from './domain/dto/booking-filter.dto';
 import { MyBookingFilterDto } from './domain/dto/my-booking-filter.dto';
 import { AdminBookingsFilterDto } from './domain/dto/admin-bookings-filter.dto';
+import { BookingServiceGuard } from './settings/guard/booking-service.guard';
 
 @ApiTags('bookings')
 @Controller({ path: 'bookings', version: '1' })
@@ -27,6 +28,7 @@ export class BookingsController {
 
   @Post('hotel')
   @Auth(RolesEnum.USER)
+  @UseGuards(BookingServiceGuard)
   @ApiOperation({ summary: 'Create a hotel booking' })
   @SuccessResponse('Hotel booking created successfully')
   async createHotelBooking(
@@ -41,6 +43,7 @@ export class BookingsController {
 
   @Post('car')
   @Auth(RolesEnum.USER)
+  @UseGuards(BookingServiceGuard)
   @ApiOperation({ summary: 'Create a car booking' })
   @SuccessResponse('Car booking created successfully')
   async createCarBooking(
@@ -55,6 +58,7 @@ export class BookingsController {
 
   @Post('flight')
   @Auth(RolesEnum.USER)
+  @UseGuards(BookingServiceGuard)
   @ApiOperation({ summary: 'Create a flight booking' })
   @SuccessResponse('Flight booking created successfully')
   async createFlightBooking(
@@ -69,6 +73,7 @@ export class BookingsController {
 
   @Post('visa')
   @Auth(RolesEnum.USER)
+  @UseGuards(BookingServiceGuard)
   @ApiOperation({ summary: 'Create a visa booking' })
   @SuccessResponse('Visa booking created successfully')
   async createVisaBooking(
@@ -83,6 +88,7 @@ export class BookingsController {
 
   @Post('bundle')
   @Auth(RolesEnum.USER)
+  @UseGuards(BookingServiceGuard)
   @ApiOperation({ summary: 'Create multiple bookings at once' })
   @SuccessResponse('Bookings created successfully')
   async createAllBookings(
