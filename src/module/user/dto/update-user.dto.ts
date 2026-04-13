@@ -15,7 +15,6 @@ export class UpdateUserDto {
 
   @ApiPropertyOptional({ example: '+966501234567', description: 'Phone number' })
   @IsOptional()
-  @IsPhoneNumber()
   phone?: string;
 
   @ApiPropertyOptional({

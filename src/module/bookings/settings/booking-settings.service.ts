@@ -44,13 +44,13 @@ export class BookingSettingsService implements OnModuleInit {
       throw new BadRequestException(`Invalid service type: ${serviceType}`);
     }
 
-    let setting = await this.repo.findOne({ where: { serviceType } });
+    let setting = await this.repo.findOne({ where: { serviceType: serviceType.toUpperCase() as BookingType } });
 
     if (setting) {
       setting.isEnabled = dto.isEnabled;
     } else {
       setting = this.repo.create({
-        serviceType,
+        serviceType: serviceType.toUpperCase() as BookingType,
         isEnabled: dto.isEnabled,
       });
     }

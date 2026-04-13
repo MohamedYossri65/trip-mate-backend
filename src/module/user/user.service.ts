@@ -102,7 +102,7 @@ export class UserService {
 
   async deleteProfile(accountId: bigint)
     : Promise<void> {
-    await this.userProfileRepository.softDelete({ account: { id: accountId } });
+    await this.userProfileRepository.delete({ accountId });
     await this.accountService.softDelete(accountId);
   }
 
@@ -150,15 +150,17 @@ export class UserService {
       .select('user_profile.account_id', 'accountId')
       .addSelect('user_profile.name', 'name')
       .addSelect('account.phone', 'phone')
+      .addSelect('account.status', 'status')
       .addSelect('account."createdAt"', 'createdAt')
       .addSelect('COUNT(DISTINCT offer.id)', 'acceptedOffersCount')
       .groupBy('user_profile.account_id')
       .addGroupBy('user_profile.name')
       .addGroupBy('account.phone')
+      .addGroupBy('account.status')
       .addGroupBy('account."createdAt"')
       .orderBy('account."createdAt"', 'DESC')
-      .skip((page - 1) * limit)
-      .take(limit)
+      .offset((page - 1) * limit)
+      .limit(limit)
       .getRawMany();
 
     return new PaginatedResponseDto(
@@ -166,6 +168,7 @@ export class UserService {
         accountId: String(row.accountId),
         name: row.name,
         phone: row.phone,
+        status: row.status,
         createdAt: row.createdAt,
         acceptedOffersCount: Number(row.acceptedOffersCount) || 0,
       })),
@@ -175,7 +178,7 @@ export class UserService {
     );
   }
 
-  async findOne(accountId: bigint){
+  async findOne(accountId: bigint) {
     const user = await this.userProfileRepository.findOne({
       where: { accountId },
       relations: ['account'],
@@ -185,6 +188,7 @@ export class UserService {
     }
     return {
       accountId: user.accountId,
+      status: user.account.status,
       name: user.name,
       account: {
         email: user.account.email,
@@ -196,17 +200,17 @@ export class UserService {
   }
 
 
-  async ToggleStatus(accountId: bigint){
-  const user = await this.findByAccountId(accountId);
-  if (!user) {
-    throw new NotFoundException("this user not found");
+  async ToggleStatus(accountId: bigint) {
+    const user = await this.findByAccountId(accountId);
+    if (!user) {
+      throw new NotFoundException("this user not found");
+    }
+    if (user.account.status === AccountStatus.ACTIVE) {
+      await this.accountService.updateStatus(accountId, AccountStatus.BLOCKED)
+    } else {
+      await this.accountService.updateStatus(accountId, AccountStatus.ACTIVE)
+    }
   }
-  if (user.account.status === AccountStatus.ACTIVE) {
-    await this.accountService.updateStatus(accountId, AccountStatus.BLOCKED)
-  } else {
-    await this.accountService.updateStatus(accountId, AccountStatus.ACTIVE)
-  }
-}
 
-  
+
 }

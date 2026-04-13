@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, IsNull, Not, Repository } from 'typeorm';
 import { Inject } from '@nestjs/common';
@@ -357,8 +357,10 @@ export class OfficeService {
       return cached;
     }
 
+    const employees = await this.findAllEmployeesByOfficeAccountId(resolvedOfficeId);
     const details = OfficeDetailsMapper.fromEntities(
       office,
+      employees,
       await this.getOfficeReviewStatus(resolvedOfficeId),
       await this.getOfficeCompletedBookingsPercentage(resolvedOfficeId),
       await this.getBookingCompletionRate(resolvedOfficeId),
@@ -573,6 +575,34 @@ export class OfficeService {
     };
   }
 
+  async deleteOfficeAccount(officeAccountId: bigint): Promise<void> {
+    const office = await this.officeProfileRepository.findOne({
+      where: { accountId: officeAccountId },
+    });
+
+    if (!office) {
+      throw new BadRequestException('Office profile not found');
+    }
+
+    await this.dataSource.transaction(async (manager) => {
+      const officeRepo = manager.getRepository(OfficeProfile);
+      const accountRepo = manager.getRepository(Account);
+
+      await officeRepo.delete({ accountId: officeAccountId });
+
+      const stamp = Date.now();
+      await accountRepo.update(
+        { id: officeAccountId },
+        {
+          status: AccountStatus.BLOCKED,
+          isPhoneVerified: false,
+          email: `deleted_${officeAccountId.toString()}_${stamp}@deleted.local`,
+          phone: `DEL-${officeAccountId.toString()}-${stamp}`,
+        },
+      );
+    });
+  }
+
   async upsertOfficePaymentDetails(
     accountId: bigint,
     dto: UpsertOfficePaymentDetailsDto,
@@ -640,13 +670,14 @@ export class OfficeService {
       commerceCertificate: office?.taxCertificate,
       taxCertificate: office?.taxCertificate,
       officeStatus: office?.account.status,
+      logoUrl: office?.logoUrl,
     };
   }
 
   async getAllOfficesForAdmin(dto: AdminOfficesFilterDto): Promise<
     PaginatedResponseDto<{
       officeName: string;
-      officeLogo: string | null;
+      logoUrl: string | null;
       location: string | null;
       rate: number;
       officeServices: BookingType[];
@@ -696,7 +727,7 @@ export class OfficeService {
         return {
           officeId: office.accountId,
           officeName: office.officeName,
-          officeLogo: office.logoUrl || null,
+          logoUrl: office.logoUrl || null,
           location: office.location || null,
           rate,
           officeServices,
@@ -754,6 +785,19 @@ export class OfficeService {
 
     if (result.affected === 0) {
       throw new BadRequestException('Support message not found');
+    }
+  }
+
+  async toggleStauts(accountId) {
+    const account = await this.accountService.findById(accountId);
+    if (!account) {
+      throw new NotFoundException("account not found");
+    }
+
+    if (account.status === AccountStatus.ACTIVE) {
+      this.accountService.updateStatus(accountId, AccountStatus.BLOCKED)
+    } else {
+      this.accountService.updateStatus(accountId, AccountStatus.ACTIVE)
     }
   }
 }

@@ -322,6 +322,28 @@ export class OfficeController {
     );
   }
 
+  @Delete('admin/:officeAccountId')
+  @Auth(RolesEnum.ADMIN)
+  @ApiOperation({ summary: 'Delete office account (Admin)' })
+  @SuccessResponse('Office account deleted successfully')
+  async deleteOfficeAccount(
+    @Param('officeAccountId') officeAccountId: string,
+  ) {
+    await this.officeService.deleteOfficeAccount(BigInt(officeAccountId));
+    return;
+  }
+
+  @Patch('admin/toggle-status/:accountId')
+  @Auth(RolesEnum.ADMIN)
+  @ApiOperation({ summary: 'Toggle office or employee account status (Admin)' })
+  @SuccessResponse('Office status updated successfully')
+  async toggleOfficeStatus(
+    @Param('accountId') accountId: string,
+  ) {
+    await this.officeService.toggleStauts(BigInt(accountId));
+    return;
+  }
+
   @Post('support-messages')
   @Auth(RolesEnum.OFFICE)
   @ApiOperation({ summary: 'Create a support message from office to super admin' })

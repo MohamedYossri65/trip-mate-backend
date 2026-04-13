@@ -393,7 +393,7 @@ export class ReportService {
     return topOfficesAcceptedOffers.map((row) => ({
       officeId: row.officeId,
       officeName: row.officeName,
-      officeLogo:`${process.env.IMAGEKIT_URL_ENDPOINT}${row.officeLogo}`,
+      logoUrl:`${process.env.IMAGEKIT_URL_ENDPOINT}${row.officeLogo}`,
       allOffersCount: this.toNumber(row.allOffersCount),
       acceptedCount: this.toNumber(row.acceptedCount),
     }));
