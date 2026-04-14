@@ -15,6 +15,7 @@ import { MsegatSmsService } from 'src/common/services/msegat-sms.service';
 import { NotificationTemplateSeed } from './seed/notification-template.seed';
 import { OfficeProfile } from '../office/entity/office.entity';
 import { OfficeEmployee } from '../office/entity/employee.entity';
+import { ServerEmailModule } from 'src/common/email/email.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { OfficeEmployee } from '../office/entity/employee.entity';
     BullModule.registerQueue({
       name: 'notification-queue',
     }),
+    ServerEmailModule
   ],
   controllers: [NotificationController],
   providers: [

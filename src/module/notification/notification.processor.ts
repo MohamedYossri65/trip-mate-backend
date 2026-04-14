@@ -7,6 +7,7 @@ import { TemplateService } from './services/template.service';
 import { NotificationStatus, NotificationChannel } from './enums';
 import { NotificationSource } from './enums/notification-source';
 import { MsegatSmsService } from 'src/common/services/msegat-sms.service';
+import { ServerEmailService } from 'src/common/email/email.service';
 
 @Processor('notification-queue')
 export class NotificationProcessor {
@@ -17,7 +18,8 @@ export class NotificationProcessor {
     private readonly pushService: PushService,
     private readonly templateService: TemplateService,
     private readonly msegatSmsService: MsegatSmsService,
-  ) {}
+    private readonly emailService: ServerEmailService,
+  ) { }
 
   @Process('send')
   async handleSend(job: Job<{ notificationId: number }>): Promise<void> {
@@ -70,14 +72,28 @@ export class NotificationProcessor {
           break;
 
         case NotificationChannel.IN_APP:
-          // In-app notifications are already saved to DB, just mark as sent
           success = true;
           break;
 
         case NotificationChannel.EMAIL:
-          // TODO: implement email channel
-          this.logger.warn('Email channel not yet implemented');
-          success = false;
+          const accountEmail = await this.notificationService.getAccountEmail(
+            notification.accountId,
+          );
+
+          if (!accountEmail) {
+            this.logger.warn(
+              `No email found for account=${notification.accountId}, cannot send EMAIL`,
+            );
+            success = false;
+            break;
+          }
+
+          await this.emailService.sendEmail({
+            to: accountEmail,
+            subject: notification.title,
+            text: notification.body,
+          });
+          success = true;
           break;
 
         case NotificationChannel.SMS:
@@ -209,6 +225,27 @@ export class NotificationProcessor {
             success = true;
             break;
 
+          case NotificationChannel.EMAIL:
+            const accountEmail = await this.notificationService.getAccountEmail(
+              accountId,
+            );
+
+            if (!accountEmail) {
+              this.logger.warn(
+                `No email found for account=${accountId}, cannot send EMAIL`,
+              );
+              success = false;
+              break;
+            }
+
+            await this.emailService.sendEmail({
+              to: accountEmail,
+              subject: rendered.title,
+              text: rendered.body,
+            });
+            success = true;
+            break;
+
           case NotificationChannel.SMS:
             const accountPhone = await this.notificationService.getAccountPhone(
               accountId,
@@ -325,6 +362,27 @@ export class NotificationProcessor {
             break;
 
           case NotificationChannel.IN_APP:
+            success = true;
+            break;
+
+          case NotificationChannel.EMAIL:
+            const accountEmail = await this.notificationService.getAccountEmail(
+              accountId,
+            );
+
+            if (!accountEmail) {
+              this.logger.warn(
+                `No email found for account=${accountId}, cannot send EMAIL`,
+              );
+              success = false;
+              break;
+            }
+
+            await this.emailService.sendEmail({
+              to: accountEmail,
+              subject: title,
+              text: body,
+            });
             success = true;
             break;
 

@@ -3,6 +3,13 @@ import { passwordResetEmail, verificationEmail } from './email.constants';
 import { ConfigService } from '@nestjs/config';
 import { MailerService } from '@nestjs-modules/mailer';
 
+export interface SendEmailOptions {
+  to: string;
+  subject: string;
+  text?: string;
+  html?: string;
+}
+
 @Injectable()
 export class ServerEmailService {
   private readonly fromEmail: string;
@@ -16,48 +23,24 @@ export class ServerEmailService {
       '"opream-support" <onway@opream.net>';
   }
 
-  async sendVerificationEmail(
-    username: string,
-    email: string,
-    otp: string,
+  async sendEmail(
+    options: SendEmailOptions,
   ): Promise<{ success: boolean; message: string }> {
-    const trimmedEmail = email.trim();
+    const trimmedEmail = options.to.trim();
     try {
       await this.mailerService.sendMail({
         to: trimmedEmail,
         from: this.fromEmail,
-        subject: 'Email Verification',
-        text: 'Welcome to Alazhar',
-        html: verificationEmail(username, otp),
+        subject: options.subject,
+        text: options.text,
+        html: options.html,
       });
       return {
         success: true,
-        message: `Verification email sent successfully to ${trimmedEmail}`,
+        message: `Email sent successfully to ${trimmedEmail}`,
       };
-    } catch (error) {
-      throw new Error(`Failed to send verification email: ${error.message}`);
-    }
-  }
-
-  async sendPasswordResetEmail(
-    email: string,
-    verificationCode: string,
-  ): Promise<{ success: boolean; message: string }> {
-    const trimmedEmail = email.trim();
-    try {
-      await this.mailerService.sendMail({
-        to: trimmedEmail,
-        from: this.fromEmail,
-        subject: 'Reset Password',
-        text: 'Welcome to Opream',
-        html: passwordResetEmail(verificationCode),
-      });
-      return {
-        success: true,
-        message: `Password reset email sent successfully to ${trimmedEmail}`,
-      };
-    } catch (error) {
-      throw new Error(`Failed to send password reset email: ${error.message}`);
+    } catch (error: any) {
+      throw new Error(`Failed to send email: ${error?.message || 'Unknown error'}`);
     }
   }
 }

@@ -502,6 +502,14 @@ export class NotificationService {
     return admins.map((admin) => admin.id);
   }
 
+  async getAccountEmail(accountId: bigint): Promise<string | null> {
+    const account = await this.accountRepo.findOne({
+      where: { id: accountId },
+      select: ['email'],
+    });
+    return account?.email || null;
+  }
+
 
   async deleteNotification(id: number, accountId: bigint): Promise<void> {
     const result = await this.notificationRepo.delete({ id, accountId });
