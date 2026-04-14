@@ -11,7 +11,6 @@ import axios from 'axios';
 import { readFile } from 'fs/promises';
 import { join } from 'path';
 import { PaymentTransaction } from './entity/payment-transaction.entity';
-import { SavedCard } from './entity/saved-card.entity';
 import { PaymentSetting } from './entity/payment-setting.entity';
 import { PaymentType } from './enum/payment-type.enum';
 import { PaymentStatus } from './enum/payment-status.enum';
@@ -53,9 +52,6 @@ export class PaymentService {
 
     @InjectRepository(Account)
     private readonly accountRepo: Repository<Account>,
-
-    @InjectRepository(SavedCard)
-    private readonly savedCardRepo: Repository<SavedCard>,
 
     @InjectRepository(PaymentSetting)
     private readonly paymentSettingRepo: Repository<PaymentSetting>,
@@ -261,6 +257,7 @@ export class PaymentService {
       status: PaymentStatus.PENDING,
       amount: offerPartialSummary.amountAfterCoupon,
       advanceAmount: offerPartialSummary.advanceAmount,
+      appCommissionAmount: offerPartialSummary.appCommissionAmount,
       currency: this.currency,
       payerAccount: account,
       booking,
@@ -963,123 +960,6 @@ export class PaymentService {
     }
   }
 
-  private async createVerifyCharge(params: {
-    cartId: string;
-    customerName: string;
-    customerEmail: string;
-    customerPhone: string;
-  }): Promise<Record<string, any>> {
-    try {
-      const requestBody = {
-        amount: 0.01,
-        currency: this.currency,
-        threeDSecure: true,
-        save_card: true,
-        source: { id: 'src_card' },
-        customer: {
-          first_name: params.customerName,
-          email: params.customerEmail,
-          phone: {
-            country_code: '966',
-            number: params.customerPhone,
-          },
-        },
-        redirect: { url: this.redirectUrl },
-        post: { url: this.webhookUrl },
-        description: 'Card Verification',
-        metadata: { cartId: params.cartId, type: 'card_verification' },
-      };
-
-      this.logger.log(
-        `Creating Tap verify charge: ${JSON.stringify(requestBody)}`,
-      );
-
-      const response = await axios.post(
-        `${this.baseUrl}/charges/`,
-        requestBody,
-        {
-          headers: {
-            Authorization: `Bearer ${this.secretKey}`,
-            'Content-Type': 'application/json',
-          },
-        },
-      );
-
-      if (!response.data.transaction?.url) {
-        this.logger.error(
-          `Tap verify charge creation failed: ${JSON.stringify(response.data)}`,
-        );
-        throw new BadRequestException(
-          'Failed to create verification charge',
-        );
-      }
-
-      return response.data;
-    } catch (error: any) {
-      this.logger.error('TAP VERIFY ERROR:', error.response?.data);
-
-      if (error instanceof BadRequestException) throw error;
-
-      throw new BadRequestException(
-        error.response?.data || 'Failed to verify card with payment gateway',
-      );
-    }
-  }
-
-  private async createChargeWithSavedCard(params: {
-    cardId: string;
-    customerId?: string;
-    cartId: string;
-    description: string;
-    amount: number;
-  }): Promise<Record<string, any>> {
-    try {
-      const requestBody: any = {
-        amount: params.amount,
-        currency: this.currency,
-        source: { id: params.cardId },
-        post: { url: this.webhookUrl },
-        description: params.description,
-        metadata: { cartId: params.cartId },
-      };
-
-      if (params.customerId) {
-        requestBody.customer = { id: params.customerId };
-      }
-
-      this.logger.log(
-        `Creating charge with saved card: ${JSON.stringify(requestBody)}`,
-      );
-
-      const response = await axios.post(
-        `${this.baseUrl}/charges/`,
-        requestBody,
-        {
-          headers: {
-            Authorization: `Bearer ${this.secretKey}`,
-            'Content-Type': 'application/json',
-          },
-        },
-      );
-
-      if (!response.data.id) {
-        this.logger.error(
-          `Tap saved card charge failed: ${JSON.stringify(response.data)}`,
-        );
-        throw new BadRequestException('Failed to charge saved card');
-      }
-
-      return response.data;
-    } catch (error: any) {
-      this.logger.error('TAP SAVED CARD ERROR:', error.response?.data);
-
-      if (error instanceof BadRequestException) throw error;
-
-      throw new BadRequestException(
-        error.response?.data || 'Failed to charge saved card',
-      );
-    }
-  }
 
   private extractOfferIdFromCartId(cartId: string): bigint | null {
     const matched = cartId.match(/^OF-(?:PARTIAL|FULL|SAVED)-(\d+)-/);

@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm/dist/typeorm.module';
 import { PaymentTransaction } from './entity/payment-transaction.entity';
-import { SavedCard } from './entity/saved-card.entity';
 import { PaymentSetting } from './entity/payment-setting.entity';
 import { PaymentService } from './payment.service';
 import { PaymentController } from './payment.controller';
@@ -18,7 +17,6 @@ import { CouponModule } from '../coupon/coupon.module';
   imports: [
     TypeOrmModule.forFeature([
       PaymentTransaction,
-      SavedCard,
       PaymentSetting,
       Booking,
       Offer,
