@@ -29,6 +29,7 @@ import { ChatModule } from './module/chat/chat.module';
 import { PaymentModule } from './module/payment/payment.module';
 import { WalletModule } from './module/wallet/wallet.module';
 import { CouponModule } from './module/coupon/coupon.module';
+import { RoleModule } from './module/role/role.module';
 import Redis from 'ioredis';
 
 
@@ -76,6 +77,7 @@ import Redis from 'ioredis';
     PaymentModule,
     WalletModule,
     CouponModule,
+    RoleModule,
   ],
   controllers: [AppController],
   providers: [

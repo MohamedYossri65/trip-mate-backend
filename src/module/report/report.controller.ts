@@ -8,9 +8,7 @@ import { Account } from '../account/entity/account.entity';
 import { ReportService } from './report.service';
 import { OfficeReportQueryDto } from './dto/office-report-query.dto';
 import { OfficeDailyProfitQueryDto } from './dto/office-daily-profit-query.dto';
-import { AcceptedUsersQueryDto } from './dto/accepted-users-query.dto';
 import { AdminChartQueryDto } from './dto/admin-chart-query.dto';
-import { PaginationDto } from 'src/common/dto/pagination.dto';
 import { AdminNamePaginationQueryDto } from './dto/admin-name-pagination-query.dto';
 
 @ApiTags('reports')

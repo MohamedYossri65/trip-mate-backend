@@ -34,7 +34,7 @@ export class OfficeEmployee {
   @Column()
   phone: string;
 
-  @Column()
+  @Column({nullable: true})
   roleInOffice: string;
 
   @Column({ default: true })

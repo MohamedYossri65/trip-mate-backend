@@ -1,6 +1,6 @@
 import { ApiParam, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Post, Query, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseIntPipe, Post, Put, Query, Req, UseGuards } from '@nestjs/common';
 import { RegisterUserDto } from './dto/register-user.dto';
 import { RegisterUserResponse } from './mapper/register-user.mapper';
 import { RegisterOfficeResponse } from './mapper/register-office.mapper';
@@ -18,9 +18,12 @@ import { ResetPasswordDto } from './dto/reset-password.dto';
 import { UpdatePasswordDto } from './dto/update-password.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { ChangePhoneDto } from './dto/change-phone.dto';
-import { ActivateOfficeEmployeeInviteDto } from './dto/activate-office-employee-invite.dto';
 import { Auth } from 'src/common/guards/decorators/auth.decorator';
 import { Public } from 'src/common/guards/decorators/public.decorator';
+import { RolesEnum } from 'src/common/enums/roles.enum';
+import { CreateAdminAccountDto } from '../account/dto/create-admin-account.dto';
+import { AdminEmployeesQueryDto } from './dto/admin-employees-query.dto';
+import { UpdateAdminEmployeeDto } from './dto/update-admin-employee.dto';
 
 @ApiTags('auth')
 @Controller({ path: 'auth', version: '1' })
@@ -143,4 +146,49 @@ export class AuthController {
   async deleteAccount(@CurrentUser() account: Account) {
     await this.authService.deleteAccount(account.id);
   }
+
+  @Post('admin/account')
+  @Auth(RolesEnum.ADMIN)
+  @SuccessResponse('Admin account created successfully')
+  async createAdminAccount(@Body() dto: CreateAdminAccountDto) {
+    return this.authService.createAdminAccount(dto);
+  }
+
+  @Get('admin/employees')
+  @Auth(RolesEnum.ADMIN)
+  @SuccessResponse('Admin employees retrieved successfully')
+  async getAdminEmployees(@Query() query: AdminEmployeesQueryDto) {
+    return this.authService.getAdminEmployees(query);
+  }
+
+  @Put('admin/employees/:accountId')
+  @Auth(RolesEnum.ADMIN)
+  @SuccessResponse('Admin employee updated successfully')
+  async updateAdminEmployee(
+    @Param('accountId', ParseIntPipe) accountId: number,
+    @Body() dto: UpdateAdminEmployeeDto,
+  ) {
+    return this.authService.updateAdminEmployee(BigInt(accountId), dto);
+  }
+
+  @Delete('admin/employees/:accountId')
+  @Auth(RolesEnum.ADMIN)
+  @SuccessResponse('Admin employee deleted successfully')
+  async deleteAdminEmployee(
+    @Param('accountId', ParseIntPipe) accountId: number,
+  ) {
+    await this.authService.deleteAdminEmployee(BigInt(accountId));
+  }
+
+  @Put('admin/employees/:accountId/toggle-status')
+  @Auth(RolesEnum.ADMIN)
+  @SuccessResponse('Admin employee status toggled successfully')
+  async toggleAdminEmployeeStatus(
+    @Param('accountId', ParseIntPipe) accountId: number,
+  ) {
+    return this.authService.toggleAdminEmployeeStatus(BigInt(accountId));
+  }
+
+
+
 }

@@ -12,8 +12,10 @@ import { Account } from '../account/entity/account.entity';
 import { AccountStatus } from 'src/common/enums/account-status.enum';
 import { GetMeUserResponse } from './mapper/get-me-user.mapper';
 import { GetMeOfficeResponse } from './mapper/get-me-office.mapper';
+import { GetMeAdminResponse } from './mapper/get-me-admin.mapper';
 import { UpdatePasswordDto } from './dto/update-password.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
+import { RoleService } from '../role/role.service';
 
 @Injectable()
 export class RegisteriationService {
@@ -21,6 +23,7 @@ export class RegisteriationService {
     private readonly accountService: AccountService,
     private readonly userService: UserService,
     private readonly officeService: OfficeService,
+    private readonly roleService: RoleService,
     private dataSource: DataSource,
   ) { }
 
@@ -75,7 +78,7 @@ export class RegisteriationService {
 
       return account.id;
     });
-    
+
     const officeProfile = await this.officeService.findByAccountId(accountId);
     return RegisterOfficeResponse.fromEntity(officeProfile);
   }
@@ -99,9 +102,21 @@ export class RegisteriationService {
   }
 
   async getMe(accountId: bigint) {
-    const account = await this.accountService.findById(accountId);
+    const account = await this.accountService.findByIdWithRoles(accountId);
     if (!account) {
       throw new BadRequestException('Account not found');
+    }
+
+    // Resolve the assigned role permissions (if any)
+    let permissions: any = null;
+    if (account.roleId) {
+      const role = await this.roleService.findById(account.roleId);
+      permissions = role?.permissions ?? null;
+    }
+
+    if (account.adminRoleId) {
+      const adminRole = await this.roleService.findAdminById(account.adminRoleId);
+      permissions = adminRole?.permissions ?? null;
     }
 
     if (account.role === RolesEnum.USER) {
@@ -109,7 +124,10 @@ export class RegisteriationService {
       return GetMeUserResponse.fromEntities(account, userProfile);
     } else if (account.role === RolesEnum.OFFICE) {
       const officeProfile = await this.officeService.findByAccountId(accountId);
-      return GetMeOfficeResponse.fromEntities(account, officeProfile);
+      return GetMeOfficeResponse.fromEntities(account, officeProfile, permissions);
+    } else if (account.role === RolesEnum.ADMIN) {
+      const adminProfile = await this.accountService.findAdminProfileByAccountId(accountId);
+      return GetMeAdminResponse.fromEntities(account, adminProfile, permissions);
     }
   }
 

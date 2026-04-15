@@ -1,4 +1,4 @@
-import { IsEmail, IsNotEmpty, IsOptional, IsString, MinLength } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsNumber, IsOptional, IsString, MinLength } from 'class-validator';
 
 export class InviteOfficeEmployeeDto {
   @IsString()
@@ -12,9 +12,8 @@ export class InviteOfficeEmployeeDto {
   @IsNotEmpty()
   phone: string;
 
-  @IsString()
-  @IsNotEmpty()
-  roleInOffice: string;
+  @IsNumber()
+  roleInOffice: bigint;
 
   @IsOptional()
   @IsString()

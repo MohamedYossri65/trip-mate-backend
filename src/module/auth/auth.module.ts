@@ -12,6 +12,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Session } from './entity/session.entity';
 import { JwtStrategy } from './jwt.strategy';
 import { JwtRefreshStrategy } from './jwt-refresh.strategy';
+import { RoleModule } from '../role/role.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { JwtRefreshStrategy } from './jwt-refresh.strategy';
     AccountModule,
     UserModule,
     OfficeModule,
+    RoleModule,
     JwtModule.register({
       secret: process.env.JWT_ACCESS_SECRET,
       signOptions: { expiresIn: '60m' },

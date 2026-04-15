@@ -29,4 +29,9 @@ export class CreateAccountDto {
   @IsOptional()
   @ApiHideProperty()      
   isPhoneVerified?: boolean;
+
+  @Exclude()
+  @IsOptional()
+  @ApiHideProperty()
+  roleId?: bigint;
 }

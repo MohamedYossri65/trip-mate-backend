@@ -19,6 +19,9 @@ import { UpdateProfileDto } from './dto/update-profile.dto';
 import { ChangePhoneDto } from './dto/change-phone.dto';
 import { ResponseCode } from 'src/common/constant/responses-code';
 import { AccountStatus } from 'src/common/enums/account-status.enum';
+import { CreateAdminAccountDto } from '../account/dto/create-admin-account.dto';
+import { AdminEmployeesQueryDto } from './dto/admin-employees-query.dto';
+import { UpdateAdminEmployeeDto } from './dto/update-admin-employee.dto';
 
 @Injectable()
 export class AuthService {
@@ -275,6 +278,26 @@ export class AuthService {
 
     await this.logoutAll(accountId);
     await this.accountService.softDelete(accountId);
+  }
+
+  async createAdminAccount(dto: CreateAdminAccountDto) {
+    return this.accountService.createAdminAccount(dto);
+  }
+
+  async getAdminEmployees(query: AdminEmployeesQueryDto) {
+    return this.accountService.getAdminEmployees(query);
+  }
+
+  async updateAdminEmployee(accountId: bigint, dto: UpdateAdminEmployeeDto) {
+    return this.accountService.updateAdminEmployee(accountId, dto);
+  }
+
+  async deleteAdminEmployee(accountId: bigint) {
+    return this.accountService.deleteAdminEmployee(accountId);
+  }
+
+  async toggleAdminEmployeeStatus(accountId: bigint) {
+    return this.accountService.toggleAdminEmployeeStatus(accountId);
   }
 
   private async generateTokens(account: Account) {

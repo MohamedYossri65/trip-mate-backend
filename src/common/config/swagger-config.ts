@@ -15,6 +15,7 @@ import { ChatModule } from 'src/module/chat/chat.module';
 import { PaymentModule } from 'src/module/payment/payment.module';
 import { WalletModule } from 'src/module/wallet/wallet.module';
 import { CouponModule } from 'src/module/coupon/coupon.module';
+import { RoleModule } from 'src/module/role/role.module';
 
 export function setupSwagger(app: INestApplication) {
   const config = new DocumentBuilder()
@@ -42,7 +43,8 @@ export function setupSwagger(app: INestApplication) {
       ChatModule,
       PaymentModule,
       WalletModule,
-      CouponModule
+      CouponModule,
+      RoleModule
     ],
   });
 
