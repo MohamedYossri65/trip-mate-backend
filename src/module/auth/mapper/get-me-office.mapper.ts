@@ -1,3 +1,5 @@
+import { OfficeProfile } from "src/module/office/entity/office.entity";
+
 export class GetMeOfficeResponse {
     accountId: bigint;
     email: string;
@@ -19,17 +21,17 @@ export class GetMeOfficeResponse {
     }[];
     permissions: any;
 
-    static fromEntities(account: any, officeProfile: any, isEmployee: boolean, permissions?: any): GetMeOfficeResponse {
+    static fromEntities(account: any, officeProfile: any, isEmployee: boolean, office: OfficeProfile | null, permissions?: any): GetMeOfficeResponse {
         return {
             accountId: account.id,
             email: account.email,
             phone: account.phone,
             role: account.role,
             status: account.status,
-            officeName: officeProfile?.officeName || null,
-            commerceNumber: officeProfile?.commerceNumber || null,
-            taxCertificate: officeProfile?.taxCertificate || null,
-            logoUrl: officeProfile?.logoUrl || null,
+            officeName: office?.officeName || "",
+            commerceNumber: office?.commerceNumber || "",
+            taxCertificate: office?.taxCertificate || "",
+            logoUrl: office?.logoUrl || "",
             reviewStatus: officeProfile?.reviewStatus || null,
             rejectionReason: officeProfile?.rejectionReason || null,
             isEmployee: isEmployee ?? false,

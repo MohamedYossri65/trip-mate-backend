@@ -161,6 +161,15 @@ export class AuthController {
     return this.authService.getAdminEmployees(query);
   }
 
+  @Get('admin/employees/:accountId')
+  @Auth(RolesEnum.ADMIN)
+  @SuccessResponse('Admin employee retrieved successfully')
+  async getAdminEmployee(
+    @Param('accountId', ParseIntPipe) accountId: number,
+  ) {
+    return this.authService.getAdminEmployee(BigInt(accountId));
+  }
+
   @Put('admin/employees/:accountId')
   @Auth(RolesEnum.ADMIN)
   @SuccessResponse('Admin employee updated successfully')

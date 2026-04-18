@@ -288,6 +288,10 @@ export class AuthService {
     return this.accountService.getAdminEmployees(query);
   }
 
+  async getAdminEmployee(accountId: bigint) {
+    return this.accountService.getAdminEmployee(accountId);
+  }
+
   async updateAdminEmployee(accountId: bigint, dto: UpdateAdminEmployeeDto) {
     return this.accountService.updateAdminEmployee(accountId, dto);
   }

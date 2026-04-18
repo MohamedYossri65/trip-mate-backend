@@ -63,6 +63,14 @@ export class RoleController {
     return this.roleService.findAdminRoles();
   }
 
+  @Get('admin/:id')
+  @Auth(RolesEnum.ADMIN)
+  @ApiOperation({ summary: 'Get an admin role by ID (Admin only)' })
+  @SuccessResponse('Admin role retrieved successfully')
+  async findOneAdminRole(@Param('id', ParseIntPipe) id: number) {
+    return this.roleService.findAdminRoleById(BigInt(id));
+  }
+
   @Get(':id')
   @Auth(RolesEnum.OFFICE)
   @ApiOperation({ summary: 'Get a role by ID (Office only)' })

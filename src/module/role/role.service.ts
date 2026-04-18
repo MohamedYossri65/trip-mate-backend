@@ -108,6 +108,14 @@ export class RoleService {
     return this.adminRoleRepository.findOne({ where: { id } });
   }
 
+  async findAdminRoleById(id: bigint): Promise<AdminRole> {
+    const role = await this.findAdminById(id);
+    if (!role) {
+      throw new BadRequestException('Admin role not found');
+    }
+    return role;
+  }
+
   async findAdminRoles(): Promise<AdminRole[]> {
     return this.adminRoleRepository.find({
       order: { createdAt: 'DESC' },

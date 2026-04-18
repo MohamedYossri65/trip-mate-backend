@@ -124,7 +124,11 @@ export class RegisteriationService {
       return GetMeUserResponse.fromEntities(account, userProfile);
     } else if (account.role === RolesEnum.OFFICE) {
       const officeProfile = await this.officeService.findByAccountId(accountId);
-      return GetMeOfficeResponse.fromEntities(account, officeProfile, permissions);
+      const employeeMembership = await this.officeService.findEmployeeMembershipByAccountId(accountId);
+      const isEmployee = !!employeeMembership;
+      const officeAccountId = employeeMembership ? employeeMembership.office.accountId : accountId;
+      const office = await this.officeService.findByAccountId(officeAccountId);
+      return GetMeOfficeResponse.fromEntities(account, officeProfile, isEmployee,office, permissions);
     } else if (account.role === RolesEnum.ADMIN) {
       const adminProfile = await this.accountService.findAdminProfileByAccountId(accountId);
       return GetMeAdminResponse.fromEntities(account, adminProfile, permissions);

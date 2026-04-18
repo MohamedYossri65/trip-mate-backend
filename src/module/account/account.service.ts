@@ -74,7 +74,7 @@ export class AccountService {
         id: data.roleId,
       } : undefined,
       status: data.status || AccountStatus.PENDING_OTP,
-      isPhoneVerified: false,
+      isPhoneVerified: data.isPhoneVerified || false,
     });
     return await repo.save(account);
   }
@@ -144,7 +144,7 @@ export class AccountService {
       : await this.accountRepository.manager.transaction(createWithManager);
 
     const createdProfile = await this.findAdminProfileByAccountId(created.id);
-    return this.mapAdminEmployee(created, createdProfile);
+    return this.mapAdminEmployee(created, createdProfile, adminRole.name);
   }
 
   async getAdminEmployees(
@@ -152,13 +152,15 @@ export class AccountService {
   ): Promise<PaginatedResponseDto<any>> {
     const qb = this.accountRepository
       .createQueryBuilder('account')
-      .leftJoinAndMapOne(
+      .innerJoinAndMapOne(
         'account.adminProfile',
         AdminProfile,
         'adminProfile',
         'adminProfile.accountId = account.id',
       )
+      .leftJoinAndSelect('account.assignedAdminRole', 'assignedAdminRole')
       .where('account.role = :role', { role: RolesEnum.ADMIN })
+      .andWhere('account.deletedAt IS NULL')
       .orderBy('account.createdAt', 'DESC')
       .skip(query.skip)
       .take(query.limit);
@@ -173,10 +175,39 @@ export class AccountService {
 
     const [accounts, total] = await qb.getManyAndCount();
     const mapped = accounts.map((account: any) =>
-      this.mapAdminEmployee(account, account.adminProfile || null),
+      this.mapAdminEmployee(
+        account,
+        account.adminProfile || null,
+        account.assignedAdminRole?.name || null,
+      ),
     );
 
     return new PaginatedResponseDto(mapped, total, query.page, query.limit);
+  }
+
+  async getAdminEmployee(accountId: bigint): Promise<any> {
+    const account = await this.accountRepository
+      .createQueryBuilder('account')
+      .leftJoinAndMapOne(
+        'account.adminProfile',
+        AdminProfile,
+        'adminProfile',
+        'adminProfile.accountId = account.id',
+      )
+      .leftJoinAndSelect('account.assignedAdminRole', 'assignedAdminRole')
+      .where('account.id = :accountId', { accountId: accountId.toString() })
+      .andWhere('account.role = :role', { role: RolesEnum.ADMIN })
+      .getOne();
+
+    if (!account) {
+      throw new BadRequestException('Admin employee not found');
+    }
+
+    return this.mapAdminEmployee(
+      account as any,
+      (account as any).adminProfile || null,
+      (account as any).assignedAdminRole?.name || null,
+    );
   }
 
   async updateAdminEmployee(
@@ -254,9 +285,16 @@ export class AccountService {
       }
     });
 
-    const updatedAccount = await this.accountRepository.findOne({ where: { id: accountId } });
+    const updatedAccount = await this.accountRepository.findOne({
+      where: { id: accountId },
+      relations: ['assignedAdminRole'],
+    });
     const updatedProfile = await this.findAdminProfileByAccountId(accountId);
-    return this.mapAdminEmployee(updatedAccount, updatedProfile);
+    return this.mapAdminEmployee(
+      updatedAccount,
+      updatedProfile,
+      updatedAccount?.assignedAdminRole?.name || null,
+    );
   }
 
   async deleteAdminEmployee(accountId: bigint): Promise<void> {
@@ -287,9 +325,16 @@ export class AccountService {
 
     await this.accountRepository.update({ id: accountId }, { status: nextStatus });
 
-    const updatedAccount = await this.accountRepository.findOne({ where: { id: accountId } });
+    const updatedAccount = await this.accountRepository.findOne({
+      where: { id: accountId },
+      relations: ['assignedAdminRole'],
+    });
     const updatedProfile = await this.findAdminProfileByAccountId(accountId);
-    return this.mapAdminEmployee(updatedAccount, updatedProfile);
+    return this.mapAdminEmployee(
+      updatedAccount,
+      updatedProfile,
+      updatedAccount?.assignedAdminRole?.name || null,
+    );
   }
 
   async validateCredentials(
@@ -430,7 +475,11 @@ export class AccountService {
     });
   }
 
-  private mapAdminEmployee(account: Account | null, adminProfile: AdminProfile | null) {
+  private mapAdminEmployee(
+    account: Account | null,
+    adminProfile: AdminProfile | null,
+    adminRoleName?: string | null,
+  ) {
     if (!account) {
       return null;
     }
@@ -442,6 +491,7 @@ export class AccountService {
       role: account.role,
       status: account.status,
       adminRoleId: account.adminRoleId ? account.adminRoleId.toString() : null,
+      adminRoleName: adminRoleName || account.assignedAdminRole?.name || null,
       profilePicture: adminProfile?.profilePicture || '',
       name: adminProfile?.name || '',
       language: adminProfile?.language || 'ar',

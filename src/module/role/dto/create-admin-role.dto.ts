@@ -170,6 +170,27 @@ class CouponsPermissionsDto {
   archiveCoupon?: boolean;
 }
 
+class BannersPermissionsDto {
+  @ApiProperty({ example: true })
+  @IsBoolean()
+  enabled: boolean;
+
+  @ApiProperty({ example: true, required: false })
+  @IsBoolean()
+  @IsOptional()
+  addBanner?: boolean;
+
+  @ApiProperty({ example: true, required: false })
+  @IsBoolean()
+  @IsOptional()
+  editBanner?: boolean;
+
+  @ApiProperty({ example: true, required: false })
+  @IsBoolean()
+  @IsOptional()
+  deleteBanner?: boolean;
+}
+
 class TripsPermissionsDto {
   @ApiProperty({ example: true })
   @IsBoolean()
@@ -351,6 +372,12 @@ class AdminRolePermissionsDto {
   @Type(() => CouponsPermissionsDto)
   @IsOptional()
   coupons?: CouponsPermissionsDto;
+
+  @ApiProperty({ type: BannersPermissionsDto, required: false })
+  @ValidateNested()
+  @Type(() => BannersPermissionsDto)
+  @IsOptional()
+  banners?: BannersPermissionsDto;
 
   @ApiProperty({ type: TripsPermissionsDto, required: false })
   @ValidateNested()

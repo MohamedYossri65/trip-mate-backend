@@ -135,4 +135,12 @@ export interface RoleAdminPermissions {
     customerProfits?: boolean;
     viewOfficeProfits?: boolean;
   };
+
+  // الإعلانات
+  banners?: {
+    enabled: boolean;
+    addBanner?: boolean;
+    editBanner?: boolean;
+    deleteBanner?: boolean;
+  };
 }

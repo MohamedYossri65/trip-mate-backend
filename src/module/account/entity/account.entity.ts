@@ -7,6 +7,7 @@ import { OfficeRole } from 'src/module/role/entity/office-role.entity';
 import {
   Column,
   CreateDateColumn,
+  DeleteDateColumn,
   Entity,
   JoinColumn,
   ManyToOne,
@@ -67,9 +68,14 @@ export class Account {
   @CreateDateColumn()
   createdAt!: Date;
 
+  @DeleteDateColumn({ nullable: true })
+  deletedAt !: Date;
+
   @OneToMany(() => Otp, (otp) => otp.account)
   otps!: Otp[];
 
   @OneToMany(() => Session, (session) => session.account)
   sessions!: Session[];
+
+  
 }
