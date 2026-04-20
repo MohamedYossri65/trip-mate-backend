@@ -1,5 +1,6 @@
 import {
   ForbiddenException,
+  forwardRef,
   Inject,
   Injectable,
   NotFoundException,
@@ -43,6 +44,7 @@ export class SubscriptionService {
 
     private readonly accountService: AccountService,
 
+  @Inject(forwardRef(() => OfficeService))
     private readonly officeService: OfficeService,
 
     @Inject(CACHE_MANAGER)
@@ -434,4 +436,38 @@ export class SubscriptionService {
 
     return status;
   }
+
+
+  async createTrialSubscription(officeAccountId: bigint): Promise<void> {
+    const trialDurationInDays = 10;
+
+    let trialPlan = await this.planRepository
+      .createQueryBuilder('plan')
+      .leftJoinAndSelect('plan.planFeatures', 'planFeatures')
+      .leftJoinAndSelect('planFeatures.feature', 'feature')
+      .orderBy('plan.price', 'ASC')
+      .addOrderBy('plan.durationInDays', 'ASC')
+      .getOne();
+
+    if (!trialPlan) {
+      throw new NotFoundException('No subscription plan found');
+    }
+
+    const startDate = new Date();
+    const endDate = new Date();
+    endDate.setDate(endDate.getDate() + trialDurationInDays);
+
+    await this.officeSubscriptionRepository.save(
+      this.officeSubscriptionRepository.create({
+        office: { accountId: officeAccountId },
+        plan: trialPlan,
+        startDate,
+        endDate,
+        status: SubscriptionStatus.ACTIVE,
+      }),
+    );
+    await this.cacheManager.del(`subscription_status_${officeAccountId}`);
+    await this.cacheManager.del(`active_subscription_${officeAccountId}`);
+  }
+    
 }

@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, forwardRef, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, IsNull, Not, Repository } from 'typeorm';
 import { Inject } from '@nestjs/common';
@@ -21,8 +21,6 @@ import { SubscriptionService } from '../subscription/subscription.service';
 import { ReviewService } from '../review/review.service';
 import { AccountService } from '../account/account.service';
 import { RolesEnum } from 'src/common/enums/roles.enum';
-import { OtpService } from '../otp/otp.service';
-import { OtpPurpose } from '../otp/enum/otp-purpose.enum';
 import { ChangeOfficeDataRequestDto } from './dto/chnge-office-data-request.dto';
 import { Account } from '../account/entity/account.entity';
 import { OfficeChangeRequestData } from './entity/office.entity';
@@ -56,6 +54,9 @@ export class OfficeService {
     private readonly reviewService: ReviewService,
 
     private readonly eventEmitter: EventEmitter2,
+
+    @Inject(forwardRef(() => SubscriptionService))
+    private readonly subscriptionService: SubscriptionService,
 
     @Inject(CACHE_MANAGER)
     private readonly cacheManager: Cache,
@@ -258,7 +259,8 @@ export class OfficeService {
   }
 
   async approveOfficeRegistration(accountId: bigint) {
-    await this.accountService.updateStatus(accountId, AccountStatus.OFFICE_NO_SUBSCRIPTION);
+    await this.accountService.updateStatus(accountId, AccountStatus.ACTIVE);
+    await this.subscriptionService.createTrialSubscription(accountId);
   }
 
   async rejectOfficeRegistration(accountId: bigint, reason: string) {
