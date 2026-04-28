@@ -55,6 +55,9 @@ export class Booking {
   @DeleteDateColumn({ nullable: true })
   deletedAt?: Date;
 
+  @Column({ type: 'timestamptz', nullable: true })
+  endingAt: Date;
+
   //  Domain method (state protection)
   changeStatus(newStatus: BookingStatus) {
     const allowedTransitions: Record<BookingStatus, BookingStatus[]> = {

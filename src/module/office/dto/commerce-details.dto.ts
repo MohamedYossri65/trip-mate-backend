@@ -10,4 +10,8 @@ export class CommerceDetailsDto {
   @ApiProperty({ type: 'string', format: 'binary' })
   @IsOptional()
   taxCertificate: Express.Multer.File | string; // Accept either file upload or existing URL
+
+  @ApiProperty({ type: 'string', format: 'binary' })
+  @IsOptional()
+  commerceCertificate?: Express.Multer.File | string;
 }

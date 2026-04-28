@@ -1,15 +1,11 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { DataSource, EntityManager, In } from 'typeorm';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { DataSource, In } from 'typeorm';
 import { BundleRepository } from './repository/bundle.repository';
 import { BundleFilterDto } from './dto/bundle-filter.dto';
 import { BundleMapper } from './mapper/bundle.mapper';
 import { PaginatedResponseDto } from 'src/common/dto/paginated-response.dto';
 import { BookingType } from '../domain/enum/booking-type.enum';
 import { Booking } from '../domain/entity/booking.entity';
-import { HotelBooking } from '../services/hotel/entity/hotel-booking.entity';
-import { CarBooking } from '../services/car/entity/car-booking.entity';
-import { FlightBooking } from '../services/flight/entity/flight.-booking.entity';
-import { VisaBooking } from '../services/visa/entity/visa-booking.entity';
 import { BookingStatus } from '../domain/enum/booking-status.enum';
 import { UserProfile } from 'src/module/user/entity/user.entity';
 import { CreateAllBookingsDto } from '../domain/dto/create-all-bookings.dto';
@@ -47,6 +43,7 @@ export class BundleService {
                 user: { accountId } as UserProfile,
                 type: BookingType.BUNDLE,
                 status: BookingStatus.WAITING_FOR_OFFERS,
+                endAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
             });
             await manager.save(createBooking);
             const bundleBase = manager.create(BundleBase, {

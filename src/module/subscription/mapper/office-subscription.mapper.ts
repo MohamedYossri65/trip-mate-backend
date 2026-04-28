@@ -8,6 +8,7 @@ export class OfficeSubscriptionMapper {
   startDate: Date;
   endDate: Date;
   status: SubscriptionStatus;
+  testingPeriod: boolean;
 
   static fromEntity(
     subscription: OfficeSubscription,
@@ -18,6 +19,7 @@ export class OfficeSubscriptionMapper {
       startDate: subscription.startDate,
       endDate: subscription.endDate,
       status: subscription.status,
+      testingPeriod: subscription.testingPeriod,
     };
   }
 

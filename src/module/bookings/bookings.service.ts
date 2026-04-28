@@ -123,6 +123,7 @@ export class BookingsService {
         user: { accountId: userProfile.accountId },
         type: BookingType.CAR,
         status: BookingStatus.DRAFT,
+        endAt: dto.returnDate
       });
 
       await manager.save(booking);
@@ -170,6 +171,7 @@ export class BookingsService {
         user: { accountId: userProfile.accountId },
         type: BookingType.FLIGHT,
         status: BookingStatus.DRAFT,
+        endAt: dto.isRoundTrip && dto.returnDate ? dto.returnDate : new Date(dto.departureDate.getTime() + 10 *24 * 60 * 60 * 1000) // if round trip use return date, else set endAt to 1 day after departure as a default
       });
 
       await manager.save(booking);
@@ -216,6 +218,7 @@ export class BookingsService {
         user: { accountId: userProfile.accountId },
         type: BookingType.VISA,
         status: BookingStatus.DRAFT,
+        endAt: new Date(dto.departureDate.getTime() + 10 * 24 * 60 * 60 * 1000), // set endAt to 1 year after departure as a default for visa bookings
       });
 
       await manager.save(booking);
@@ -261,7 +264,7 @@ export class BookingsService {
 
   async findAllHotels(dto: HotelFilterDto, account?: Account) {
     const hideCancelled = account?.role === RolesEnum.OFFICE;
-    return this.hotelService.findAll(dto, hideCancelled);
+    return this.hotelService.findAll(dto, hideCancelled); 
   }
 
   async findAllFlights(dto: FlightFilterDto, account?: Account) {

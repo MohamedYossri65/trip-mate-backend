@@ -9,6 +9,7 @@ import {
   NewBookingCreatedEvent,
   NewOfferReceivedEvent,
   OfficeChangeRequestEvent,
+  OfficeRegisteredEvent,
 } from './events';
 
 @Injectable()
@@ -127,12 +128,37 @@ export class NotificationListener {
         {
           officeName: event.officeName,
         },
-        [NotificationChannel.PUSH, NotificationChannel.IN_APP],
+        [NotificationChannel.PUSH],
       );
     }
 
     this.logger.log(
       `Office change request notification sent to ${adminAccountIds.length} admin accounts`,
+    );
+  }
+
+  @OnEvent('office.registered')
+  async handleOfficeRegistered(event: OfficeRegisteredEvent): Promise<void> {
+    this.logger.log(
+      `Handling office.registered event for office=${event.officeAccountId}`,
+    );
+
+    const adminAccountIds =
+      await this.notificationService.getAdminAccountIds();
+
+    for (const accountId of adminAccountIds) {
+      await this.notificationService.createAndQueue(
+        'NEW_OFFICE_REGISTERED',
+        accountId,
+        {
+          officeName: event.officeName,
+        },
+        [NotificationChannel.PUSH],
+      );
+    }
+
+    this.logger.log(
+      `New office registration notification sent to ${adminAccountIds.length} admin accounts`,
     );
   }
 }

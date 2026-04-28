@@ -1,4 +1,5 @@
 import { OfficeProfile } from "src/module/office/entity/office.entity";
+import { OfficeSubscriptionMapper } from "src/module/subscription/mapper/office-subscription.mapper";
 
 export class GetMeOfficeResponse {
     accountId: bigint;
@@ -20,8 +21,9 @@ export class GetMeOfficeResponse {
         roleInOffice: string;
     }[];
     permissions: any;
+    testingPeriod: boolean | null;
 
-    static fromEntities(account: any, officeProfile: any, isEmployee: boolean, office: OfficeProfile | null, permissions?: any): GetMeOfficeResponse {
+    static fromEntities(account: any, officeProfile: any, isEmployee: boolean, office: OfficeProfile | null, activeSubscription: OfficeSubscriptionMapper | null, permissions?: any): GetMeOfficeResponse {
         return {
             accountId: account.id,
             email: account.email,
@@ -42,6 +44,7 @@ export class GetMeOfficeResponse {
                 roleInOffice: emp.roleInOffice,
             })),
             permissions: permissions || null,
+            testingPeriod: activeSubscription?.testingPeriod || null,
         };
     }
 }

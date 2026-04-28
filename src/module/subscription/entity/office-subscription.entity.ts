@@ -31,6 +31,9 @@ export class OfficeSubscription {
   @Column({ type: 'timestamp' })
   endDate: Date;
 
+  @Column({ default: false })
+  testingPeriod: boolean;
+
   @Column({
     type: 'enum',
     enum: SubscriptionStatus,

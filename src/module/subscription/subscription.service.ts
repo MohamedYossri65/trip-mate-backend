@@ -464,6 +464,7 @@ export class SubscriptionService {
         startDate,
         endDate,
         status: SubscriptionStatus.ACTIVE,
+        testingPeriod: true,
       }),
     );
     await this.cacheManager.del(`subscription_status_${officeAccountId}`);

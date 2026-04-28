@@ -282,8 +282,9 @@ export class ReportService {
 
     const offerRepo = this.dataSource.getRepository(Offer);
     const accountRepo = this.dataSource.getRepository(Account);
+    const officeRepo = this.dataSource.getRepository(OfficeProfile);
 
-    const [currentAcceptedOffers, previousAcceptedOffers, currentRejectedOffers, previousRejectedOffers, currentNewCustomers, previousNewCustomers] =
+    const [currentAcceptedOffers, previousAcceptedOffers, currentRejectedOffers, previousRejectedOffers, currentNewCustomers, previousNewCustomers, allUsersCount, allOfficesCount] =
       await Promise.all([
         offerRepo
           .createQueryBuilder('offer')
@@ -336,6 +337,13 @@ export class ReportService {
             currentMonthStart,
           })
           .getCount(),
+        accountRepo
+          .createQueryBuilder('account')
+          .where('account.role = :role', { role: RolesEnum.USER })
+          .getCount(),
+        officeRepo
+          .createQueryBuilder('office')
+          .getCount(),
       ]);
 
     return {
@@ -373,6 +381,20 @@ export class ReportService {
             currentNewCustomers,
             previousNewCustomers,
           ),
+        },
+        {
+          key: 'allUsers',
+          label: 'allUsers',
+          value: allUsersCount,
+          previousValue: null,
+          monthOverMonthPct: null,
+        },
+        {
+          key: 'allOffices',
+          label: 'allOffices',
+          value: allOfficesCount,
+          previousValue: null,
+          monthOverMonthPct: null,
         },
       ],
     };

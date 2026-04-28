@@ -95,7 +95,15 @@ export class OfficeService {
       { account: { id: accountId } },
       {
         commerceNumber: commerceDetails.commerceNumber,
-        taxCertificate: commerceDetails.taxCertificate.toString(),
+        ...(commerceDetails.taxCertificate !== undefined
+          ? { taxCertificate: commerceDetails.taxCertificate.toString() }
+          : {}),
+        ...(commerceDetails.commerceCertificate !== undefined
+          ? {
+              commerceCertificate:
+                commerceDetails.commerceCertificate.toString(),
+            }
+          : {}),
       },
     );
   }
@@ -669,7 +677,7 @@ export class OfficeService {
       phoneNumber: office?.account?.phone,
       email: office?.account?.email,
       commerceNumber: office?.commerceNumber,
-      commerceCertificate: office?.taxCertificate,
+      commerceCertificate: office?.commerceCertificate,
       taxCertificate: office?.taxCertificate,
       officeStatus: office?.account.status,
       logoUrl: office?.logoUrl,
@@ -684,6 +692,7 @@ export class OfficeService {
       rate: number;
       officeServices: BookingType[];
       allServicesTypesOnApplication: BookingType[];
+      status: AccountStatus;
     }>
   > {
     const officeQb = this.officeProfileRepository
@@ -734,6 +743,7 @@ export class OfficeService {
           rate,
           officeServices,
           allServicesTypesOnApplication,
+          status: office.account.status,
         };
       }),
     );

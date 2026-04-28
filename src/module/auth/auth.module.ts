@@ -13,6 +13,7 @@ import { Session } from './entity/session.entity';
 import { JwtStrategy } from './jwt.strategy';
 import { JwtRefreshStrategy } from './jwt-refresh.strategy';
 import { RoleModule } from '../role/role.module';
+import { SubscriptionModule } from '../subscription/subscription.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { RoleModule } from '../role/role.module';
       signOptions: { expiresIn: '60m' },
     }),
     TypeOrmModule.forFeature([Session]),
+    SubscriptionModule,
   ],
   controllers: [AuthController],
   providers: [

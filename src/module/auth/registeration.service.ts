@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { DataSource } from 'typeorm';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { UserService } from '../user/user.service';
 import { OfficeService } from '../office/office.service';
 import { AccountService } from '../account/account.service';
@@ -16,6 +17,8 @@ import { GetMeAdminResponse } from './mapper/get-me-admin.mapper';
 import { UpdatePasswordDto } from './dto/update-password.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { RoleService } from '../role/role.service';
+import { SubscriptionService } from '../subscription/subscription.service';
+import { OfficeRegisteredEvent } from '../notification/events';
 
 @Injectable()
 export class RegisteriationService {
@@ -25,6 +28,8 @@ export class RegisteriationService {
     private readonly officeService: OfficeService,
     private readonly roleService: RoleService,
     private dataSource: DataSource,
+    private readonly subscriptionService: SubscriptionService,
+    private readonly eventEmitter: EventEmitter2,
   ) { }
 
   async registerUser(dto: RegisterUserDto): Promise<RegisterUserResponse> {
@@ -80,6 +85,11 @@ export class RegisteriationService {
     });
 
     const officeProfile = await this.officeService.findByAccountId(accountId);
+    this.eventEmitter.emit(
+      'office.registered',
+      new OfficeRegisteredEvent(accountId, officeProfile?.officeName || dto.officeName),
+    );
+
     return RegisterOfficeResponse.fromEntity(officeProfile);
   }
 
@@ -127,8 +137,9 @@ export class RegisteriationService {
       const employeeMembership = await this.officeService.findEmployeeMembershipByAccountId(accountId);
       const isEmployee = !!employeeMembership;
       const officeAccountId = employeeMembership ? employeeMembership.office.accountId : accountId;
+      const activeSubscription = await this.subscriptionService.getActiveSubscription(officeAccountId);
       const office = await this.officeService.findByAccountId(officeAccountId);
-      return GetMeOfficeResponse.fromEntities(account, officeProfile, isEmployee,office, permissions);
+      return GetMeOfficeResponse.fromEntities(account, officeProfile, isEmployee,office,activeSubscription, permissions);
     } else if (account.role === RolesEnum.ADMIN) {
       const adminProfile = await this.accountService.findAdminProfileByAccountId(accountId);
       return GetMeAdminResponse.fromEntities(account, adminProfile, permissions);

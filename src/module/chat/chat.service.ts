@@ -81,6 +81,7 @@ export class ChatService {
         userAccountId,
         officeAccountId,
         createdByAccountId: requesterId,
+        endingAt: new Date(booking.endingAt?.getTime() + 10 * 24 * 60 * 60 * 1000),
       });
 
       const savedConversation = await manager.getRepository(ChatConversation).save(conversation);
@@ -119,7 +120,7 @@ export class ChatService {
   private async listConversationsForUser(accountId: bigint, query?: GetConversationsQueryDto) {
     const officeScopeIds = await this.getOfficeScopeIds(accountId);
 
-    // ── Step 1: Query conversations with DB-level isEnded filter ──
+    // ── Step 1: Query conversations ──
     const qb = this.conversationRepository
       .createQueryBuilder('conversation')
       .leftJoinAndSelect('conversation.participants', 'participants')
@@ -140,19 +141,6 @@ export class ChatService {
         WHERE cm.conversation_id = conversation.id
       )`,
     );
-
-    const endedStatuses = [BookingStatus.COMPLETED, BookingStatus.CANCELLED];
-    
-    if (query?.isEnded) {
-      if (query.isEnded === 'true') {
-        qb.andWhere('booking.status IN (:...endedStatuses)', { endedStatuses });
-      } else {
-        qb.andWhere(
-          '(booking.id IS NULL OR booking.status IS NULL OR booking.status NOT IN (:...endedStatuses))',
-          { endedStatuses },
-        );
-      }
-    }
 
     qb.orderBy('conversation.createdAt', 'DESC');
 
@@ -231,7 +219,7 @@ export class ChatService {
     );
 
     // ── Step 9: Map response ──
-    return conversations.map((conversation) => {
+    let results = conversations.map((conversation) => {
       const me = participantMap.get(conversation.id.toString());
       const officeProfile = officeProfileMap.get(conversation.officeAccountId.toString());
       const userProfile = userProfileMap.get(conversation.userAccountId.toString());
@@ -240,13 +228,19 @@ export class ChatService {
       // Online status for participants
       const participantIds = conversation.participants.map((p) => p.accountId.toString());
       const onlineStatus = this.onlineStatusService.getOnlineStatus(participantIds);
-      // const participantsWithStatus = conversation.participants.map((p) => ({
-      //   ...p,
-      //   isActive: onlineStatus.get(p.accountId.toString()) ?? false,
-      // }));
 
       const bookingStatus = latestOffer?.booking?.status;
-      const isEnded = bookingStatus ? this.isEndedBookingStatus(bookingStatus) : false;
+      let isEnded = false;
+      if (
+        (bookingStatus === BookingStatus.UNDER_NEGOTIATION ||
+          bookingStatus === BookingStatus.CANCELLED)
+        && latestOffer?.offerDuration && latestOffer.offerDuration < new Date()) {
+        isEnded = true;
+      } else if ((bookingStatus === BookingStatus.CONFIRMED 
+        || bookingStatus === BookingStatus.COMPLETED) 
+        && latestOffer?.booking?.endingAt && latestOffer.booking.endingAt < new Date()) {
+        isEnded = true;
+      }
 
       return {
         ...conversation,
@@ -269,12 +263,24 @@ export class ChatService {
         logoUrl: officeProfile?.logoUrl ?? null,
         lastOfferDuration: latestOffer?.offerDuration ?? null,
         unreadCount: unreadCountMap.get(conversation.id.toString()) ?? 0,
-        // participants: participantsWithStatus,
         latestMessage: latestMessageMap.get(conversation.id.toString()) ?? null,
         myLastReadMessageId: me?.lastReadMessageId ?? null,
         myLastReadAt: me?.lastReadAt ?? null,
       };
     });
+
+    // ── Step 10: Apply isEnded filter if specified ──
+    if (query?.isEnded) {
+      results = results.filter((r) => {
+        if (query.isEnded === 'true') {
+          return r.isEnded === true;
+        } else {
+          return r.isEnded === false;
+        }
+      });
+    }
+
+    return results;
   }
 
   async getConversationById(accountId: bigint, conversationIdRaw: string) {
@@ -325,7 +331,17 @@ export class ChatService {
     }));
 
     const bookingStatus = activeOffer.booking.status;
-    const isEnded = this.isEndedBookingStatus(bookingStatus);
+    let isEnded = false;
+    if (
+      (bookingStatus === BookingStatus.UNDER_NEGOTIATION ||
+        bookingStatus === BookingStatus.CANCELLED)
+      && activeOffer.offerDuration && activeOffer.offerDuration < new Date()) {
+      isEnded = true;
+    } else if ((bookingStatus === BookingStatus.CONFIRMED 
+      || bookingStatus === BookingStatus.COMPLETED) 
+      && activeOffer.booking.endingAt && activeOffer.booking.endingAt < new Date()) {
+      isEnded = true;
+    }
 
     return {
       ...hydratedConversation,
@@ -518,7 +534,7 @@ export class ChatService {
       })
       .andWhere('(offer.offerDuration IS NULL OR offer.offerDuration > :now)', { now })
       .andWhere('booking.status NOT IN (:...closedStatuses)', {
-        closedStatuses: [BookingStatus.COMPLETED, BookingStatus.CANCELLED],
+        closedStatuses: [BookingStatus.CANCELLED],
       })
       .orderBy('offer.updatedAt', 'DESC')
       .getOne();

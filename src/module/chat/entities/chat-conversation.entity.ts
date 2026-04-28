@@ -44,5 +44,8 @@ export class ChatConversation {
   @ManyToOne(() => Booking, { onDelete: 'SET NULL' })
   @JoinColumn({ name: 'booking_id' })
   booking: Booking;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  endingAt: Date;
 }
 

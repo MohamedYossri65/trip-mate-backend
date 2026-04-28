@@ -229,6 +229,40 @@ export class NotificationTemplateSeed implements OnModuleInit {
         bodyTemplate: 'طلب تغيير جديد من المكتب {{officeName}} بانتظار المراجعة.',
         direction: 'rtl',
       },
+
+      // ─── NEW_OFFICE_REGISTERED (sent to admin) ──────────
+      {
+        templateKey: 'NEW_OFFICE_REGISTERED',
+        language: 'en',
+        channel: NotificationChannel.PUSH,
+        titleTemplate: 'New Office Registration',
+        bodyTemplate: 'A new office {{officeName}} has registered and is pending review.',
+        direction: 'ltr',
+      },
+      {
+        templateKey: 'NEW_OFFICE_REGISTERED',
+        language: 'ar',
+        channel: NotificationChannel.PUSH,
+        titleTemplate: 'تسجيل مكتب جديد',
+        bodyTemplate: 'تم تسجيل مكتب جديد {{officeName}} وهو بانتظار المراجعة.',
+        direction: 'rtl',
+      },
+      {
+        templateKey: 'NEW_OFFICE_REGISTERED',
+        language: 'en',
+        channel: NotificationChannel.IN_APP,
+        titleTemplate: 'New Office Registration',
+        bodyTemplate: 'A new office {{officeName}} has registered and is pending review.',
+        direction: 'ltr',
+      },
+      {
+        templateKey: 'NEW_OFFICE_REGISTERED',
+        language: 'ar',
+        channel: NotificationChannel.IN_APP,
+        titleTemplate: 'تسجيل مكتب جديد',
+        bodyTemplate: 'تم تسجيل مكتب جديد {{officeName}} وهو بانتظار المراجعة.',
+        direction: 'rtl',
+      },
     ];
 
     let created = 0;

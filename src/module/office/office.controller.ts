@@ -89,24 +89,46 @@ export class OfficeController {
   @Post('commerce-details')
   @Public()
   @Auth(RolesEnum.OFFICE)
-  @ApiOperation({ summary: 'Add commerce details with tax certificate' })
+  @ApiOperation({ summary: 'Add commerce details with certificates' })
   @ApiConsumes('multipart/form-data')
   @ApiBody({ type: CommerceDetailsDto })
-  @UseInterceptors(FileInterceptor('taxCertificate'))
+  @UseInterceptors(
+    FileFieldsInterceptor([
+      { name: 'taxCertificate', maxCount: 1 },
+      { name: 'commerceCertificate', maxCount: 1 },
+    ]),
+  )
   @SuccessResponse('Commerce details added successfully')
   async addCommerceDetails(
     @Body() dto: CommerceDetailsDto,
-    @UploadedFile() file: Express.Multer.File,
+    @UploadedFiles()
+    files: {
+      taxCertificate?: Express.Multer.File[];
+      commerceCertificate?: Express.Multer.File[];
+    },
     @CurrentUser() account: Account,
   ) {
-    const taxCertificateUrl = await this.fileUploadService.uploadImage(
-      file,
-      '/office-documents',
-    );
+    const taxCertificateFile = files?.taxCertificate?.[0];
+    const commerceCertificateFile = files?.commerceCertificate?.[0];
+
+    const taxCertificateUrl = taxCertificateFile
+      ? await this.fileUploadService.uploadImage(
+          taxCertificateFile,
+          '/office-documents',
+        )
+      : undefined;
+
+    const commerceCertificateUrl = commerceCertificateFile
+      ? await this.fileUploadService.uploadImage(
+          commerceCertificateFile,
+          '/office-documents',
+        )
+      : undefined;
 
     await this.officeService.addCommerceDetails(account.id, {
       ...dto,
-      taxCertificate: taxCertificateUrl,
+      taxCertificate: taxCertificateUrl || dto.taxCertificate,
+      commerceCertificate: commerceCertificateUrl || dto.commerceCertificate,
     });
 
     return;
@@ -191,6 +213,7 @@ export class OfficeController {
   }
 
   @Post('payment-details')
+  @Public()
   @Auth(RolesEnum.OFFICE)
   @ApiOperation({ summary: 'Create or update office payment details' })
   @ApiConsumes('multipart/form-data')
