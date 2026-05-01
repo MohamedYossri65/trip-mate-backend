@@ -26,11 +26,13 @@ import { CouponService } from '../coupon/coupon.service';
 import { UpsertPaymentSettingDto } from './dto/upsert-payment-setting.dto';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
 import { PaginatedResponseDto } from 'src/common/dto/paginated-response.dto';
+import { toSaudiLocalPhone } from 'src/common/utils/phone.util';
 
 @Injectable()
 export class PaymentService {
   private readonly logger = new Logger(PaymentService.name);
 
+  private readonly environment: string;
   private readonly secretKey: string;
   private readonly currency: string;
   private readonly webhookUrl: string;
@@ -61,7 +63,8 @@ export class PaymentService {
     private readonly walletService: WalletService,
     private readonly couponService: CouponService,
   ) {
-    this.secretKey = this.configService.get<string>('TAP_SECRET_KEY', '');
+    this.environment = this.configService.get<string>('APP_ENV' ,'');
+    this.secretKey = this.configService.get<string>(this.environment === 'development' ? 'TAP_DEV_SECRET_KEY' : 'TAP_PROD_SECRET_KEY', '');
     this.currency = this.configService.get<string>('TAP_CURRENCY', 'SAR');
     this.webhookUrl = this.configService.get<string>('TAP_WEBHOOK_URL', '');
     this.redirectUrl = this.configService.get<string>('TAP_REDIRECT_URL', '');
@@ -215,7 +218,7 @@ export class PaymentService {
       amount: plan.price,
       customerName: account.email || account.phone || 'Customer',
       customerEmail: account.email || 'no-email@tripmate.com',
-      customerPhone: account.phone || '0500000000',
+      customerPhone: toSaudiLocalPhone(account.phone || '0500000000'),
     });
 
     // Update payment with charge ID
@@ -271,7 +274,7 @@ export class PaymentService {
       amount: offerPartialSummary.amountAfterCoupon,
       customerName: account.email || account.phone || 'Customer',
       customerEmail: account.email || 'no-email@tripmate.com',
-      customerPhone: account.phone || '0500000000',
+      customerPhone: toSaudiLocalPhone(account.phone || '0500000000'),
     });
 
     savedPayment.transactionReference = tapResponse.id;
@@ -331,7 +334,7 @@ export class PaymentService {
       amount,
       customerName: account.email || account.phone || 'Customer',
       customerEmail: account.email || 'no-email@tripmate.com',
-      customerPhone: account.phone || '0500000000',
+      customerPhone: toSaudiLocalPhone(account.phone || '0500000000'),
     });
 
     savedPayment.transactionReference = tapResponse.id;

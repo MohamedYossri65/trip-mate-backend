@@ -34,6 +34,7 @@ import { Booking } from '../bookings/domain/entity/booking.entity';
 import { UpdateOfficeByAdminDto } from './dto/update-office-by-admin.dto';
 import { CreateSupportMessageDto } from './dto/create-support-message.dto';
 import { SupportMessageFilterDto } from './dto/support-message-filter.dto';
+import { getSaudiPhoneVariants, normalizeSaudiPhone } from 'src/common/utils/phone.util';
 
 @Injectable()
 export class OfficeService {
@@ -128,7 +129,7 @@ export class OfficeService {
         office: { accountId: office.accountId },
         accountId: null,
         name: emp.name,
-        phone: emp.phone,
+        phone: normalizeSaudiPhone(emp.phone),
         roleInOffice: emp.roleInOffice,
         invitedByAccountId: accountId,
       }),
@@ -172,7 +173,7 @@ export class OfficeService {
         const account = await this.accountService.create(
           {
             email: dto.email,
-            phone: dto.phone,
+            phone: normalizeSaudiPhone(dto.phone),
             password: temporaryPassword,
             role: RolesEnum.OFFICE,
             roleId: dto.roleInOffice,
@@ -188,7 +189,7 @@ export class OfficeService {
             account: { id: account.id },
             accountId: account.id,
             name: dto.name,
-            phone: dto.phone,
+            phone: account.phone,
             invitedByAccountId: officeAccountId,
             isActive: true,
           }),
@@ -198,7 +199,7 @@ export class OfficeService {
           employeeId: employee.id,
           accountId: account.id,
           email: dto.email,
-          phone: dto.phone,
+          phone: account.phone,
           temporaryPassword,
         });
       }
@@ -517,7 +518,7 @@ export class OfficeService {
 
       if (requestData.phoneNumber && requestData.phoneNumber !== office.account?.phone) {
         const existingPhone = await accountRepo.findOne({
-          where: { phone: requestData.phoneNumber },
+          where: getSaudiPhoneVariants(requestData.phoneNumber).map((phone) => ({ phone })),
         });
 
         if (existingPhone && existingPhone.id !== office.accountId) {
@@ -530,7 +531,7 @@ export class OfficeService {
         accountUpdates.email = requestData.email;
       }
       if (requestData.phoneNumber) {
-        accountUpdates.phone = requestData.phoneNumber;
+        accountUpdates.phone = normalizeSaudiPhone(requestData.phoneNumber);
       }
 
       if (Object.keys(accountUpdates).length > 0) {
@@ -759,7 +760,7 @@ export class OfficeService {
       officeAccountId,
       name: dto.name,
       email: dto.email,
-      phone: dto.phone,
+      phone: normalizeSaudiPhone(dto.phone),
       message: dto.message,
     });
 

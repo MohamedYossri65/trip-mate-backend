@@ -22,6 +22,7 @@ import { AccountStatus } from 'src/common/enums/account-status.enum';
 import { CreateAdminAccountDto } from '../account/dto/create-admin-account.dto';
 import { AdminEmployeesQueryDto } from './dto/admin-employees-query.dto';
 import { UpdateAdminEmployeeDto } from './dto/update-admin-employee.dto';
+import { normalizeSaudiPhone } from 'src/common/utils/phone.util';
 
 @Injectable()
 export class AuthService {
@@ -35,6 +36,7 @@ export class AuthService {
   ) { }
 
   async registerUser(dto: RegisterUserDto): Promise<RegisterUserResponse> {
+
     const result = await this.registrationService.registerUser(dto);
 
     await this.otpService.generate(
@@ -94,7 +96,7 @@ export class AuthService {
       password,
     );
 
-    const validationStatus = await this.validateAccount(account , 'login');
+    const validationStatus = await this.validateAccount(account, 'login');
     if (validationStatus === 'OTP_SENT') {
       throw new HttpException(
         'Phone number not verified. OTP has been resent to your phone.',
@@ -238,7 +240,9 @@ export class AuthService {
       throw new BadRequestException('Account not found');
     }
 
-    const isPhoneTaken = await this.accountService.isPhoneTaken(changePhoneDto.newPhone);
+    const normalizedNewPhone = normalizeSaudiPhone(changePhoneDto.newPhone);
+
+    const isPhoneTaken = await this.accountService.isPhoneTaken(normalizedNewPhone);
     if (isPhoneTaken) {
       throw new BadRequestException('Phone number is already taken by another account');
     }
@@ -254,7 +258,7 @@ export class AuthService {
     }
 
     // This resets isPhoneVerified to false and status to PENDING_OTP
-    await this.accountService.changePhone(accountId, changePhoneDto.newPhone);
+    await this.accountService.changePhone(accountId, normalizedNewPhone);
 
     // Generate a new OTP for the new phone number
     await this.otpService.generate(accountId, OtpPurpose.PHONE_VERIFICATION);
@@ -323,7 +327,7 @@ export class AuthService {
     return { accessToken, refreshToken };
   }
 
-  private async validateAccount(account: Account ,methode: 'login' | 'verify' = 'login'){
+  private async validateAccount(account: Account, methode: 'login' | 'verify' = 'login') {
     if (!account.isPhoneVerified && methode === "login") {
       await this.resendPhoneVerificationOtp(account.email);
       return 'OTP_SENT';
@@ -356,4 +360,5 @@ export class AuthService {
     }
     return 'ACTIVE';
   }
+
 }

@@ -27,6 +27,7 @@ import { PaginatedResponseDto } from 'src/common/dto/paginated-response.dto';
 import { OfficeProfile } from 'src/module/office/entity/office.entity';
 import { OfficeEmployee } from 'src/module/office/entity/employee.entity';
 import { NotificationSource } from './enums/notification-source';
+import { normalizeSaudiPhone } from 'src/common/utils/phone.util';
 
 /** How many users to process per single Bull job */
 const BULK_BATCH_SIZE = 500;
@@ -362,7 +363,7 @@ export class NotificationService {
       select: ['phone'],
     });
 
-    return account?.phone || null;
+    return account?.phone ? normalizeSaudiPhone(account.phone) : null;
   }
 
   // ─── Internal ──────────────────────────────────────────────

@@ -10,6 +10,7 @@ import { UserListQueryDto } from './dto/user-list-query.dto';
 import { PaginatedResponseDto } from 'src/common/dto/paginated-response.dto';
 import { AccountService } from '../account/account.service';
 import { AccountStatus } from 'src/common/enums/account-status.enum';
+import { normalizeSaudiPhone } from 'src/common/utils/phone.util';
 
 @Injectable()
 export class UserService {
@@ -70,7 +71,7 @@ export class UserService {
       accountUpdates.email = dto.email;
     }
     if (dto.phone !== undefined) {
-      accountUpdates.phone = dto.phone;
+      accountUpdates.phone = normalizeSaudiPhone(dto.phone);
     }
     if (dto.status !== undefined) {
       accountUpdates.status = dto.status;

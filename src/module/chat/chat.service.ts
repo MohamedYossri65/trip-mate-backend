@@ -81,7 +81,9 @@ export class ChatService {
         userAccountId,
         officeAccountId,
         createdByAccountId: requesterId,
-        endingAt: new Date(booking.endingAt?.getTime() + 10 * 24 * 60 * 60 * 1000),
+        endingAt: booking.endingAt
+          ? new Date(booking.endingAt.getTime() + 10 * 24 * 60 * 60 * 1000)
+          : new Date(Date.now() + 10 * 24 * 60 * 60 * 1000), // default to 10 days after booking end if available
       });
 
       const savedConversation = await manager.getRepository(ChatConversation).save(conversation);

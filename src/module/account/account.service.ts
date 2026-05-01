@@ -13,6 +13,7 @@ import { AdminProfile } from './entity/admin.profile.entity';
 import { AdminEmployeesQueryDto } from '../auth/dto/admin-employees-query.dto';
 import { UpdateAdminEmployeeDto } from '../auth/dto/update-admin-employee.dto';
 import { PaginatedResponseDto } from 'src/common/dto/paginated-response.dto';
+import { getSaudiPhoneVariants, normalizeSaudiPhone } from 'src/common/utils/phone.util';
 
 @Injectable()
 export class AccountService {
@@ -46,7 +47,7 @@ export class AccountService {
     }
 
     const existingPhone = await repo.findOne({
-      where: { phone: data.phone },
+      where: getSaudiPhoneVariants(data.phone).map((phone) => ({ phone })),
     });
 
     if (existingPhone) {
@@ -66,7 +67,7 @@ export class AccountService {
 
     const account = repo.create({
       email: data.email,
-      phone: data.phone,
+      phone: normalizeSaudiPhone(data.phone),
       password: hashedPassword,
       role: data.role,
       roleId: data.roleId ? data.roleId : undefined,
@@ -96,7 +97,7 @@ export class AccountService {
     }
 
     const existingPhone = await repo.findOne({
-      where: { phone: data.phone },
+      where: getSaudiPhoneVariants(data.phone).map((phone) => ({ phone })),
     });
 
     if (existingPhone) {
@@ -118,7 +119,7 @@ export class AccountService {
 
       const account = accountRepo.create({
         email: data.email,
-        phone: data.phone,
+        phone: normalizeSaudiPhone(data.phone),
         password: hashedPassword,
         role: RolesEnum.ADMIN,
         adminRoleId: BigInt(data.adminRoleId),
@@ -239,7 +240,9 @@ export class AccountService {
     }
 
     if (dto.phone !== undefined) {
-      const existingPhone = await this.accountRepository.findOne({ where: { phone: dto.phone } });
+      const existingPhone = await this.accountRepository.findOne({
+        where: getSaudiPhoneVariants(dto.phone).map((phone) => ({ phone })),
+      });
       if (existingPhone && existingPhone.id !== accountId) {
         throw new ConflictException('Phone number already registered');
       }
@@ -251,7 +254,7 @@ export class AccountService {
 
       const accountUpdates: Partial<Account> = {};
       if (dto.email !== undefined) accountUpdates.email = dto.email;
-      if (dto.phone !== undefined) accountUpdates.phone = dto.phone;
+      if (dto.phone !== undefined) accountUpdates.phone = normalizeSaudiPhone(dto.phone);
       if (dto.adminRoleId !== undefined) accountUpdates.adminRoleId = BigInt(dto.adminRoleId);
       if (dto.password !== undefined) {
         accountUpdates.password = await bcrypt.hash(dto.password, 10);
@@ -368,12 +371,31 @@ export class AccountService {
   }
 
   async findByPhone(phone: string): Promise<Account | null> {
-    return await this.accountRepository.findOne({ where: { phone } });
+    const phoneVariants = getSaudiPhoneVariants(phone);
+    if (!phoneVariants.length) {
+      return null;
+    }
+
+    return await this.accountRepository.findOne({
+      where: phoneVariants.map((phoneValue) => ({ phone: phoneValue })),
+    });
   }
 
   async findByIdentifier(identifier: string): Promise<Account | null> {
+    if (identifier.includes('@')) {
+      return await this.accountRepository.findOne({ where: { email: identifier } });
+    }
+
+    const phoneVariants = getSaudiPhoneVariants(identifier);
+    if (!phoneVariants.length) {
+      return await this.accountRepository.findOne({ where: { email: identifier } });
+    }
+
     return await this.accountRepository.findOne({
-      where: [{ email: identifier }, { phone: identifier }],
+      where: [
+        { email: identifier },
+        ...phoneVariants.map((phone) => ({ phone })),
+      ],
     });
   }
 
@@ -410,7 +432,7 @@ export class AccountService {
     await this.accountRepository.update(
       { id: accountId },
       {
-        phone: newPhone,
+        phone: normalizeSaudiPhone(newPhone),
         isPhoneVerified: false,
         status: AccountStatus.PENDING_OTP,
       },
@@ -425,8 +447,13 @@ export class AccountService {
   }
 
   async isPhoneTaken(phone: string): Promise<boolean> {
+    const phoneVariants = getSaudiPhoneVariants(phone);
+    if (!phoneVariants.length) {
+      return false;
+    }
+
     const query = this.accountRepository.createQueryBuilder('account')
-      .where('account.phone = :phone', { phone });
+      .where('account.phone IN (:...phones)', { phones: phoneVariants });
     const result = await query.getOne();
     return !!result;
   }

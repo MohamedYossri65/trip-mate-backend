@@ -19,6 +19,7 @@ import { UpdateProfileDto } from './dto/update-profile.dto';
 import { RoleService } from '../role/role.service';
 import { SubscriptionService } from '../subscription/subscription.service';
 import { OfficeRegisteredEvent } from '../notification/events';
+import { normalizeSaudiPhone } from 'src/common/utils/phone.util';
 
 @Injectable()
 export class RegisteriationService {
@@ -37,7 +38,7 @@ export class RegisteriationService {
       const account = await this.accountService.create(
         {
           email: dto.email,
-          phone: dto.phone,
+          phone: normalizeSaudiPhone(dto.phone),
           password: dto.password,
           role: RolesEnum.USER,
         },
@@ -65,7 +66,7 @@ export class RegisteriationService {
       const account = await this.accountService.create(
         {
           email: dto.email,
-          phone: dto.phone,
+          phone: normalizeSaudiPhone(dto.phone),
           password: dto.password,
           role: RolesEnum.OFFICE,
         },
