@@ -34,6 +34,8 @@ import { Booking } from '../bookings/domain/entity/booking.entity';
 import { UpdateOfficeByAdminDto } from './dto/update-office-by-admin.dto';
 import { CreateSupportMessageDto } from './dto/create-support-message.dto';
 import { SupportMessageFilterDto } from './dto/support-message-filter.dto';
+import { ReplySupportMessageDto } from './dto/reply-support-message.dto';
+import { ServerEmailService } from 'src/common/email/email.service';
 import { getSaudiPhoneVariants, normalizeSaudiPhone } from 'src/common/utils/phone.util';
 
 @Injectable()
@@ -55,6 +57,8 @@ export class OfficeService {
     private readonly reviewService: ReviewService,
 
     private readonly eventEmitter: EventEmitter2,
+
+    private readonly serverEmailService: ServerEmailService,
 
     @Inject(forwardRef(() => SubscriptionService))
     private readonly subscriptionService: SubscriptionService,
@@ -103,6 +107,12 @@ export class OfficeService {
           ? {
               commerceCertificate:
                 commerceDetails.commerceCertificate.toString(),
+            }
+          : {}),
+        ...(commerceDetails.ministryOfTourismLicense !== undefined
+          ? {
+              ministryOfTourismLicense:
+                commerceDetails.ministryOfTourismLicense.toString(),
             }
           : {}),
       },
@@ -441,6 +451,7 @@ export class OfficeService {
       commerceNumber: data.commerceNumber,
       commerceCertificate: data.commerceCertificate?.toString(),
       taxCertificate: data.taxCertificate?.toString(),
+      ministryOfTourismLicense: data.ministryOfTourismLicense?.toString(),
     };
 
     await this.officeProfileRepository.update(
@@ -680,6 +691,7 @@ export class OfficeService {
       commerceNumber: office?.commerceNumber,
       commerceCertificate: office?.commerceCertificate,
       taxCertificate: office?.taxCertificate,
+      ministryOfTourismLicense: office?.ministryOfTourismLicense,
       officeStatus: office?.account.status,
       logoUrl: office?.logoUrl,
     };
@@ -753,11 +765,9 @@ export class OfficeService {
   }
 
   async createSupportMessage(
-    officeAccountId: bigint,
     dto: CreateSupportMessageDto,
   ): Promise<SupportMessage> {
     const supportMessage = this.supportMessageRepository.create({
-      officeAccountId,
       name: dto.name,
       email: dto.email,
       phone: normalizeSaudiPhone(dto.phone),
@@ -791,6 +801,24 @@ export class OfficeService {
       .getMany();
 
     return new PaginatedResponseDto(data, total, dto.page, dto.limit);
+  }
+
+  async replySupportMessage(id: bigint, dto: ReplySupportMessageDto) {
+    const support = await this.supportMessageRepository.findOne({ where: { id } });
+    if (!support) {
+      throw new NotFoundException('Support message not found');
+    }
+
+    const to = support.email;
+
+    await this.serverEmailService.sendEmail({
+      to,
+      subject: 'Reply to your support message',
+      text: dto.message,
+      html: `<p>${dto.message.replace(/\n/g, '<br/>')}</p>`,
+    });
+
+    return { success: true, message: `Reply sent to ${to}` };
   }
 
   async deleteSupportMessage(messageId: bigint): Promise<void> {

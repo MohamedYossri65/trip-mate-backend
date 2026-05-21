@@ -11,6 +11,7 @@ export interface OfficeChangeRequestData {
   commerceNumber?: string;
   commerceCertificate?: string;
   taxCertificate?: string;
+  ministryOfTourismLicense?: string;
 }
 
 @Entity('office_profiles')
@@ -108,6 +109,22 @@ export class OfficeProfile {
 		},
 	})
   logoUrl: string;
+
+  @Column({
+		nullable: true,
+		transformer: {
+			to: (value: string) => value,
+			from: (value: string) => {
+				const baseUrl = process.env.IMAGEKIT_URL_ENDPOINT || 'https://yourbaseurl.com';
+				if (!value) return value;
+				if (value.startsWith('http://') || value.startsWith('https://')) {
+					return value.replace(/^(http:\/\/|https:\/\/)[^\/]+/, baseUrl);
+				}
+				return `${baseUrl}${value}`;
+			},
+		},
+	})
+  ministryOfTourismLicense: string;
 
   @Column({
     type: 'enum',

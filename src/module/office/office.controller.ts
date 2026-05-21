@@ -32,6 +32,7 @@ import { AdminOfficesFilterDto } from './dto/admin-offices-filter.dto';
 import { UpdateOfficeByAdminDto } from './dto/update-office-by-admin.dto';
 import { CreateSupportMessageDto } from './dto/create-support-message.dto';
 import { SupportMessageFilterDto } from './dto/support-message-filter.dto';
+import { ReplySupportMessageDto } from './dto/reply-support-message.dto';
 
 @Controller('offices')
 export class OfficeController {
@@ -96,6 +97,7 @@ export class OfficeController {
     FileFieldsInterceptor([
       { name: 'taxCertificate', maxCount: 1 },
       { name: 'commerceCertificate', maxCount: 1 },
+      { name: 'ministryOfTourismLicense', maxCount: 1 },
     ]),
   )
   @SuccessResponse('Commerce details added successfully')
@@ -105,30 +107,41 @@ export class OfficeController {
     files: {
       taxCertificate?: Express.Multer.File[];
       commerceCertificate?: Express.Multer.File[];
+      ministryOfTourismLicense?: Express.Multer.File[];
     },
     @CurrentUser() account: Account,
   ) {
     const taxCertificateFile = files?.taxCertificate?.[0];
     const commerceCertificateFile = files?.commerceCertificate?.[0];
+    const ministryOfTourismLicenseFile = files?.ministryOfTourismLicense?.[0];
 
     const taxCertificateUrl = taxCertificateFile
       ? await this.fileUploadService.uploadImage(
-          taxCertificateFile,
-          '/office-documents',
-        )
+        taxCertificateFile,
+        '/office-documents',
+      )
       : undefined;
 
     const commerceCertificateUrl = commerceCertificateFile
       ? await this.fileUploadService.uploadImage(
-          commerceCertificateFile,
-          '/office-documents',
-        )
+        commerceCertificateFile,
+        '/office-documents',
+      )
+      : undefined;
+
+
+    const ministryOfTourismLicenseUrl = ministryOfTourismLicenseFile
+      ? await this.fileUploadService.uploadImage(
+        ministryOfTourismLicenseFile,
+        '/office-documents',
+      )
       : undefined;
 
     await this.officeService.addCommerceDetails(account.id, {
       ...dto,
       taxCertificate: taxCertificateUrl || dto.taxCertificate,
       commerceCertificate: commerceCertificateUrl || dto.commerceCertificate,
+      ministryOfTourismLicense: ministryOfTourismLicenseUrl || dto.ministryOfTourismLicense,
     });
 
     return;
@@ -168,7 +181,7 @@ export class OfficeController {
   }
 
   @Delete('employees/accounts/:employeeAccountId')
-  @Auth(RolesEnum.OFFICE ,RolesEnum.ADMIN)
+  @Auth(RolesEnum.OFFICE, RolesEnum.ADMIN)
   @SuccessResponse('Employee account removed successfully')
   async deleteEmployeeAccount(
     @Param('employeeAccountId') employeeAccountId: bigint,
@@ -180,7 +193,7 @@ export class OfficeController {
 
   @Post('upload-logo')
   @Public()
-  @Auth(RolesEnum.OFFICE ,RolesEnum.ADMIN)
+  @Auth(RolesEnum.OFFICE, RolesEnum.ADMIN)
   @ApiBody({ type: UploadLogoDto })
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(FileInterceptor('logo'))
@@ -199,7 +212,7 @@ export class OfficeController {
   }
 
   @Get('office-main-data')
-  @Auth(RolesEnum.OFFICE ,RolesEnum.ADMIN)
+  @Auth(RolesEnum.OFFICE, RolesEnum.ADMIN)
   @ApiOperation({ summary: 'Get office main data' })
   @ApiQuery({ name: 'accountId', required: false, description: 'Office account ID (Admin can specify to get any office data, Office role will ignore this and get their own data)' })
   @SuccessResponse('Office main data retrieved successfully')
@@ -227,9 +240,9 @@ export class OfficeController {
   ) {
     const ibanAttachmentUrl = ibanAttachmentFile
       ? await this.fileUploadService.uploadImage(
-          ibanAttachmentFile,
-          '/office-documents',
-        )
+        ibanAttachmentFile,
+        '/office-documents',
+      )
       : undefined;
 
     return this.officeService.upsertOfficePaymentDetails(account.id, {
@@ -246,7 +259,7 @@ export class OfficeController {
     return this.officeService.getOfficePaymentDetails(account.id);
   }
 
-  
+
   @Get('details/:officeId')
   @Auth()
   @ApiOperation({ summary: 'Get office details' })
@@ -275,6 +288,7 @@ export class OfficeController {
     FileFieldsInterceptor([
       { name: 'commerceCertificate', maxCount: 1 },
       { name: 'taxCertificate', maxCount: 1 },
+      { name: 'ministryOfTourismLicense', maxCount: 1 },
     ]),
   )
   @SuccessResponse('Office data change request submitted successfully')
@@ -284,30 +298,39 @@ export class OfficeController {
     files: {
       commerceCertificate?: Express.Multer.File[];
       taxCertificate?: Express.Multer.File[];
+      ministryOfTourismLicense?: Express.Multer.File[];
     },
     @CurrentUser() account: Account,
   ) {
     const commerceCertificateFile = files?.commerceCertificate?.[0];
     const taxCertificateFile = files?.taxCertificate?.[0];
-
+    const ministryOfTourismLicenseFile = files?.ministryOfTourismLicense?.[0];
     const commerceCertificateUrl = commerceCertificateFile
       ? await this.fileUploadService.uploadImage(
-          commerceCertificateFile,
-          '/office-documents',
-        )
+        commerceCertificateFile,
+        '/office-documents',
+      )
       : undefined;
 
     const taxCertificateUrl = taxCertificateFile
       ? await this.fileUploadService.uploadImage(
-          taxCertificateFile,
-          '/office-documents',
-        )
+        taxCertificateFile,
+        '/office-documents',
+      )
+      : undefined;
+
+    const ministryOfTourismLicenseUrl = ministryOfTourismLicenseFile
+      ? await this.fileUploadService.uploadImage(
+        ministryOfTourismLicenseFile,
+        '/office-documents',
+      )
       : undefined;
 
     return this.officeService.addChangeOfficeDataRequest(account.id, {
       ...dto,
       commerceCertificate: commerceCertificateUrl || dto.commerceCertificate,
       taxCertificate: taxCertificateUrl || dto.taxCertificate,
+      ministryOfTourismLicense: ministryOfTourismLicenseUrl || dto.ministryOfTourismLicense,
     });
   }
 
@@ -368,14 +391,20 @@ export class OfficeController {
   }
 
   @Post('support-messages')
-  @Auth(RolesEnum.OFFICE)
   @ApiOperation({ summary: 'Create a support message from office to super admin' })
   @SuccessResponse('Support message created successfully')
   async createSupportMessage(
     @Body() dto: CreateSupportMessageDto,
-    @CurrentUser() account: Account,
   ) {
-    return await this.officeService.createSupportMessage(account.id, dto);
+    return await this.officeService.createSupportMessage(dto);
+  }
+
+  @Post('admin/support-messages/reply/:id')
+  @Auth(RolesEnum.ADMIN)
+  @ApiOperation({ summary: 'Reply to a support message (Admin)' })
+  @SuccessResponse('Support message replied successfully')
+  async replySupportMessage(@Param('id') id: bigint, @Body() dto: ReplySupportMessageDto) {
+    return await this.officeService.replySupportMessage(id, dto);
   }
 
   @Get('admin/support-messages')

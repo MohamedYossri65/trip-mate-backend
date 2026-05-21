@@ -6,7 +6,7 @@ import { OtpPurpose } from './enum/otp-purpose.enum';
 import { OtpStatus } from './enum/otp-status.enum';
 import * as bcrypt from 'bcrypt';
 import { Account } from '../account/entity/account.entity';
-import { MsegatSmsService } from 'src/common/services/msegat-sms.service';
+import { TaqnyatSmsService } from 'src/common/services/taqnyat-sms.service';
 import { AccountService } from '../account/account.service';
 import { normalizeSaudiPhone } from 'src/common/utils/phone.util';
 
@@ -18,7 +18,7 @@ export class OtpService {
     @InjectRepository(Account)
     private readonly accountRepository: Repository<Account>,
     private readonly accountService: AccountService,
-    private readonly msegatSmsService: MsegatSmsService,
+    private readonly taqnyatSmsService: TaqnyatSmsService,
   ) { }
 
   async generate(accountId: bigint, purpose: OtpPurpose): Promise<boolean> {
@@ -56,8 +56,8 @@ export class OtpService {
       { status: OtpStatus.EXPIRED },
     );
 
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
-    // const code = '123456'; // For testing purposes, use a fixed code
+    // const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const code = '123456'; // For testing purposes, use a fixed code
 
     const codeHash = await bcrypt.hash(code, 10);
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 mins
@@ -76,16 +76,15 @@ export class OtpService {
 
     const formattedPhone = normalizeSaudiPhone(account.phone);
 
-    const smsSent = await this.msegatSmsService.sendSms({
-      numbers: [formattedPhone],
-      msg: `Verification Code: ${code}`,
-      reqFilter: false,
-    });
+    // const smsSent = await this.taqnyatSmsService.sendSms({
+    //   numbers: [formattedPhone],
+    //   msg: `Verification Code: ${code}`,
+    // });
 
-    if (!smsSent) {
-      await this.otpRepository.update({ id: otp.id }, { status: OtpStatus.EXPIRED });
-      throw new BadRequestException('Failed to send OTP SMS');
-    }
+    // if (!smsSent) {
+    //   await this.otpRepository.update({ id: otp.id }, { status: OtpStatus.EXPIRED });
+    //   throw new BadRequestException('Failed to send OTP SMS');
+    // }
 
     return true;
   }

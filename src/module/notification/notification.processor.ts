@@ -6,7 +6,7 @@ import { PushService } from './channels/push.service';
 import { TemplateService } from './services/template.service';
 import { NotificationStatus, NotificationChannel } from './enums';
 import { NotificationSource } from './enums/notification-source';
-import { MsegatSmsService } from 'src/common/services/msegat-sms.service';
+import { TaqnyatSmsService } from 'src/common/services/taqnyat-sms.service';
 import { ServerEmailService } from 'src/common/email/email.service';
 
 @Processor('notification-queue')
@@ -17,7 +17,7 @@ export class NotificationProcessor {
     private readonly notificationService: NotificationService,
     private readonly pushService: PushService,
     private readonly templateService: TemplateService,
-    private readonly msegatSmsService: MsegatSmsService,
+    private readonly taqnyatSmsService: TaqnyatSmsService,
     private readonly emailService: ServerEmailService,
   ) { }
 
@@ -109,7 +109,7 @@ export class NotificationProcessor {
             break;
           }
 
-          success = await this.msegatSmsService.sendSms({
+          success = await this.taqnyatSmsService.sendSms({
             numbers: [accountPhone],
             msg: notification.body,
           });
@@ -259,7 +259,7 @@ export class NotificationProcessor {
               break;
             }
 
-            success = await this.msegatSmsService.sendSms({
+            success = await this.taqnyatSmsService.sendSms({
               numbers: [accountPhone],
               msg: rendered.body,
             });
@@ -399,7 +399,7 @@ export class NotificationProcessor {
               break;
             }
 
-            success = await this.msegatSmsService.sendSms({
+            success = await this.taqnyatSmsService.sendSms({
               numbers: [accountPhone],
               msg: body,
             });

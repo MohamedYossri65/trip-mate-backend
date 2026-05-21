@@ -1,17 +1,53 @@
-import { TypeOrmModuleAsyncOptions } from '@nestjs/typeorm';
-import { ConfigService } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import {
+  TypeOrmModuleAsyncOptions,
+  TypeOrmModuleOptions,
+} from '@nestjs/typeorm';
 
-export const typeOrmConfig: TypeOrmModuleAsyncOptions = {
-  imports: [],
+export default class TypeOrmConfig {
+  static getTypeOrmConfig(configService: ConfigService): TypeOrmModuleOptions {
+    const nodeEnv = configService.get<string>('NODE_ENV', 'development');
+    const isProd = nodeEnv === 'production';
+
+    // Use production or development database based on NODE_ENV
+    const dbHost = isProd
+      ? configService.get<string>('DB_HOST_PROD')
+      : configService.get<string>('DB_HOST_DEV');
+    
+    const dbPort = isProd
+      ? configService.get<number>('DB_PORT_PROD')
+      : configService.get<number>('DB_PORT_DEV');
+    
+    const dbUser = isProd
+      ? configService.get<string>('DB_USER_PROD')
+      : configService.get<string>('DB_USER_DEV');
+    
+    const dbPass = isProd
+      ? configService.get<string>('DB_PASS_PROD')
+      : configService.get<string>('DB_PASS_DEV');
+    
+    const dbName = isProd
+      ? configService.get<string>('DB_NAME_PROD')
+      : configService.get<string>('DB_NAME_DEV');
+
+    return {
+      type: 'postgres',
+      host: dbHost,
+      port: dbPort,
+      username: dbUser,
+      password: dbPass,
+      database: dbName,
+      autoLoadEntities: true,
+      synchronize: false,
+      logging: String(configService.get<string>('TYPE_ORM_LOGGING')) === 'true',
+      migrationsRun: false,
+    };
+  }
+}
+
+export const typeOrmConfigAsync: TypeOrmModuleAsyncOptions = {
+  imports: [ConfigModule],
+  useFactory: (configService: ConfigService): TypeOrmModuleOptions =>
+    TypeOrmConfig.getTypeOrmConfig(configService),
   inject: [ConfigService],
-  useFactory: (config: ConfigService) => ({
-    type: 'postgres',
-    host: config.get<string>('DB_HOST'),
-    port: config.get<number>('DB_PORT') || 5432,
-    username: config.get<string>('DB_USER'),
-    password: config.get<string>('DB_PASS'),
-    database: config.get<string>('DB_NAME'),
-    autoLoadEntities: true,
-    synchronize: true,
-  }),
 };

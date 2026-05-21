@@ -14,4 +14,8 @@ export class CommerceDetailsDto {
   @ApiProperty({ type: 'string', format: 'binary' })
   @IsOptional()
   commerceCertificate?: Express.Multer.File | string;
+
+  @ApiProperty({ type: 'string', format: 'binary' })
+  @IsOptional()
+  ministryOfTourismLicense?: Express.Multer.File | string;
 }

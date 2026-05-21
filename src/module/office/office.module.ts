@@ -11,6 +11,7 @@ import { SubscriptionModule } from '../subscription/subscription.module';
 import { ReviewModule } from '../review/review.module';
 import { AccountModule } from '../account/account.module';
 import { OtpModule } from '../otp/otp.module';
+import { ServerEmailModule } from 'src/common/email/email.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { OtpModule } from '../otp/otp.module';
     ReviewModule,
     AccountModule,
     OtpModule,
+    ServerEmailModule
   ],
   controllers: [OfficeController],
   providers: [OfficeService],

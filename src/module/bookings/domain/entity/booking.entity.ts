@@ -21,6 +21,9 @@ export class Booking {
   @PrimaryGeneratedColumn('identity')
   id!: bigint;
 
+  @Column({ type: 'bigint' })
+  userAccountId!: bigint;
+
   @ManyToOne(() => UserProfile, { nullable: false , eager : true})
   @JoinColumn({ name: 'userAccountId' })
   user!: UserProfile;

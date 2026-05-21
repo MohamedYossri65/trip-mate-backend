@@ -11,7 +11,7 @@ import { NotificationListener } from './notification.listener';
 import { NotificationProcessor } from './notification.processor';
 import { TemplateService } from './services/template.service';
 import { PushService } from './channels/push.service';
-import { MsegatSmsService } from 'src/common/services/msegat-sms.service';
+import { TaqnyatSmsService } from 'src/common/services/taqnyat-sms.service';
 import { NotificationTemplateSeed } from './seed/notification-template.seed';
 import { OfficeProfile } from '../office/entity/office.entity';
 import { OfficeEmployee } from '../office/entity/employee.entity';
@@ -37,7 +37,7 @@ import { ServerEmailModule } from 'src/common/email/email.module';
     NotificationService,
     TemplateService,
     PushService,
-    MsegatSmsService,
+    TaqnyatSmsService,
     NotificationListener,
     NotificationProcessor,
     NotificationTemplateSeed,

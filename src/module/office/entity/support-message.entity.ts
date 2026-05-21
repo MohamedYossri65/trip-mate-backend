@@ -6,13 +6,6 @@ export class SupportMessage {
   @PrimaryGeneratedColumn('increment', { type: 'bigint' })
   id: bigint;
 
-  @Column({ type: 'bigint' })
-  officeAccountId: bigint;
-
-  @ManyToOne(() => OfficeProfile, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'office_account_id' })
-  office: OfficeProfile;
-
   @Column()
   name: string;
 

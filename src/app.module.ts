@@ -5,7 +5,6 @@ import { AcceptLanguageResolver, I18nModule } from 'nestjs-i18n';
 import { join } from 'path';
 import { LoggerMiddleware } from './logger.middleware';
 import { AccountModule } from './module/account/account.module';
-import { typeOrmConfig } from './common/config/typeorm.config';
 import { TypeOrmModule } from '@nestjs/typeorm/dist/typeorm.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AuthModule } from './module/auth/auth.module';
@@ -31,6 +30,7 @@ import { WalletModule } from './module/wallet/wallet.module';
 import { CouponModule } from './module/coupon/coupon.module';
 import { RoleModule } from './module/role/role.module';
 import Redis from 'ioredis';
+import TypeOrmConfig, { typeOrmConfigAsync } from './common/config/typeorm.config';
 
 
 
@@ -40,7 +40,7 @@ import Redis from 'ioredis';
       isGlobal: true,
       envFilePath: '.env',
     }),
-    TypeOrmModule.forRootAsync(typeOrmConfig),
+    TypeOrmModule.forRootAsync(typeOrmConfigAsync),
     I18nModule.forRoot({
       loaderOptions: {
         path: join(__dirname, 'i18n'),
